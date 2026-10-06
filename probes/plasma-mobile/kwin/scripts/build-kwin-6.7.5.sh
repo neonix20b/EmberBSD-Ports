@@ -6,10 +6,14 @@ build_root=${BUILD_ROOT:-"$HOME/.cache/emberbsd-plasma-kwin"}
 archive_dir=${ARCHIVE_DIR:-"$build_root/archives"}
 plasma_prefix=${PLASMA_PREFIX:?Set PLASMA_PREFIX to the matching Plasma installation}
 input_prefix=${LIBINPUT_PREFIX:?Set LIBINPUT_PREFIX to the validated libopeninput installation}
+case ${CONFIGURE_ONLY:-0} in 0|1) ;; *) echo 'CONFIGURE_ONLY must be 0 or 1.' >&2; exit 2 ;; esac
 source_archive=${SOURCE_ARCHIVE:-"$archive_dir/kwin-6.7.5.tar.xz"}
 prefix=${PREFIX:-"$build_root/install"}
 PATH=/usr/pkg/qt6/bin:/usr/pkg/bin:/usr/pkg/sbin:/usr/X11R7/bin:/bin:/usr/bin
 export PATH
+: "${CC:=/usr/bin/cc}"
+: "${CXX:=/usr/bin/c++}"
+export CC CXX
 export PKG_CONFIG_PATH="$plasma_prefix/lib/pkgconfig:$input_prefix/lib/pkgconfig:/usr/pkg/lib/pkgconfig:/usr/X11R7/lib/pkgconfig"
 export LD_LIBRARY_PATH="$plasma_prefix/lib:$input_prefix/lib:/usr/pkg/lib:/usr/X11R7/lib"
 expected=6baa910b732d93c48c90f9c1cc685cc93d0b8de0cdf138c24192c045bc3a48e2
@@ -44,8 +48,8 @@ if [ "${PREPARE_ONLY:-0}" = 1 ]; then
     exit 0
 fi
 qt-cmake -S "$build_root/src/kwin-6.7.5" -B "$build_root/build-6.7.5" -G Ninja \
-    -DCMAKE_C_COMPILER=/usr/bin/cc \
-    -DCMAKE_CXX_COMPILER=/usr/bin/c++ \
+    -DCMAKE_C_COMPILER="$CC" \
+    -DCMAKE_CXX_COMPILER="$CXX" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
     -DCMAKE_PREFIX_PATH="$plasma_prefix;$input_prefix;/usr/pkg/qt6;/usr/pkg;/usr/X11R7" \
@@ -54,8 +58,12 @@ qt-cmake -S "$build_root/src/kwin-6.7.5" -B "$build_root/build-6.7.5" -G Ninja \
     -DBUILD_TESTING=OFF \
     -DKWIN_BUILD_KCMS=OFF \
     -DKWIN_BUILD_SCREENLOCKER=OFF \
-    -DKWIN_BUILD_GLOBALSHORTCUTS=OFF \
+    -DKWIN_BUILD_GLOBALSHORTCUTS=ON \
     -DKWIN_BUILD_RUNNERS=OFF \
     -DKWIN_BUILD_DECORATIONS=OFF
+if [ "${CONFIGURE_ONLY:-0}" = 1 ]; then
+    echo 'Configured KWin; compilation and installation not requested.'
+    exit 0
+fi
 cmake --build "$build_root/build-6.7.5" --parallel "${JOBS:-1}"
 cmake --install "$build_root/build-6.7.5"

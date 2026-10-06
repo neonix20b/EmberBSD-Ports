@@ -48,11 +48,21 @@ JOBS=1 sh scripts/build-component.sh kirigami-6.30.0
 JOBS=1 sh scripts/build-component.sh plasma-activities-6.7.5
 JOBS=1 sh scripts/build-component.sh plasma-activities-stats-6.7.5
 JOBS=1 sh scripts/build-component.sh kactivitymanagerd-6.7.5
+JOBS=1 sh scripts/build-component.sh kglobalacceld-6.7.5 -DWITH_X11=OFF
 ```
 
 The Activities library does not provide its daemon. `plasmashell` refuses to
 load a shell without the real `kactivitymanagerd` service. Configuration alone
 can be inspected with `CONFIGURE_ONLY=1` before allocating a build slot.
+`KGlobalAccelD` is also required inside KWin: Mobile's task-panel button calls
+the compositor's real `Mobile Task Switcher` shortcut over D-Bus.
+The Wayland compositor uses its own input backend, so this library does not
+need the standalone daemon's X11 plugin.
+
+Both daemons compiled and installed in the native diagnostic prefix. KWin's
+shortcut-enabled configuration was checked, but its 611-object rebuild is
+reserved for the common GCC 16 / Qt 6.12 / KF6 6.30 migration. The installed
+diagnostic KWin still uses the earlier profile with shortcuts disabled.
 
 Build the matching Plasma Wayland Protocols, KDecoration, KNightTime
 and KWayland common libraries from the [KWin recipe](kwin/README.md):
@@ -155,6 +165,14 @@ real envmanager inside the private bus before starting KWin. It selects
 the installed `plasma-keyboard` executable explicitly. Its cleanup marker
 is separate from the Enlightenment session marker; the native process
 scope tests are documented in the main README.
+
+For pointer diagnostics, compile `tests/nested-pointer.c` with the base C
+compiler, X11/XTest headers and libraries. It accepts `DISPLAY X Y` for a
+click or `DISPLAY X Y END_X END_Y` for a drag. It refuses a display unless
+exactly one visible top-level window occupies 480×800 at the origin.
+Use only the launcher's owned display, and confirm each result from the
+real application state or a captured frame; successful event delivery
+alone does not prove that the UI handled it.
 
 Default `PLASMA_COMPOSITOR=O2` requests OpenGL. This requires a compatible
 graphics stack and, for nested X11, working DRI3. Plain Xvfb does not supply

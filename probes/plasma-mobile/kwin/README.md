@@ -101,8 +101,12 @@ existing X11R7 installation. The probe shares one current Plasma prefix rather t
 application. Older packaged Plasma libraries may remain during migration and
 must not satisfy the current probe.
 
-The initial profile disables configuration modules, screen locking, global
-shortcuts, runners and decorations. DRM, libinput, nested X11/Wayland and
+The initial validated profile disabled global shortcuts. The current recipe
+requires matching `KGlobalAccelD` and enables them: Mobile invokes its task
+switcher through KWin's `org.kde.kglobalaccel` interface. Build that dependency
+in the shared prefix using [the common recipe](../BUILDING.md).
+Configuration modules, screen locking, runners and decorations remain disabled.
+DRM, libinput, nested X11/Wayland and
 virtual backends remain compiled. The intended runtime explicitly selects
 nested X11 with software rendering and an empty `KWIN_RENDER_NODES` list.
 
@@ -138,6 +142,10 @@ CONTRACT_DISPLAY=:79 sh scripts/check-nested.sh
 
 `ARCHIVE_DIR` defaults to `$BUILD_ROOT/archives`. `SOURCE_ARCHIVE` can override
 the KWin archive path alone. Both helpers verify source hashes before use.
+`CONFIGURE_ONLY=1` stops the KWin helper after generating build files.
+Both builders default to base `cc`/`c++` and honor explicit `CC`/`CXX` paths.
+Override them only when Qt, KDE and all C++ consumers move to the same runtime;
+changing KWin's compiler alone is not a compatible toolchain migration.
 
 Choose an unused X display for the final command. The runtime check requires
 Xvfb, XTest development files, xwd, xwininfo, xdpyinfo, dbus-daemon and Qt's
@@ -217,5 +225,5 @@ binary identity.
 This is a basic window/input checkpoint. OpenGL, Vulkan, native DRM/KMS,
 mobile task switching and long-running stability remain unverified here.
 See [the graphics contract](MOBILE-GRAPHICS-CONTRACT.md) for the required next
-check on the common Mesa/toolchain stack. This recipe's fixed base compiler
+check on the common Mesa/toolchain stack. This recipe's default base compiler
 and temporary C++23 adaptations must be reassessed during that shared upgrade.

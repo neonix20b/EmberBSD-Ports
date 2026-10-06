@@ -15,7 +15,7 @@
  pkg_check_modules(PipeWire QUIET IMPORTED_TARGET libpipewire-0.3)
 --- /dev/null
 +++ b/cmake/NestedShell.cmake
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,83 @@
 +# SPDX-License-Identifier: BSD-3-Clause
 +# Local EmberBSD experimental profile, prepared with AI assistance.
 +# Build real upstream shell targets without installing login/session services.
@@ -80,6 +80,7 @@
 +add_subdirectory(libkmpris)
 +add_subdirectory(libdbusmenuqt)
 +add_subdirectory(shell)
++add_subdirectory(menu)
 +add_subdirectory(components/containmentlayoutmanager)
 +add_subdirectory(components/dbus)
 +add_subdirectory(components/shellprivate)

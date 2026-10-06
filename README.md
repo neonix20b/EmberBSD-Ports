@@ -38,12 +38,17 @@ runtime behavior are validated.
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
   and the patched GTK4 Demo were verified.
+- [Current Plasma Mobile](probes/plasma-mobile/README.md): Plasma Mobile
+  6.7.5 builds and installs on the AArch64 VM; KWin displays a real Qt Wayland
+  window with keyboard input. Activities activation and the upstream
+  application menu are checked. The complete mobile workflow still needs
+  the common OpenGL stack and an enabled KWin shortcut backend.
 
 - [Enlightenment desktop](probes/enlightenment/README.md): EFL 1.28.1 and
   Enlightenment 0.27.1 use system Lua 5.4 through compatibility patches.
   Native software X11 rendering, window management and session exit pass.
 
-The Wayland, Phosh and Enlightenment entries remain experimental probes,
+The Wayland, Phosh, Plasma Mobile and Enlightenment entries remain experimental probes,
 not installable packages or phone images. Each recipe records its tested
 runtime and platform boundaries.
 Helpers stop on errors and keep output in private user directories.

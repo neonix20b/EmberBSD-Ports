@@ -107,6 +107,25 @@ Mobile envmanager in a fresh D-Bus/XDG profile. Its virtual-keyboard default
 is immutable: reading it succeeds, while rewriting it returns 2. The launcher
 checks the real default instead of repeating that write and aborting startup.
 
+`kactivitymanagerd` 6.7.5 now builds and activates on the private session bus;
+without it, `plasmashell` refused to load the Mobile shell. Its nine installed
+ELF files passed the same single-runtime loader gate. The original Workspace
+menu data and `XDG_MENU_PREFIX=plasma-` restore KDE's application catalog;
+`kbuildsycoca6 --menutest` finds Kate, Konsole, Dolphin and Plasma Settings.
+
+The QPainter session creates one desktop and two panels and reacts to a real
+pointer click on the app-drawer button. Its application grid stays invisible:
+upstream sets the grid's opacity to zero and renders it through
+`FlickableOpacityGradient`/`OpacityMask`. [Qt's software backend](https://doc.qt.io/qt-6.11/qtquick-visualcanvas-adaptations-software.html) cannot render
+those shader effects. The app catalog and a responsive partial screen do not
+establish a usable Mobile session.
+
+KGlobalAccelD 6.7.5 builds with `WITH_X11=OFF`; both installed ELF files pass
+the loader gate. KWin's shortcut-enabled configuration succeeds but schedules
+611 C++ compilations. That rebuild is reserved for the coordinated GCC 16 /
+Qt 6.12 / KF6 6.30 migration. The currently installed diagnostic KWin still
+has shortcuts disabled. No shortcut or task-switcher runtime is claimed.
+
 ## Required runtime result
 
 A real isolated Wayland session must display the mobile shell, open an

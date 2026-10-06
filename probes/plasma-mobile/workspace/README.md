@@ -115,7 +115,13 @@ changed. All build and install logs are kept privately under `logs`.
 
 The profile builds `plasmashell`, workspace/task/notification/MPRIS libraries,
 keyboard-layout, containment, sessions, battery, D-Bus and shell QML components,
-the system tray, clock QML module, and image/color wallpaper support. It does not
+the system tray, clock QML module, and image/color wallpaper support. It also
+installs the original upstream `plasma-applications.menu` and 40 category
+`.directory` files through `add_subdirectory(menu)`. With this profile's relative
+`SYSCONFDIR=etc`, the menu is in `prefix/etc/xdg/menus` and category data in
+`prefix/share/desktop-directories`. The session must include `prefix/etc/xdg`
+in `XDG_CONFIG_DIRS`, `prefix/share` in `XDG_DATA_DIRS`, and set
+`XDG_MENU_PREFIX=plasma-`, matching upstream `startplasma.cpp`. It does not
 build `startplasma`, session shutdown helpers, settings modules, or device
 notification services. Upstream session backends keep their real capability
 checks and explicit unsupported-operation behavior. Do not set
@@ -124,6 +130,19 @@ checks and explicit unsupported-operation behavior. Do not set
 Further modules such as Plasma NetworkManager, ModemManager, audio volume,
 PowerDevil, and Milou are independent requirements of Plasma Mobile. Their absence
 must be reported by runtime validation, not replaced by mock QML modules.
+
+For an existing build missing only these menu data, `configure-menu-data.sh`
+reads and validates its cached source, private prefix and relative directories,
+including ECM's `share/desktop-directories` default for empty cache entries.
+It configures a separate `LANGUAGES NONE` driver around the real upstream
+`menu` directory, preserving the main source/build tree. Inspect the printed
+build directory's `menu/desktop/cmake_install.cmake` destinations, then run
+`cmake --install` on that data-only build directory. No build command, compiler
+check, replacement menu, or package transaction is involved.
+The native data-only installation added exactly 41 upstream files; its manifest
+and every installed file matched the source. The existing `plasmashell`, main
+CMake cache and Ninja build file kept their digests. This data check does not
+by itself validate the Mobile application list.
 
 ## Validation
 
