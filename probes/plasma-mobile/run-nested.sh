@@ -36,7 +36,7 @@ done < "$work/prefixes.txt"
 LD_LIBRARY_PATH="$LIBINPUT_PREFIX/lib:$LD_LIBRARY_PATH"
 export PATH LD_LIBRARY_PATH QML_IMPORT_PATH QT_PLUGIN_PATH XDG_DATA_DIRS XDG_CONFIG_DIRS
 export LD_BIND_NOW=1
-for binary in kwin_wayland plasmashell plasma-keyboard plasma-mobile-envmanager dbus-run-session kwriteconfig6; do
+for binary in kwin_wayland plasmashell plasma-keyboard plasma-mobile-envmanager dbus-run-session kreadconfig6; do
     command -v "$binary" >/dev/null || { echo "Missing executable: $binary" >&2; exit 2; }
 done
 command -v timeout >/dev/null
@@ -223,7 +223,12 @@ cat > "$session/start-compositor.sh" <<'SHELL'
 set -eu
 # The envmanager sends reload signals; it must run inside our private bus.
 QT_QPA_PLATFORM=offscreen plasma-mobile-envmanager --apply-settings
-kwriteconfig6 --file kwinrc --group Wayland --key VirtualKeyboardEnabled true
+# Mobile makes this default immutable. Verify it instead of rewriting it:
+# kwriteconfig6 correctly returns 2 for a locked entry and would abort startup.
+[ "$(kreadconfig6 --file kwinrc --group Wayland --key VirtualKeyboardEnabled)" = true ] || {
+    echo 'Mobile configuration did not enable the virtual keyboard.' >&2
+    exit 1
+}
 exec kwin_wayland --x11-display "$DISPLAY" \
     --width 480 --height 800 --socket emberbsd-plasma \
     --inputmethod "$(command -v plasma-keyboard)" \

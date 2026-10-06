@@ -12,6 +12,7 @@ component=${1:?usage: build-component.sh SOURCE_DIRECTORY}
 shift
 case "$component" in ''|*[!a-zA-Z0-9._-]*) echo 'Invalid source directory name.' >&2; exit 2 ;; esac
 case ${JOBS:-1} in 1|2) ;; *) echo 'JOBS must be 1 or 2.' >&2; exit 2 ;; esac
+case ${CONFIGURE_ONLY:-0} in 0|1) ;; *) echo 'CONFIGURE_ONLY must be 0 or 1.' >&2; exit 2 ;; esac
 export LC_ALL=C.UTF-8
 : "${CC:=/usr/bin/cc}"
 : "${CXX:=/usr/bin/c++}"
@@ -34,6 +35,10 @@ cmake -S "$root/src/$component" -B "$root/build/$component" -G Ninja \
     -DKDE_INSTALL_PLUGINDIR=lib/qt6/plugins -DKF_IGNORE_PLATFORM_CHECK=ON \
     -DBUILD_TESTING=OFF -DBUILD_DOC=OFF "$@" \
     >"$root/logs/$component-configure.log" 2>&1 || { tail -60 "$root/logs/$component-configure.log"; exit 1; }
+if [ "${CONFIGURE_ONLY:-0}" = 1 ]; then
+    echo "Configured $component; compilation and installation not requested."
+    exit 0
+fi
 cmake --build "$root/build/$component" --parallel "${JOBS:-1}" >"$root/logs/$component-build.log" 2>&1 || { tail -60 "$root/logs/$component-build.log"; exit 1; }
 cmake --install "$root/build/$component" >"$root/logs/$component-install.log" 2>&1 || { tail -60 "$root/logs/$component-install.log"; exit 1; }
 echo "Installed $component"

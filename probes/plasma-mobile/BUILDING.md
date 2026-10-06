@@ -47,7 +47,12 @@ JOBS=1 sh scripts/build-component.sh extra-cmake-modules-6.30.0
 JOBS=1 sh scripts/build-component.sh kirigami-6.30.0
 JOBS=1 sh scripts/build-component.sh plasma-activities-6.7.5
 JOBS=1 sh scripts/build-component.sh plasma-activities-stats-6.7.5
+JOBS=1 sh scripts/build-component.sh kactivitymanagerd-6.7.5
 ```
+
+The Activities library does not provide its daemon. `plasmashell` refuses to
+load a shell without the real `kactivitymanagerd` service. Configuration alone
+can be inspected with `CONFIGURE_ONLY=1` before allocating a build slot.
 
 Build the matching Plasma Wayland Protocols, KDecoration, KNightTime
 and KWayland common libraries from the [KWin recipe](kwin/README.md):

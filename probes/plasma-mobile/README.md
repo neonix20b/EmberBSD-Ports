@@ -102,6 +102,11 @@ manifest stayed inside the common prefix; 37 installed ELF files passed
 immediate loader checks with one base C++ runtime and no missing libraries.
 This does not establish the mobile runtime workflow below.
 
+`sh scripts/check-mobile-configuration.sh BUILD_ROOT` exercises the installed
+Mobile envmanager in a fresh D-Bus/XDG profile. Its virtual-keyboard default
+is immutable: reading it succeeds, while rewriting it returns 2. The launcher
+checks the real default instead of repeating that write and aborting startup.
+
 ## Required runtime result
 
 A real isolated Wayland session must display the mobile shell, open an
