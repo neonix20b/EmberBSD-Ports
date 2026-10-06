@@ -1,0 +1,158 @@
+# Common development toolchain (candidate)
+
+This profile prepares GCC 16.2.0 for native EmberBSD/NetBSD 11 AArch64.
+It is the compiler foundation for a reproducible distribution development
+environment. It has not yet been built, installed, or selected as default.
+The source checks below do not establish native compiler support.
+
+## Source and preparation
+
+The base is pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`
+(`pkgsrc-2026Q3`). Apply the original NetBSD update
+[`823a3b483b7ffeb73973f911458d6ba22c74efc4`](https://github.com/NetBSD/pkgsrc/commit/823a3b483b7ffeb73973f911458d6ba22c74efc4)
+to `gcc16`, `gcc16-libs`, and `gcc16-libjit` together. This imports the
+16.2.0 version and archive checksums without advancing unrelated packages.
+The full original update is preserved in `patches/pkgsrc-gcc16.2.patch`.
+Original archive and patch URLs/SHA256 are in `sources.tsv`; GCC's SHA512
+and BLAKE2s remain in the resulting pkgsrc `distinfo`.
+
+The local AI-assisted `strict-tests.patch` is not submitted upstream. It
+preserves failed `make check` status, corrects the historical SONAME comment,
+and removes the ISL source patch because this profile does not extract ISL.
+Do not enable Graphite in this exported profile. No compiler source or
+runtime ABI is renamed. Existing pkgsrc patches retain their authorship.
+GCC and its runtime retain upstream licenses and GCC Runtime Library Exception;
+the probe code is BSD-2-Clause.
+
+```sh
+git submodule update --init --depth 1 upstream/pkgsrc
+sh scripts/prepare-pkgsrc.sh /absolute/new-pkgsrc development-toolchain
+```
+
+The destination must be new. Existing exports are never changed in place.
+The exported `EMBERBSD-DEVELOPMENT-MK.CONF` selects C/C++ only, external
+GMP/MPFR/MPC, one worker, `-O2` without debug information, and the compiler's
+own libgcc. Graphite, NLS, Fortran, Cobol, Go, and Objective-C are disabled.
+These are language/optional-feature limits, not missing basic C/C++ semantics.
+
+## Native package build boundary
+
+Build only a committed Ports revision. Capture that commit, the pkgsrc pin,
+private MAKECONF, dependency versions, configure output, logs, and package hash.
+The intended package is `gcc16-16.2.0`, installed with pkg_tools at the recipe's
+standard `/usr/pkg/gcc16` prefix. Base files are never overwritten.
+Use pkgsrc's DESTDIR/package staging; do not relocate GCC after configuration.
+
+The build's private MAKECONF includes the exported profile, sets WRKOBJDIR,
+DISTDIR and PACKAGES to scratch storage, and keeps LOCALBASE `/usr/pkg`.
+First use the base compiler to build the candidate. Do not set GCC_REQD=16
+while building its own bootstrap dependencies. Native tools include gmake,
+GNU sed, texinfo >=7, Perl, pkg_tools, cwrappers and digest. Math dependencies
+are GMP, MPFR, and MPC (`math/mpcomplex`); the recipe also needs libxml2.
+DejaGNU with Expect/Tcl is required for upstream tests. Resolve full pkgsrc
+dependencies before starting; this list is not a substitute for that check.
+
+The upstream recipe disables bootstrap on all NetBSD hosts because GCC 16.1
+stage2/stage3 comparison failed on x86_64. This profile retains that choice
+for the initial resource-limited candidate. It does not imply the same failure
+on AArch64 or prove self-hosting. A subsequent AArch64 self-build and comparison
+investigation is a distribution gate, not something to hide with `|| true`.
+The initial compiler uses base binutils; the common development profile must
+subsequently select current binutils and repeat generated-code tests.
+
+Measured source footprint: 107,200,820-byte archive, about 1.3 GiB extracted;
+the full prepared pkgsrc tree is about 0.8 GiB. Budget 4–6 GiB for objects,
+2 GiB for staging/install/package overlap, 1 GiB for test/temp/distfiles,
+and at least 1 GiB reserve. Provision 16 GiB scratch; 12 GiB is a tight
+estimate, not a measured peak or sufficient room for a three-stage bootstrap.
+Use one worker on a 4 GiB guest. Drain other compiler jobs first; inspect
+memory and free space throughout. No storage deletion or swap setup is implicit.
+
+## Runtime and consumer repair
+
+The observed base compiler is GCC 12.5.0nb3 with `libstdc++.so.9` and
+`libgcc_s.so.1`. Qt 6.11.1, ICU, and LLVM 21.1.8 currently load that runtime.
+The pkgsrc GCC16 recipe intentionally retains its own `libstdc++.so.7`.
+Changing its SONAME to 9 does not make the ABIs identical. Never add a SONAME
+symlink, use LD_LIBRARY_PATH to conceal resolution, or mix the two C++ runtimes
+in one process as an accepted configuration.
+
+Build a coherent new C++ closure using GCC16: shared-runtime dependencies
+(including ICU and double-conversion), Qt, KF, LLVM and desktop consumers.
+The coordinated consumer targets are Qt 6.12.0, KF 6.30.0, and LLVM 23.1.2;
+these are rebuild targets, not the currently installed versions above.
+Inventory every transitive DSO before adopting it; C interfaces alone do not
+prove that a dependency has no hidden C++ runtime. Fix source incompatibilities
+in Ports, then rebuild and retest their consumers with the same compiler.
+Existing current GUI builds finish with the original compiler. After that
+boundary, rebuilt packages replace the corresponding installed packages as a
+coordinated set with retained rollback packages. This repair is required work,
+not an indefinite exception allowing old runtime consumers in new builds.
+
+The base compiler and its runtime temporarily remain for bootstrap, recovery,
+and already-running old programs. Their removal gate is a validated base OS
+toolchain migration plus rebuild of remaining base consumers. They are not an
+application-specific alternative, and must not be the new image's user-facing
+default development tools.
+
+## Acceptance
+
+After the package installation is explicitly scheduled, use an ordinary clean
+loader environment and run:
+
+```sh
+sh profiles/development-toolchain/tests/run.sh /usr/pkg/gcc16 /absolute/new-check
+sh profiles/development-toolchain/tests/qt-consumer.sh /usr/pkg/gcc16 \
+  /usr/pkg/qt6/lib/pkgconfig /absolute/new-qt-check
+```
+
+The first check compiles and runs C11 atomics, pthreads, C/C++ TLS, C++20,
+cross-DSO strings and exception cleanup. It records DT_NEEDED and `ldd`, then
+uses the actual process link map to require exactly one libstdc++ and libgcc_s,
+both matching this compiler's reported runtime files under its own prefix.
+The Qt check exchanges real strings with QtCore and repeats runtime identity
+checks. It must fail on an unresolved old/new runtime mixture. Also audit LLVM's
+dynamic closure and run an LLVM consumer after its rebuild; Qt success cannot
+prove LLVM compatibility.
+
+Run upstream tests through the strict recipe and retain the true exit status
+and `.sum`/`.log` files. Failed checks need classification and concrete fixes;
+a generated summary or successful `--version` is not acceptance.
+
+For new pkgsrc consumers, select GCC16 through the common build MAKECONF
+(`GCC_REQD=16.2.0`, `USE_PKGSRC_GCC=yes`) after the bootstrap package exists.
+For CMake/Meson, use explicit compiler paths in fresh build directories;
+cached compiler identities cannot be changed by modifying PATH alone.
+Verify generated compile commands and runtime mappings before selecting
+the toolchain for all new builds. Preserve the previous selection for rollback.
+
+## Distribution integration
+
+The inspected OS checkout currently builds kernels using NetBSD 11's native
+tools and documents official NetBSD 11 userland; it has no complete public
+image assembler that installs this development profile. Package installation
+alone therefore does not satisfy current-image release acceptance.
+
+The image build must consume a pinned Ports commit, a recorded package set
+and hashes, and one explicit common compiler/tool selection. Install the
+validated packages into the image through pkg_tools, configure user-facing
+`cc`, `c++`, `gcc`, and `g++` selection without overwriting package/base files,
+and repeat the compiler/Qt/LLVM checks in a fresh boot of that image. Record
+base bootstrap exceptions separately. Keep a tested reversal of selection.
+
+Additional current binutils, LLVM/Clang, CMake, Meson, pkgconf, Libtool, Perl,
+Python, Ruby, Go, and TinyGo recipes join this profile through reviewed Ports
+deltas. They must share the same runtime policy and image manifest; stale
+installed versions are not the release target. Upstream Python requirements
+remain visible; project-owned build/test helpers here do not use Python.
+TinyGo's LLVM compatibility needs validation and source repair against the
+common LLVM version; do not silently install another LLVM for that consumer.
+
+## Verified scope (2026-10-06)
+
+Verified: original archive hashes, upstream update application, all 23 remaining
+pkgsrc source patches against GCC16.2 without fuzz, and shell syntax. The C11
+probe runs on the development host; the DSO source compiles there. These host
+checks are probe checks, not GCC16/NetBSD evidence. Native build, installation,
+upstream test execution, runtime tests, consumer repairs, default selection,
+and image integration are pending coordinated build/install phases.

@@ -13,6 +13,9 @@ archives or store generated binaries.
 - [Robotics and ROS 2](profiles/robotics/README.md): Zenoh-Pico 1.10.1
   native package and tests verified; the Examples C controller exchanges
   typed commands and telemetry with ROS 2 Jazzy, including reconnect checks.
+- [Common development toolchain](profiles/development-toolchain/README.md):
+  GCC 16.2.0 source profile and native acceptance probes; compiler build,
+  coordinated C++ consumer rebuilds, and image integration remain pending.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.

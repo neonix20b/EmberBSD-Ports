@@ -1,0 +1,55 @@
+Local EmberBSD delta, AI-assisted, not submitted upstream.
+Preserve the upstream check failure status; a summary never makes a failure pass.
+The NetBSD SONAME comment describes a historical base, not our NetBSD 11 base.
+The C/C++ profile disables Graphite, so no in-tree ISL is extracted; remove
+its unconditional source patch. This profile must not enable gcc-graphite.
+
+--- a/lang/gcc16/Makefile
++++ b/lang/gcc16/Makefile
+@@ -41,7 +41,8 @@
+ .if !empty(MACHINE_PLATFORM:MNetBSD-*-*)
+ # on NetBSD, use the native SSP code in libc
+ CONFIGURE_ARGS+=	--disable-libssp
+-# Match base libstdc++ major
++# Preserve pkgsrc's runtime ABI. NetBSD 11 base uses major 9; consumers
++# of that runtime must be rebuilt before joining this C++ process graph.
+ SUBST_CLASSES+=		libstdc
+ SUBST_STAGE.libstdc=	pre-configure
+ SUBST_FILES.libstdc=	libstdc++-v3/configure
+@@ -65,7 +66,7 @@
+ 
+ CTF_FILES_SKIP+=	*/gengtype	# CPU limit exceeded
+ 
+-TEST_TARGET=	-j ${MAKE_JOBS} -k check || ${TRUE}
++TEST_TARGET=	-j ${MAKE_JOBS} -k check
+ TEST_DEPENDS+=	dejagnu-[0-9]*:../../devel/dejagnu
+ 
+ post-test:
+
+--- a/lang/gcc16/patches/patch-isl_configure
++++ /dev/null
+@@ -1,24 +0,0 @@
+-$NetBSD: patch-isl_configure,v 1.1 2026/08/10 21:41:35 wiz Exp $
+-
+-Fix unportable test(1) operator.
+-
+---- isl/configure.orig	2021-04-26 09:13:19.000000000 +0000
+-+++ isl/configure
+-@@ -20657,7 +20657,7 @@ fi
+-   HAVE_CXX11_FALSE=
+- fi
+- 
+-- if test "x$with_int" == "ximath-32"; then
+-+ if test "x$with_int" = "ximath-32"; then
+-   SMALL_INT_OPT_TRUE=
+-   SMALL_INT_OPT_FALSE='#'
+- else
+-@@ -20665,7 +20665,7 @@ fi
+-   SMALL_INT_OPT_FALSE=
+- fi
+- 
+--if test "x$with_int" == "ximath-32"; then :
+-+if test "x$with_int" = "ximath-32"; then :
+- 
+- 
+- $as_echo "#define USE_SMALL_INT_OPT /**/" >>confdefs.h

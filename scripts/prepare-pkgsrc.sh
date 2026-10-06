@@ -3,7 +3,15 @@
 set -eu
 umask 022
 
-[ "$#" -eq 1 ] || { echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY' >&2; exit 2; }
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] || {
+    echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY [development-toolchain]' >&2
+    exit 2
+}
+profile=${2:-}
+case "$profile" in
+    ''|development-toolchain) ;;
+    *) echo 'Unknown profile.' >&2; exit 2 ;;
+esac
 destination=$1
 case "$destination" in
     /*) ;;
@@ -36,5 +44,13 @@ for category in "$root"/pkgsrc/*; do
     }
     cp -R "$category" "$destination/$name"
 done
+if [ "$profile" = development-toolchain ]; then
+    for delta in pkgsrc-gcc16.2.patch strict-tests.patch; do
+        patch -f -E -d "$destination" -p1 -F 0 < \
+            "$root/profiles/development-toolchain/patches/$delta"
+    done
+    cp "$root/profiles/development-toolchain/mk.conf" \
+        "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
+fi
 printf '%s\n' "$expected" > "$destination/EMBERBSD-PKGSRC-REVISION"
 printf 'Prepared %s with pkgsrc %s\n' "$destination" "$expected"
