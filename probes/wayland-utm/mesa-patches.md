@@ -97,3 +97,10 @@ Mesa 26 installs `libgallium-26.2.4.so`; shared libglapi is no longer installed.
 Do not emulate its old SONAME with symlinks. Audit and rebuild Qt/GNOME/Xorg
 consumers against the common ABI before package promotion. Current source
 adaptation does not establish a full build or renderer run.
+
+The 2026-10-06 native ABI inventory found Qt6Gui 6.11.1 depends on base
+libEGL.so.0/libGL.so.3/libstdc++.so.9, while Mutter 40.2 and COGL depend on
+libEGL.so.0. Base EGL/GL/GBM require libglapi.so.1 and libdrm.so.3. The selected
+non-GLVND Mesa source instead declares libEGL.so.1/libGL.so.1 and libgallium;
+these are concrete consumer rebuild requirements. Startup pthread linkage
+is also required for clients that load worker-using libraries dynamically.

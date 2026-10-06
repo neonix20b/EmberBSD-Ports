@@ -73,6 +73,13 @@ DSO, mixed C++/C registration order, normal exit and injected allocation/
 registration failures. A plain-atexit control must reproduce cleanup failure.
 The half regression checks all 65536 encodings with FP flush off and on.
 
+On 2026-10-06 these narrow checks passed on NetBSD 11/AArch64 using base
+GCC 12.5: 64 two-DSO unload cycles, mixed C++/C order, ordinary exit, local
+ELF bindings and injected failures. Plain atexit fails the same cleanup
+contract. Patched half conversion has zero failures; pristine Mesa has 2046.
+The upstream symbol-policy check passes with the existing Python 3.13.
+These results do not establish the selected compiler, complete Mesa or JIT.
+
 [`audit-libraries.sh`](audit-libraries.sh) records ELF dynamic dependencies,
 hashes and native loaded paths for staged graphics and compositors. It rejects
 mixed Mesa/libdrm/input/LLVM/C++ runtimes and legacy shared-libglapi links.
