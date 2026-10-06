@@ -16,31 +16,134 @@ diff -ruN a/devel/gtexinfo/Makefile b/devel/gtexinfo/Makefile
  CATEGORIES=	devel sysutils
  MASTER_SITES=	${MASTER_SITE_GNU:=texinfo/}
  EXTRACT_SUFX=	.tar.xz
+diff -ruN a/devel/gtexinfo/PLIST b/devel/gtexinfo/PLIST
+--- a/devel/gtexinfo/PLIST	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/PLIST	2026-10-06 23:10:44.346052165 +0300
+@@ -12,17 +12,23 @@
+ info/texi2any_api.info
+ info/texi2any_internals.info
+ info/texinfo.info
+-lib/texi2any/ConvertXS.la
+-lib/texi2any/DocumentXS.la
+-lib/texi2any/IndicesXS.la
+-lib/texi2any/MiscXS.la
+-lib/texi2any/Parsetexi.la
+-lib/texi2any/StructuringTransfoXS.la
+-lib/texi2any/XSParagraph.la
+-lib/texi2any/libtexinfo-convert.la
+-lib/texi2any/libtexinfo-convertxs.la
+-lib/texi2any/libtexinfo.la
+-lib/texi2any/libtexinfoxs.la
++lib/texi2any/XS_extension/ConfigXS.la
++lib/texi2any/XS_extension/ConvertToTexinfoXS.la
++lib/texi2any/XS_extension/ConvertXS.la
++lib/texi2any/XS_extension/DocumentXS.la
++lib/texi2any/XS_extension/IndicesXS.la
++lib/texi2any/XS_extension/MiscXS.la
++lib/texi2any/XS_extension/Parsetexi.la
++lib/texi2any/XS_extension/ReaderXS.la
++lib/texi2any/XS_extension/StructuringTransfoXS.la
++lib/texi2any/XS_extension/TreeElementConverterXS.la
++lib/texi2any/XS_extension/TreeElementXS.la
++lib/texi2any/XS_extension/XSParagraph.la
++lib/texi2any/lib/libtexinfo-convert.la
++lib/texi2any/lib/libtexinfo-convertxs.la
++lib/texi2any/lib/libtexinfo-main.la
++lib/texi2any/lib/libtexinfo.la
++lib/texi2any/lib/libtexinfoxs.la
+ man/man1/info.1
+ man/man1/install-info.1
+ man/man1/makeinfo.1
+@@ -37,8 +43,11 @@
+ share/texi2any/Pod-Simple-Texinfo/Pod/Simple/Texinfo.pm
+ share/texi2any/Texinfo/Commands.pm
+ share/texi2any/Texinfo/Commands.pod
++share/texi2any/Texinfo/CommandsValues.pm
++share/texi2any/Texinfo/CommandsValues.pod
+ share/texi2any/Texinfo/Common.pm
+ share/texi2any/Texinfo/Config.pm
++share/texi2any/Texinfo/ConfigXS.pm
+ share/texi2any/Texinfo/Convert/ConvertXS.pm
+ share/texi2any/Texinfo/Convert/Converter.pm
+ share/texi2any/Texinfo/Convert/DocBook.pm
+@@ -52,12 +61,19 @@
+ share/texi2any/Texinfo/Convert/ParagraphNonXS.pm
+ share/texi2any/Texinfo/Convert/PlainTexinfo.pm
+ share/texi2any/Texinfo/Convert/Plaintext.pm
++share/texi2any/Texinfo/Convert/ReadDocBook.pm
++share/texi2any/Texinfo/Convert/TestReader.pm
+ share/texi2any/Texinfo/Convert/Texinfo.pm
+ share/texi2any/Texinfo/Convert/TexinfoMarkup.pm
++share/texi2any/Texinfo/Convert/TexinfoNonXS.pm
+ share/texi2any/Texinfo/Convert/TexinfoSXML.pm
+ share/texi2any/Texinfo/Convert/TexinfoXML.pm
++share/texi2any/Texinfo/Convert/TexinfoXS.pm
+ share/texi2any/Texinfo/Convert/Text.pm
+ share/texi2any/Texinfo/Convert/TextContent.pm
++share/texi2any/Texinfo/Convert/TreeElementConverter.pm
++share/texi2any/Texinfo/Convert/TreeElementConverterXS.pm
++share/texi2any/Texinfo/Convert/TreeElementReadDocBook.pm
+ share/texi2any/Texinfo/Convert/Unicode.pm
+ share/texi2any/Texinfo/Convert/Utils.pm
+ share/texi2any/Texinfo/DebugTree.pm
+@@ -65,6 +81,7 @@
+ share/texi2any/Texinfo/DocumentXS.pm
+ share/texi2any/Texinfo/Documentlanguages.pm
+ share/texi2any/Texinfo/HTMLData.pm
++share/texi2any/Texinfo/HTMLDataCSS.pm
+ share/texi2any/Texinfo/Indices.pm
+ share/texi2any/Texinfo/IndicesXS.pm
+ share/texi2any/Texinfo/ManipulateTree.pm
+@@ -74,14 +91,19 @@
+ share/texi2any/Texinfo/OutputUnits.pm
+ share/texi2any/Texinfo/Parser.pm
+ share/texi2any/Texinfo/ParserNonXS.pm
++share/texi2any/Texinfo/Reader.pm
++share/texi2any/Texinfo/ReaderNonXS.pm
+ share/texi2any/Texinfo/Report.pm
+ share/texi2any/Texinfo/StructTransfXS.pm
+ share/texi2any/Texinfo/Structuring.pm
+ share/texi2any/Texinfo/Tests.pm
+ share/texi2any/Texinfo/Transformations.pm
+ share/texi2any/Texinfo/Translations.pm
+-share/texi2any/Texinfo/XS/parsetexi/Parsetexi.pm
++share/texi2any/Texinfo/TreeElement.pm
++share/texi2any/Texinfo/TreeElementNonXS.pm
++share/texi2any/Texinfo/UnicodeData.pm
+ share/texi2any/Texinfo/XSLoader.pm
++share/texi2any/XSTexinfo/Parsetexi.pm
+ share/texi2any/ext/epub3.pm
+ share/texi2any/ext/highlight_syntax.pm
+ share/texi2any/ext/latex2html.pm
+@@ -94,6 +116,7 @@
+ share/texi2any/js/info.css
+ share/texi2any/js/info.js
+ share/texi2any/js/modernizr.js
++share/texi2any/load_txi_modules
+ share/texinfo/htmlxref.cnf
+ share/texinfo/texindex.awk
+ share/texinfo/texinfo.dtd
 diff -ruN a/devel/gtexinfo/distinfo b/devel/gtexinfo/distinfo
 --- a/devel/gtexinfo/distinfo	2026-10-02 21:24:59.000000000 +0300
-+++ b/devel/gtexinfo/distinfo	2026-10-06 23:01:43.442934341 +0300
++++ b/devel/gtexinfo/distinfo	2026-10-06 23:10:44.352364022 +0300
 @@ -1,13 +1,10 @@
  $NetBSD: distinfo,v 1.68 2025/10/05 01:58:37 js Exp $
  
 -BLAKE2s (texinfo-7.2.tar.xz) = 2bb5d9812df4689d0c2e379077df5f617ea3e07c7bfe49669e9de74f9bb43e50
 -SHA512 (texinfo-7.2.tar.xz) = 8e67337ae12a552fc620c43725507a4978710ea6630e98b0f5e98eb3f79a90e191dde5225699aa6217c26f171d277461f76150f0459cd07b40c3234d2f3d89bf
 -Size (texinfo-7.2.tar.xz) = 6408432 bytes
--SHA1 (patch-configure) = 207dc69f65b29db3ba937bd82a664c27f237fd57
--SHA1 (patch-gnulib_lib_malloc_dynarray-skeleton.c) = 6e683e689bfc7573bf9d62d2bc9a1abb64d521df
--SHA1 (patch-gnulib_lib_mbiter.h) = 3d932f20f69ec2531a2b797dcc02252e19ace163
--SHA1 (patch-gnulib_lib_mbuiter.h) = a248a56818e46ca501f9dc57415c40f766a065f8
++BLAKE2s (texinfo-7.3.tar.xz) = 7c595fca0e941075378970492d5fc6320c75f4786915bc189f8d40a510ce22af
++SHA512 (texinfo-7.3.tar.xz) = fb1a16df67f870e79c31f4b96d8431d9c944eb84e5aa71e9d94890417ce63047918d55620fa63bd582232c47e9b412a6f95a11a2479f53f40e92e49bc018d926
++Size (texinfo-7.3.tar.xz) = 6940392 bytes
+ SHA1 (patch-configure) = 207dc69f65b29db3ba937bd82a664c27f237fd57
+ SHA1 (patch-gnulib_lib_malloc_dynarray-skeleton.c) = 6e683e689bfc7573bf9d62d2bc9a1abb64d521df
+ SHA1 (patch-gnulib_lib_mbiter.h) = 3d932f20f69ec2531a2b797dcc02252e19ace163
+ SHA1 (patch-gnulib_lib_mbuiter.h) = a248a56818e46ca501f9dc57415c40f766a065f8
 -SHA1 (patch-info_filesys.h) = 7cc1819ac02deae957f95b84b11bed20609d0235
 -SHA1 (patch-tp_Texinfo_XS_configure) = 9aa1b01463cee53bb137e545719fdbbe41b9a175
 -SHA1 (patch-tp_Texinfo_XS_parsetexi_parser.c) = ba0ac6fc04dbf4cd5a555bce8071ca6fee2d66a5
 -SHA1 (patch-util_texi2dvi) = 72be61e607a393edf0cbd67747f7e0b360441466
-+BLAKE2s (texinfo-7.3.tar.xz) = 7c595fca0e941075378970492d5fc6320c75f4786915bc189f8d40a510ce22af
-+SHA512 (texinfo-7.3.tar.xz) = fb1a16df67f870e79c31f4b96d8431d9c944eb84e5aa71e9d94890417ce63047918d55620fa63bd582232c47e9b412a6f95a11a2479f53f40e92e49bc018d926
-+Size (texinfo-7.3.tar.xz) = 6940392 bytes
-+SHA1 (patch-configure) = d6495a41e5bcf21f6637c024bb9e9434e2cd8f2c
-+SHA1 (patch-gnulib_lib_malloc_dynarray-skeleton.c) = 3c0ed7431704c281eb9088c0bf478c78355bc3b7
-+SHA1 (patch-gnulib_lib_mbiter.h) = d4b230562fd46288e92ee3b3317f16360818bb37
-+SHA1 (patch-gnulib_lib_mbuiter.h) = 4207fd9ee7ef84a2f83f578af004df8fdda48ddf
-+SHA1 (patch-info_filesys.h) = 458e926cd285ab4f26717571c62f91f79cb8d55f
++SHA1 (patch-info_filesys.h) = 552172c092b9efd7bb48ebe95a4c364ab98c068e
 diff -ruN a/devel/gtexinfo/patches/patch-info_filesys.h b/devel/gtexinfo/patches/patch-info_filesys.h
 --- a/devel/gtexinfo/patches/patch-info_filesys.h	2026-10-02 21:24:59.000000000 +0300
 +++ b/devel/gtexinfo/patches/patch-info_filesys.h	2026-10-06 23:01:43.371686099 +0300
@@ -175,7 +278,7 @@ diff -ruN a/math/mpcomplex/PLIST b/math/mpcomplex/PLIST
 +lib/pkgconfig/mpc.pc
 diff -ruN a/math/mpcomplex/distinfo b/math/mpcomplex/distinfo
 --- a/math/mpcomplex/distinfo	2026-10-02 21:24:59.000000000 +0300
-+++ b/math/mpcomplex/distinfo	2026-10-06 23:01:43.416425480 +0300
++++ b/math/mpcomplex/distinfo	2026-10-06 23:10:44.352650481 +0300
 @@ -1,6 +1,6 @@
  $NetBSD: distinfo,v 1.12 2023/10/29 18:06:32 wiz Exp $
  
@@ -186,7 +289,7 @@ diff -ruN a/math/mpcomplex/distinfo b/math/mpcomplex/distinfo
 +BLAKE2s (mpc-1.4.1.tar.xz) = ec9bf1d17fe24b9877c80724c1ea20ad102359783338c8836132feb7dcaee86e
 +SHA512 (mpc-1.4.1.tar.xz) = cdfbe64e80e30df64dbd536e8104a6bb10471582415d5b45a1dd30eb2a312781b38389a9531243413c14e0f88866a35159b20e77900718f28c1030253a1305b9
 +Size (mpc-1.4.1.tar.xz) = 531992 bytes
-+SHA1 (patch-src_get__x.c) = 8af29cee299334807fe6c55bc2bc5a1f9d4d5c62
++SHA1 (patch-src_get__x.c) = 7f57257e355c1577edd2c88f9edcf713188ae668
 diff -ruN a/math/mpcomplex/patches/patch-src_get__x.c b/math/mpcomplex/patches/patch-src_get__x.c
 --- a/math/mpcomplex/patches/patch-src_get__x.c	2026-10-02 21:24:59.000000000 +0300
 +++ b/math/mpcomplex/patches/patch-src_get__x.c	2026-10-06 23:01:43.371512162 +0300

@@ -43,6 +43,14 @@ Three obsolete patches are removed with these concrete reasons:
   disabling it is obsolete.
 
 The recipe retains Perl XS and external Perl module dependencies.
+Its PLIST follows the 7.3 Automake install destinations: Perl example
+converters still install below `Texinfo/Convert`, XS modules move into
+`lib/texi2any/XS_extension`, and C libraries into `lib/texi2any/lib`.
+The enabled XS/C build also installs new reader, tree-element, configuration
+and Texinfo conversion modules, `libtexinfo-main`, and `load_txi_modules`.
+Native staging and pkgsrc `check-files` must confirm the complete payload.
+Patch checksums use pkgsrc's RCS-ID filtering; the source regression invokes
+pkgsrc's own checksum verifier and rejects a deliberately unfiltered digest.
 Do not weaken pkgsrc's Perl ABI constraints or vendor another Perl runtime
 to get through configuration. The pinned Perl 5.44.0 recipe supplies the
 required ABI; replacing an installed older Perl requires rollback packages

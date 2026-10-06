@@ -18,6 +18,35 @@ grep -q '16.2.0' "$work/lang/gcc16/version.mk"
 grep -q 'gcc-16.2.0.tar.xz' "$work/lang/gcc16/distinfo"
 grep -q 'mpc-1.4.1' "$work/math/mpcomplex/Makefile"
 grep -q 'texinfo-7.3' "$work/devel/gtexinfo/Makefile"
+# Use pkgsrc's own verifier, not a second implementation of its RCS filtering.
+# Only SHA1 is needed for patches; shasum provides a portable digest adapter.
+cat > "$work/digest" <<'EOF'
+#!/bin/sh
+[ "$1" = SHA1 ] || exit 2
+shift
+shasum -a 1 "$@" | awk '{ print $1 }'
+EOF
+chmod +x "$work/digest"
+for recipe in lang/gcc16 math/mpcomplex devel/gtexinfo; do
+    DIGEST="$work/digest" awk -f "$root/upstream/pkgsrc/mk/checksum/checksum.awk" \
+        -- -p "$work/$recipe/distinfo" "$work/$recipe"/patches/patch-*
+done
+# Reproduce the review defect: an unfiltered patch hash must be rejected.
+raw=$(shasum -a 1 "$work/devel/gtexinfo/patches/patch-configure" | awk '{ print $1 }')
+sed "s/^SHA1 (patch-configure) = .*/SHA1 (patch-configure) = $raw/" \
+    "$work/devel/gtexinfo/distinfo" > "$work/bad-distinfo"
+if DIGEST="$work/digest" awk -f "$root/upstream/pkgsrc/mk/checksum/checksum.awk" \
+    -- -p "$work/bad-distinfo" "$work/devel/gtexinfo/patches/patch-configure" \
+    > "$work/bad-checksum.log" 2>&1; then
+    echo 'pkgsrc unexpectedly accepted the unfiltered patch checksum.' >&2
+    exit 1
+fi
+# These moved/new outputs caught a real 7.2-to-7.3 packaging regression.
+for output in Texinfo/CommandsValues.pm Texinfo/ConfigXS.pm \
+    Texinfo/Convert/IXIN.pm Texinfo/Convert/TreeElementReadDocBook.pm \
+    XSTexinfo/Parsetexi.pm load_txi_modules; do
+    grep -qx "share/texi2any/$output" "$work/devel/gtexinfo/PLIST"
+done
 [ ! -e "$work/lang/gcc16/patches/patch-isl_configure" ]
 if grep '^TEST_TARGET=' "$work/lang/gcc16/Makefile" | grep -q '||'; then exit 1; fi
 if sh "$root/scripts/prepare-pkgsrc.sh" "$work/unknown" unknown; then exit 1; fi
