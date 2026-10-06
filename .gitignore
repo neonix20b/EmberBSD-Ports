@@ -4,3 +4,4 @@ packages/
 work/
 work.*/
 *.core
+!/pkgsrc/**/Makefile

@@ -1,0 +1,7 @@
+@comment EmberBSD CPU runtime package
+bin/whisper-bench
+bin/whisper-cli
+bin/whisper-quantize
+share/doc/whisper-cpp/SOURCE
+share/licenses/whisper-cpp/LICENSE
+share/licenses/whisper-cpp/THIRD-PARTY-NOTICES

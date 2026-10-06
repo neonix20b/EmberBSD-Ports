@@ -10,6 +10,9 @@ archives or store generated binaries.
 
 ## Current contents
 
+- [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
+  llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
+  text generation, WAV transcription, and loopback HTTP inference verified.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
   libdrm, Mesa, wlroots and labwc sources and patches; native builds and
   software EGL readback pass. Native KMS and GPU runtime remain unverified.
@@ -22,8 +25,9 @@ archives or store generated binaries.
   Enlightenment 0.27.1 use system Lua 5.4 through compatibility patches.
   Native software X11 rendering, window management and session exit pass.
 
-These entries are experimental probes, not installable packages or phone
-images. Each recipe records its tested runtime and platform boundaries.
+The Wayland, Phosh and Enlightenment entries remain experimental probes,
+not installable packages or phone images. Each recipe records its tested
+runtime and platform boundaries.
 Helpers stop on errors and keep output in private user directories.
 
 ## Package integration
@@ -34,10 +38,12 @@ by EmberBSD's NetBSD-derived package environment. It provides upstream
 fetching, checksums, patches, dependency handling and binary packaging.
 This repository does not implement another package manager.
 
-Future installable recipes should use pkgsrc's `Makefile`, `distinfo`,
-`DESCR`, `PLIST` and `patches/` conventions. Experimental probes remain
-under `probes/` until their package integration and runtime are validated.
-No pkgsrc overlay or binary package repository is provided yet.
+`upstream/pkgsrc` pins the pkgsrc-2026Q3 base as a Git submodule. Local recipes
+under `pkgsrc/` use ordinary `Makefile`, `distinfo`, `DESCR`, and `PLIST` files.
+`scripts/prepare-pkgsrc.sh` exports that pinned base and adds the local recipes
+to an independent working tree. Experimental probes remain under `probes/`
+until their package integration and runtime are validated. No signed binary
+package repository is provided yet.
 
 ## Contributions and provenance
 

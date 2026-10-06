@@ -1,0 +1,10 @@
+@comment EmberBSD CPU runtime package
+bin/llama-bench
+bin/llama-cli
+bin/llama-completion
+bin/llama-quantize
+bin/llama-server
+share/doc/llama-cpp/SOURCE
+share/licenses/llama-cpp/LICENSE
+share/licenses/llama-cpp/THIRD-PARTY-NOTICES
+share/licenses/llama-cpp/vendor_cpp-httplib_LICENSE

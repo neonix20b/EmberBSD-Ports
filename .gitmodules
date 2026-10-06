@@ -1,0 +1,4 @@
+[submodule "upstream/pkgsrc"]
+	path = upstream/pkgsrc
+	url = https://github.com/NetBSD/pkgsrc.git
+	branch = pkgsrc-2026Q3

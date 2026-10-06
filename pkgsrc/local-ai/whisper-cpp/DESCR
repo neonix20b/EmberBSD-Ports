@@ -1,0 +1,4 @@
+whisper.cpp executes local Whisper speech recognition models on the CPU.
+This package includes file transcription, benchmarking, and model quantization.
+It uses its own statically linked GGML and does not require a cloud service.
+Model weights are acquired separately and retain their own licenses.

@@ -1,0 +1,4 @@
+llama.cpp executes local language models stored in GGUF format. This CPU-only
+package includes text generation, a loopback-capable HTTP server, benchmarking,
+and quantization tools. Its bundled GGML is statically linked into the tools.
+Model weights are acquired separately and retain their own licenses.
