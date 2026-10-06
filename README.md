@@ -8,6 +8,15 @@ against pinned hashes. This repository carries our recipes and patches,
 with their provenance and validation limits. It does not mirror source
 archives or store generated binaries.
 
+## Purpose
+
+Ports supplies the native dependencies used by EmberBSD applications and
+examples. It owns the delta over pkgsrc: package recipes, portability patches,
+source provenance, shared dependency profiles and reproducible build probes.
+Kernel changes belong in EmberBSD; application demonstrations belong in
+Examples. A source probe remains experimental until packaging and the intended
+runtime behavior are validated.
+
 ## Current contents
 
 - [Robotics and ROS 2](profiles/robotics/README.md): Zenoh-Pico 1.10.1
@@ -65,3 +74,28 @@ Distinguish a configured project, a compiled library, passing tests and
 a working application. Keep logs and downloaded artifacts outside Git.
 Examples that use these ports belong in
 [EmberBSD Examples](https://github.com/neonix20b/EmberBSD-Examples).
+
+## Related EmberBSD projects
+
+[EmberBSD](https://github.com/apovalixin/EmberBSD#emberbsd-ecosystem) is the
+central project and the entry point for the ecosystem.
+
+- [EmberBSD](https://github.com/apovalixin/EmberBSD) — OS, drivers, boards and system builds.
+- [EmberBSD-Examples](https://github.com/neonix20b/EmberBSD-Examples) — standalone demonstrations using these dependencies.
+- [EmberBSD-Runtime](https://github.com/neonix20b/EmberBSD-Runtime) — application execution and device operations; design stage.
+- [EmberBSD-SDK](https://github.com/neonix20b/EmberBSD-SDK) — application contracts and development tools; design stage.
+- [Ember-Agent-Skills](https://github.com/neonix20b/Ember-Agent-Skills) — instructions for AI coding assistants, ports and tested contributions.
+
+## Connect developer skills
+
+Use a Codex CLI with plugin support:
+
+```sh
+codex plugin marketplace add neonix20b/Ember-Agent-Skills --ref main
+codex plugin add emberbsd-development@ember-agent-skills
+```
+
+Start a new conversation and ask `$emberbsd-repository-guide` to prepare a
+port, run the appropriate checks and open a tested contribution. Follow the
+[installation, verification and update guide](https://github.com/neonix20b/Ember-Agent-Skills#install-in-codex)
+for the complete procedure and other assistant environments.
