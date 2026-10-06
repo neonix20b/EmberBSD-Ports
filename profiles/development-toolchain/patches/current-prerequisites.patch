@@ -18,7 +18,7 @@ diff -ruN a/devel/gtexinfo/Makefile b/devel/gtexinfo/Makefile
  EXTRACT_SUFX=	.tar.xz
 diff -ruN a/devel/gtexinfo/PLIST b/devel/gtexinfo/PLIST
 --- a/devel/gtexinfo/PLIST	2026-10-02 21:24:59.000000000 +0300
-+++ b/devel/gtexinfo/PLIST	2026-10-06 23:10:44.346052165 +0300
++++ b/devel/gtexinfo/PLIST	2026-10-06 23:37:27.389917455 +0300
 @@ -12,17 +12,23 @@
  info/texi2any_api.info
  info/texi2any_internals.info
@@ -115,12 +115,16 @@ diff -ruN a/devel/gtexinfo/PLIST b/devel/gtexinfo/PLIST
  share/texi2any/ext/epub3.pm
  share/texi2any/ext/highlight_syntax.pm
  share/texi2any/ext/latex2html.pm
-@@ -94,6 +116,7 @@
+@@ -94,6 +116,10 @@
  share/texi2any/js/info.css
  share/texi2any/js/info.js
  share/texi2any/js/modernizr.js
+-share/texinfo/htmlxref.cnf
 +share/texi2any/load_txi_modules
- share/texinfo/htmlxref.cnf
++share/texinfo/htmlxref.d/Texinfo_GNU.cnf
++share/texinfo/htmlxref.d/Texinfo_nonGNU.cnf
++share/texinfo/info-hooks/gnu-manuals-locations.dat
++share/texinfo/info-hooks/manual-not-found
  share/texinfo/texindex.awk
  share/texinfo/texinfo.dtd
 diff -ruN a/devel/gtexinfo/distinfo b/devel/gtexinfo/distinfo

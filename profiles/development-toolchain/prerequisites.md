@@ -49,6 +49,8 @@ converters still install below `Texinfo/Convert`, XS modules move into
 `lib/texi2any/XS_extension`, and C libraries into `lib/texi2any/lib`.
 The enabled XS/C build also installs new reader, tree-element, configuration
 and Texinfo conversion modules, `libtexinfo-main`, and `load_txi_modules`.
+Native staging also verified the split `share/texinfo/htmlxref.d` data and
+the Unix `info-hooks` script/data replacing the former `htmlxref.cnf` entry.
 Native staging and pkgsrc `check-files` must confirm the complete payload.
 Patch checksums use pkgsrc's RCS-ID filtering; the source regression invokes
 pkgsrc's own checksum verifier and rejects a deliberately unfiltered digest.

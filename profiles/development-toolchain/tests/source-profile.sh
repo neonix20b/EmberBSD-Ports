@@ -47,6 +47,11 @@ for output in Texinfo/CommandsValues.pm Texinfo/ConfigXS.pm \
     XSTexinfo/Parsetexi.pm load_txi_modules; do
     grep -qx "share/texi2any/$output" "$work/devel/gtexinfo/PLIST"
 done
+for output in htmlxref.d/Texinfo_GNU.cnf htmlxref.d/Texinfo_nonGNU.cnf \
+    info-hooks/gnu-manuals-locations.dat info-hooks/manual-not-found; do
+    grep -qx "share/texinfo/$output" "$work/devel/gtexinfo/PLIST"
+done
+if grep -qx 'share/texinfo/htmlxref.cnf' "$work/devel/gtexinfo/PLIST"; then exit 1; fi
 [ ! -e "$work/lang/gcc16/patches/patch-isl_configure" ]
 if grep '^TEST_TARGET=' "$work/lang/gcc16/Makefile" | grep -q '||'; then exit 1; fi
 if sh "$root/scripts/prepare-pkgsrc.sh" "$work/unknown" unknown; then exit 1; fi
