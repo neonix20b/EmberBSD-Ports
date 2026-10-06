@@ -5,7 +5,11 @@
   `[UMD][KMD].align with 4.3.0 release`.
 - Its `Linux/bash_env_setup.sh` declares UMD/KMD 6.1.1. The revision, not that release
   label alone, pins these sources. Archive URL/SHA256: [sources.tsv](sources.tsv).
-- Inspection and macOS ARM64 software-contract checks: 2026-10-07.
+- Inspection and software-contract checks: 2026-10-07 (local date).
+  macOS ARM64/Clang 21 and NetBSD 11 AArch64 VM/GCC 16.2 both pass the
+  13-case isolated production-method contract, with the same original RED
+  controls. The VM used the committed source export, not a guest-only patch.
+  This is not a full UMD/KMD build or hardware/model validation.
 
 The patch modifies only `Linux/driver/umd/src/device/aipu/aipu.cpp` and
 `aipu.h`. Upstream Apache-2.0 notices and copyright remain intact; the original

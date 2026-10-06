@@ -54,9 +54,11 @@ positive-descriptor destruction and open-error handling remain passing controls.
 
 ## Verified and unresolved scope
 
-On the macOS ARM64 host, the patched isolated production methods pass all
-13 cases. The original fails 11 with the expected diagnostics and passes the
-two unchanged controls. This does not establish a full UMD build on NetBSD,
+On macOS ARM64 with Clang 21 and the NetBSD 11 AArch64 VM with GCC 16.2,
+the patched isolated production methods pass all 13 cases. Both platforms
+reproduce 11 expected original failures and two unchanged passing controls.
+The native VM contract run took 1.08 seconds with 104,048 KiB peak RSS.
+This does not establish a full UMD build on NetBSD,
 Linux ioctl encoding compatibility, DMA/mapping/coherency, matched kernel
 support, board execution, model execution or repeated-inference recovery.
 No package, kernel, firmware, compiler selection or board was changed.
