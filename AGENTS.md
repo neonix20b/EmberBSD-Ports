@@ -15,6 +15,14 @@ probe or recipe documentation before making changes.
   Do not conceal AI assistance.
 - Prefer pkgsrc conventions for installable package recipes. Do not
   introduce a new package manager merely to apply patches.
+- Avoid parallel versions of libraries, interpreters and tools for individual
+  applications. Choose one current supported dependency version and adapt its
+  consumers through these ports. Check upstream updates and compatibility
+  patches before adding an older version alongside it. Any exception needs
+  a concrete incompatibility, a documented reason and a removal condition.
+  Temporary comparison builds must not become permanent dependencies; remove
+  unneeded versions after validation. Test affected consumers when updating
+  a shared dependency.
 - Keep experimental probes separate from validated package recipes.
   Preserve error exit statuses and do not replace missing system
   behavior with silent stubs.
