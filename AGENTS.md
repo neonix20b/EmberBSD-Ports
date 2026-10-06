@@ -35,6 +35,17 @@ probe or recipe documentation before making changes.
   language, not Python. Document upstream Python dependencies honestly.
 - Select checks that address the change. A successful configuration or
   dependency build does not establish an application's runtime support.
+- Keep the public overview of EmberBSD current when a substantial port,
+  example, validation result, regression or support withdrawal changes it.
+  Update this repository's affected descriptions and review
+  [the central README](https://github.com/apovalixin/EmberBSD#what-this-fork-adds-to-netbsd-11),
+  even when no OS code changed. Explain the user benefit and our adaptation
+  or verified scenario, link to public instructions, and name the test
+  platform and validation level. Distinguish packages from source probes,
+  builds from runtime, VMs from boards, and plans from usable capabilities.
+  Check current published sources, links and consistency. Follow the
+  accepting repository's contribution rules for the companion update;
+  identify any unpublished overview change in the task handoff.
 - Keep build products, source archives, full logs, credentials and
   machine-specific addresses out of Git. Use private build directories.
 - Installations, session changes and hardware deployment must be within
