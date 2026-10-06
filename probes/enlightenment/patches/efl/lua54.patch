@@ -1,0 +1,297 @@
+diff -ruN a/meson.build b/meson.build
+--- a/meson.build	2025-03-17 18:43:43.000000000 +0300
++++ b/meson.build	2026-10-06 20:28:32.578876789 +0300
+@@ -261,8 +261,14 @@
+ 
+ evas_static_list = []
+ 
+-luaold_interpreters = [
+-  ['lua',     ['>=5.1.0', '<5.3.0']],
++lua_interpreters = [
++  ['lua',     ['>=5.1.0', '<5.5.0']],
++  ['lua54',   ['>=5.4.0', '<5.5.0']],
++  ['lua-5.4', ['>=5.4.0', '<5.5.0']],
++  ['lua5.4',  ['>=5.4.0', '<5.5.0']],
++  ['lua53',   ['>=5.3.0', '<5.4.0']],
++  ['lua-5.3', ['>=5.3.0', '<5.4.0']],
++  ['lua5.3',  ['>=5.3.0', '<5.4.0']],
+   ['lua51',   ['>=5.1.0', '<5.2.0']],
+   ['lua-5.1', ['>=5.1.0', '<5.2.0']],
+   ['lua5.1',  ['>=5.1.0', '<5.2.0']],
+@@ -276,7 +282,7 @@
+ 
+ if get_option('lua-interpreter') == 'lua'
+   config_h.set('ENABLE_LUA_OLD', '1')
+-  foreach l : luaold_interpreters
++  foreach l : lua_interpreters
+     lua = dependency(l[0], version: l[1], required:false)
+     lua_pc_name = l[0]
+     if lua.found()
+@@ -286,6 +292,9 @@
+   if not lua.found()
+     error('Lua not found')
+   endif
++  if lua.version().version_compare('>=5.3') and (have_elua or get_option('bindings').contains('lua'))
++    error('Lua 5.3/5.4 support covers Edje and Evas; disable elua and Lua bindings')
++  endif
+   if have_elua
+     message('Using experimental Elua with interpreter support...')
+   endif
+diff -ruN a/src/bin/edje/edje_cc_out.c b/src/bin/edje/edje_cc_out.c
+--- a/src/bin/edje/edje_cc_out.c	2025-03-17 18:43:43.000000000 +0300
++++ b/src/bin/edje/edje_cc_out.c	2026-10-06 20:28:32.580227874 +0300
+@@ -2537,7 +2537,11 @@
+         _edje_lua_error_and_abort(L, err_code, sc);
+         return;
+      }
++#if LUA_VERSION_NUM >= 503
++   lua_dump(L, _edje_lua_script_writer, &dat, 0);
++#else
+    lua_dump(L, _edje_lua_script_writer, &dat);
++#endif
+ #else // LUA_PLAIN_TEXT
+    dat.buf = (char *)lua_tostring(L, -1);
+    dat.size = strlen(dat.buf);
+diff -ruN a/src/lib/edje/edje_lua2.c b/src/lib/edje/edje_lua2.c
+--- a/src/lib/edje/edje_lua2.c	2025-03-17 18:43:43.000000000 +0300
++++ b/src/lib/edje/edje_lua2.c	2026-10-06 20:28:32.579431623 +0300
+@@ -2,6 +2,7 @@
+ 
+ #include "edje_private.h"
+ #include <ctype.h>
++#include "efl_lua_compat.h"
+ 
+ #define RASTER_FORGOT_WHY "this is here."
+ 
+@@ -458,7 +459,7 @@
+               if (lua_isnumber(L, j)) // Stack usage [-0, +0, -]
+                 {
+                    int *v = va_arg(vl, int *);
+-                   *v = lua_tointeger(L, j); // Stack usage [-0, +0, -]
++                   *v = _efl_lua_toint(L, j); // Stack usage [-0, +0, -]
+                    n++;
+                 }
+               break;
+@@ -977,7 +978,7 @@
+ _elua_messagesend(lua_State *L)  // Stack usage [-2, +2, ev] plus [-2, +2] for every element if it's an array message.
+ {
+    Edje *ed = (Edje *)_elua_table_ptr_get(L, _elua_key);     // Stack usage [-2, +2, e]
+-   int id = luaL_checkinteger(L, 1); // Stack usage [-0, +0, v]
++   int id = _efl_lua_checkint(L, 1); // Stack usage [-0, +0, v]
+    const char *type = luaL_checkstring(L, 2); // Stack usage [-0, +0, v]
+    if (!type) return 0;
+    if (!strcmp(type, "none"))
+@@ -1001,7 +1002,7 @@
+    else if (!strcmp(type, "int"))
+      {
+         Edje_Message_Int *emsg;
+-        int val = luaL_checkinteger(L, 3); // Stack usage [-0, +0, v]
++        int val = _efl_lua_checkint(L, 3); // Stack usage [-0, +0, v]
+         emsg = alloca(sizeof(Edje_Message_Int));
+         emsg->val = val;
+         _edje_util_message_send(ed, EDJE_QUEUE_APP, EDJE_MESSAGE_INT, id, emsg);
+@@ -1053,7 +1054,7 @@
+           {
+              lua_pushinteger(L, i); // Stack usage [-0, +1, -]
+              lua_gettable(L, 3); // Stack usage [-1, +1, e]
+-             emsg->val[i - 1] = lua_tointeger(L, -1); // Stack usage [-0, +0, -]
++             emsg->val[i - 1] = _efl_lua_toint(L, -1); // Stack usage [-0, +0, -]
+              lua_pop(L, 1); // Stack usage [-n, +0, -]
+           }
+         _edje_util_message_send(ed, EDJE_QUEUE_APP, EDJE_MESSAGE_INT_SET, id, emsg);
+@@ -1085,7 +1086,7 @@
+         const char *str = luaL_checkstring(L, 3); // Stack usage [-0, +0, v]
+         emsg = alloca(sizeof(Edje_Message_String_Int));
+         emsg->str = (char *)str;
+-        emsg->val = luaL_checkinteger(L, 4); // Stack usage [-0, +0, v]
++        emsg->val = _efl_lua_checkint(L, 4); // Stack usage [-0, +0, v]
+         _edje_util_message_send(ed, EDJE_QUEUE_APP, EDJE_MESSAGE_STRING_INT, id, emsg);
+      }
+    else if (!strcmp(type, "strfloat"))
+@@ -1116,7 +1117,7 @@
+           {
+              lua_pushinteger(L, i); // Stack usage [-0, +1, -]
+              lua_gettable(L, 4); // Stack usage [-1, +1, e]
+-             emsg->val[i - 1] = lua_tointeger(L, -1); // Stack usage [-0, +0, -]
++             emsg->val[i - 1] = _efl_lua_toint(L, -1); // Stack usage [-0, +0, -]
+              lua_pop(L, 1); // Stack usage [-n, +0, -]
+           }
+         _edje_util_message_send(ed, EDJE_QUEUE_APP, EDJE_MESSAGE_STRING_INT_SET, id, emsg);
+@@ -1640,7 +1641,7 @@
+ {
+    _ELUA_PLANT_EVAS_OBJECT(Edje_Lua_Map, _elua_evas_map_meta, _elua_map_free)
+    // Stack usage [-7, +8, em]
+-   elo->map = evas_map_new(luaL_checkinteger(L, 1)); // Stack usage [-0, +0, v]
++   elo->map = evas_map_new(_efl_lua_checkint(L, 1)); // Stack usage [-0, +0, v]
+    return 1;
+ }
+ 
+@@ -3132,10 +3133,10 @@
+       {
+          if (_elua_scan_params(L, 3, "%r %g %b %a", &r, &g, &b, &a) > 0) // Stack usage [-0, +0, m] unless it's in a table [-4, +4, e]
+            {
+-              evas_map_point_color_set(elm->map, lua_tointeger(L, 2), r, g, b, a);
++              evas_map_point_color_set(elm->map, _efl_lua_toint(L, 2), r, g, b, a);
+               // Stack usage [-0, +0, -]
+            }
+-         evas_map_point_color_get(elm->map, lua_tointeger(L, 2), &r, &g, &b, &a);
++         evas_map_point_color_get(elm->map, _efl_lua_toint(L, 2), &r, &g, &b, &a);
+          // Stack usage [-0, +0, -]
+          _elua_ret(L, "%r %g %b %a", r, g, b, a);
+          // Stack usage [-8, +9, em]
+@@ -3183,10 +3184,10 @@
+ 
+    if (_elua_scan_params(L, 2, "%x %y %z", &x, &y, &z) > 0)     // Stack usage [-0, +0, m] unless it's in a table [-3, +3, e]
+      {
+-        evas_map_point_coord_set(elm->map, lua_tointeger(L, 2), x, y, z);
++        evas_map_point_coord_set(elm->map, _efl_lua_toint(L, 2), x, y, z);
+         // Stack usage [-0, +0, -]
+      }
+-   evas_map_point_coord_get(elm->map, lua_tointeger(L, 2), &x, &y, &z);
++   evas_map_point_coord_get(elm->map, _efl_lua_toint(L, 2), &x, &y, &z);
+    // Stack usage [-0, +0, -]
+    _elua_ret(L, "%x %y %z", x, y, z);
+    // Stack usage [-6, +7, em]
+@@ -3321,7 +3322,7 @@
+       {
+          Edje_Lua_Obj *obj2 = (Edje_Lua_Obj *)lua_touserdata(L, 2);      // Stack usage [-0, +0, -]
+          const Edje_Lua_Evas_Object *source = (Edje_Lua_Evas_Object *)obj2;
+-         Evas_Coord z = lua_tointeger(L, 3);
++         Evas_Coord z = _efl_lua_toint(L, 3);
+ 
+          if (!_elua_isa(obj2, _elua_evas_meta)) return 0;
+          evas_map_util_points_populate_from_object_full(elm->map, source->evas_obj, z);
+@@ -3334,7 +3335,7 @@
+ 
+          if ((n = _elua_scan_params(L, 2, "%x %y %w %h", &x, &y, &w, &h)) > 0) // Stack usage [-0, +0, m] unless it's in a table [-4, +4, e]
+            {
+-              evas_map_util_points_populate_from_geometry(elm->map, x, y, w, h, lua_tointeger(L, 2 + n));
++              evas_map_util_points_populate_from_geometry(elm->map, x, y, w, h, _efl_lua_toint(L, 2 + n));
+            }
+          break;
+       }
+diff -ruN a/src/lib/efl/efl_lua_compat.h b/src/lib/efl/efl_lua_compat.h
+--- a/src/lib/efl/efl_lua_compat.h	1970-01-01 03:00:00.000000000 +0300
++++ b/src/lib/efl/efl_lua_compat.h	2026-10-06 20:28:32.488988675 +0300
+@@ -0,0 +1,34 @@
++#ifndef EFL_LUA_COMPAT_H
++#define EFL_LUA_COMPAT_H
++
++#include <limits.h>
++#include <lua.h>
++#include <lauxlib.h>
++
++/* Lua 5.1/5.2 truncated fractional numbers in lua_tointeger(). Lua 5.3+
++ * requires an exact integer and otherwise returns zero. Edje animations
++ * and Evas filters intentionally accept fractional coordinates and colors.
++ * Preserve their truncation while rejecting undefined C integer conversions.
++ */
++static inline int
++_efl_lua_number_to_int(lua_State *L, lua_Number value)
++{
++   if (!((long double)value > (long double)INT_MIN - 1.0L &&
++         (long double)value < (long double)INT_MAX + 1.0L))
++     return luaL_error(L, "number outside the EFL integer range");
++   return (int)value;
++}
++
++static inline int
++_efl_lua_toint(lua_State *L, int index)
++{
++   return _efl_lua_number_to_int(L, lua_tonumber(L, index));
++}
++
++static inline int
++_efl_lua_checkint(lua_State *L, int index)
++{
++   return _efl_lua_number_to_int(L, luaL_checknumber(L, index));
++}
++
++#endif
+diff -ruN a/src/lib/evas/filters/evas_filter_parser.c b/src/lib/evas/filters/evas_filter_parser.c
+--- a/src/lib/evas/filters/evas_filter_parser.c	2025-03-17 18:43:43.000000000 +0300
++++ b/src/lib/evas/filters/evas_filter_parser.c	2026-10-06 20:28:32.579922999 +0300
+@@ -2,17 +2,10 @@
+ 
+ #include <stdarg.h>
+ 
+-// Lua breaks API all the time
+-#ifdef ENABLE_LUA_OLD
+-// For 5.2 --> 5.1 compatibility
+-# define LUA_COMPAT_ALL
+-// For 5.3 --> 5.1 compatibility
+-# define LUA_COMPAT_5_1
+-#endif
+-
+ #include <lua.h>
+ #include <lualib.h>
+ #include <lauxlib.h>
++#include "efl_lua_compat.h"
+ 
+ #define FILTERS_LEGACY_COMPAT
+ 
+@@ -2009,7 +2002,7 @@
+       case VT_INT:
+         if (!lua_isnumber(L, i))
+           goto fail;
+-        param->value.i = lua_tointeger(L, i);
++        param->value.i = _efl_lua_toint(L, i);
+         break;
+       case VT_REAL:
+         if (!lua_isnumber(L, i))
+@@ -2051,13 +2044,13 @@
+            if (!lua_istable(L, cid))
+              goto fail;
+            lua_getfield(L, cid, "a");
+-           A = lua_tointeger(L, -1);
++           A = _efl_lua_toint(L, -1);
+            lua_getfield(L, cid, "r");
+-           R = lua_tointeger(L, -1);
++           R = _efl_lua_toint(L, -1);
+            lua_getfield(L, cid, "g");
+-           G = lua_tointeger(L, -1);
++           G = _efl_lua_toint(L, -1);
+            lua_getfield(L, cid, "b");
+-           B = lua_tointeger(L, -1);
++           B = _efl_lua_toint(L, -1);
+            lua_pop(L, pop + 4);
+            evas_color_argb_premul(A, &R, &G, &B);
+            param->value.c = ARGB_JOIN(A, R, G, B);
+@@ -2431,7 +2424,11 @@
+                   const luaL_Reg *meta, const luaL_Reg *methods)
+ {
+    luaL_newmetatable(L, name);
++#if LUA_VERSION_NUM >= 502
++   luaL_setfuncs(L, meta, 0);
++#else
+    luaL_register(L, NULL, meta);
++#endif
+    lua_pushliteral(L, "__metatable");
+    lua_pushvalue(L, -2);
+    lua_rawset(L, -3);
+@@ -2439,7 +2436,11 @@
+      {
+         lua_pushliteral(L, _lua_methods_table);
+         lua_newtable(L);
++#if LUA_VERSION_NUM >= 502
++        luaL_setfuncs(L, methods, 0);
++#else
+         luaL_register(L, NULL, methods);
++#endif
+         lua_rawset(L, -3);
+      }
+    lua_pushvalue(L, -1);
+diff -ruN a/src/lib/evas/filters/lua/color.lua b/src/lib/evas/filters/lua/color.lua
+--- a/src/lib/evas/filters/lua/color.lua	2025-03-17 18:43:43.000000000 +0300
++++ b/src/lib/evas/filters/lua/color.lua	2026-10-06 20:28:32.580413457 +0300
+@@ -225,7 +225,9 @@
+    end,
+ 
+    __tostring = function (self)
+-      return string.format('#%02x%02x%02x%02x', self.r, self.g, self.b, self.a)
++      -- Lua 5.3+ requires integers for %x; color arithmetic can be fractional.
++      return string.format('#%02x%02x%02x%02x', math.floor(self.r),
++                           math.floor(self.g), math.floor(self.b), math.floor(self.a))
+    end,
+ 
+    __call = function (mt, ...)

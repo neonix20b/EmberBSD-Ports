@@ -18,6 +18,10 @@ archives or store generated binaries.
   Stevia screen-keyboard input in English/Russian, a saved text document
   and the patched GTK4 Demo were verified.
 
+- [Enlightenment desktop](probes/enlightenment/README.md): EFL 1.28.1 and
+  Enlightenment 0.27.1 use system Lua 5.4 through compatibility patches.
+  Native software X11 rendering, window management and session exit pass.
+
 These entries are experimental probes, not installable packages or phone
 images. Each recipe records its tested runtime and platform boundaries.
 Helpers stop on errors and keep output in private user directories.

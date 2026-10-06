@@ -3,3 +3,4 @@
 patch-* -whitespace
 # Keep the upstream license copy byte-for-byte, including its blank lines.
 probes/phosh/gtk4/LICENSES/COPYING -whitespace
+probes/enlightenment/LICENSES/** -whitespace

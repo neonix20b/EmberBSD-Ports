@@ -1,0 +1,12 @@
+Honor the selected installation prefix for the session D-Bus service.
+Do not install a private EFL build into the system dbus package's prefix.
+Local EmberBSD change; AI-assisted, not submitted upstream.
+
+--- dbus-services/meson.build.orig
++++ dbus-services/meson.build
+@@ -15,4 +15,4 @@
+   input: 'org.enlightenment.Ethumb.service.in',
+   output: 'org.enlightenment.Ethumb.service',
+   configuration: org_enlightenment_ethumb_service_config,
+-  install_dir: dep.get_pkgconfig_variable('session_bus_services_dir'))
++  install_dir: join_paths(dir_data, 'dbus-1', 'services'))

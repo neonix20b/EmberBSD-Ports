@@ -1,0 +1,402 @@
+Subject: Add an explicit disposable nested-session profile
+Origin: EmberBSD; AI-assisted local adaptation, not submitted upstream
+Base: Enlightenment 0.27.1 plus pkgsrc-wip 60460008d0c770590e46fc229035b8e454472a80
+Default system-services=true retains the upstream system integration.
+
+--- a/data/config/standard/meson.build
++++ b/data/config/standard/meson.build
+@@ -15,8 +15,15 @@
+ ##### boilerplate config build + install of icons/dirs
+ i = 0
+ foreach cd: src
++  config_src = cd + '.src'
++  if (cd == 'e' or cd == 'e_bindings') and not get_option('system-services')
++    config_src = custom_target('standard private ' + cd,
++                               input: config_src,
++                               output: cd + '-private.src',
++                               command: [find_program('sh'), files('private-profile.sh'), '@INPUT@', '@OUTPUT@'])
++  endif
+   custom_target(' '.join(['config_dist', dir, cd]),
+-		input        : cd + '.src',
++		input        : config_src,
+ 		output       : cd + '.cfg',
+ 		command      : [eet_cmd, '-e', '@OUTPUT@', 'config', '@INPUT@', '1'],
+ 		install      : true,
+--- a/data/config/standard/private-profile.sh
++++ b/data/config/standard/private-profile.sh
+@@ -0,0 +1,52 @@
++#!/bin/sh
++# SPDX-License-Identifier: BSD-2-Clause
++# Derive a disposable nested-session profile from the upstream standard profile.
++set -eu
++[ "$#" -eq 2 ] || { echo 'Usage: private-profile.sh INPUT.src OUTPUT.src' >&2; exit 2; }
++awk '
++BEGIN {
++    split("backlight battery bluez5 connman cpufreq geolocation lokker mixer packagekit polkit temperature", names)
++    for (i in names) disabled[names[i]] = 1
++    split("desk_lock halt halt_now reboot suspend suspend_smart suspend_hybrid suspend_then_hibernate hibernate backlight backlight_adjust volume_decrease volume_increase volume_mute", actions)
++    for (i in actions) unavailable[actions[i]] = 1
++}
++function emit_block() {
++    if (!(name in disabled) && !(action in unavailable)) printf "%s", block
++    block = ""
++    name = ""
++    action = ""
++    collecting = 0
++}
++/group "E_Config_(Module|Gadcon_Client|Syscon_Action|Binding_[A-Za-z]+)" struct \{/ {
++    collecting = 1
++    depth = 0
++}
++collecting {
++    block = block $0 "\n"
++    if ($0 ~ /value "name" string: "/) {
++        name = $0
++        sub(/^.*value "name" string: "/, "", name)
++        sub(/";.*/, "", name)
++    }
++    if ($0 ~ /value "action" string: "/) {
++        action = $0
++        sub(/^.*value "action" string: "/, "", action)
++        sub(/";.*/, "", action)
++    }
++    line = $0
++    depth += gsub(/\{/, "{", line)
++    depth -= gsub(/\}/, "}", line)
++    if (depth == 0) emit_block()
++    next
++}
++/value "(desklock_start_locked|desklock_on_suspend|desklock_autolock_screensaver|screensaver_enable|screensaver_suspend|screensaver_hibernate|screensaver_suspend_on_ac|dpms_enable|dpms_standby_enable|dpms_suspend_enable|dpms_off_enable|backlight\.idle_dim|backlight\.ddc)" / {
++    sub(/: [0-9]+;/, ": 0;")
++}
++{ print }
++END {
++    if (collecting) {
++        print "Unterminated profile group" > "/dev/stderr"
++        exit 1
++    }
++}
++' "$1" > "$2"
+--- a/meson.build
++++ b/meson.build
+@@ -10,6 +10,7 @@
+ ver      = meson.project_version()
+ 
+ config_h = configuration_data()
++config_h.set10('E_SYSTEM_SERVICES', get_option('system-services'))
+ 
+ e_version   = ver.split('.')
+ 
+@@ -220,7 +221,7 @@
+   add_global_link_arguments('-framework CoreFoundation', '-framework IOKit')
+ endif
+ 
+-if get_option('pam') == true
++if get_option('system-services') and get_option('pam') == true
+   if cc.has_header('security/pam_appl.h')
+     config_h.set('HAVE_PAM', '1')
+     dep_pam = cc.find_library('pam', required: true)
+@@ -410,7 +411,9 @@
+ 
+ subdir('doc')
+ 
+-meson.add_install_script('meson/meson_inst.sh'   , suid_exes)
++if get_option('system-services')
++  meson.add_install_script('meson/meson_inst.sh', suid_exes)
++endif
+ meson.add_install_script('meson/meson_modules.sh', module_files)
+ 
+ wayland = 'false'
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -1,3 +1,8 @@
++option('system-services',
++       type: 'boolean',
++       value: true,
++       description: 'Enable privileged helpers, authentication and system power services; disable for a disposable nested session')
++
+ option('install-sysactions',
+ 	type: 'boolean',
+ 	value: true,
+--- a/src/bin/e_alert_main.c
++++ b/src/bin/e_alert_main.c
+@@ -253,7 +253,7 @@
+    if (setup_display())
+      {
+         s = getenv("E_ALERT_SYSTEM_BIN");
+-        if (s && s[0])
++        if (E_SYSTEM_SERVICES && s && s[0])
+           {
+              putenv("E_ALERT_BACKLIGHT_RESET=1");
+              ecore_exe_pipe_run
+--- a/src/bin/e_auth.c
++++ b/src/bin/e_auth.c
+@@ -13,7 +13,8 @@
+    E_EVENT_AUTH_FPRINT_AVAILABLE = ecore_event_type_new();
+    E_EVENT_AUTH_FPRINT_STATUS = ecore_event_type_new();
+ 
+-   conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
++   if (e_system_services_enabled_get())
++     conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
+    return 1;
+ }
+ 
+@@ -37,6 +38,11 @@
+ 
+    pwlen = strlen(passwd);
+ 
++   if (!e_system_services_enabled_get())
++     {
++        ERR("Password authentication is unavailable: system services are disabled");
++        goto out;
++     }
+    snprintf(buf, sizeof(buf),
+             "%s/enlightenment/utils/enlightenment_ckpasswd pw",
+             e_prefix_lib_get());
+@@ -74,6 +80,11 @@
+ 
+    pwlen = strlen(passwd);
+ 
++   if (!e_system_services_enabled_get())
++     {
++        ERR("Polkit authentication is unavailable: system services are disabled");
++        goto out;
++     }
+    snprintf(buf, sizeof(buf),
+             "%s/enlightenment/utils/enlightenment_ckpasswd pk",
+             e_prefix_lib_get());
+@@ -362,6 +373,11 @@
+    Eldbus_Object *obj;
+    Eldbus_Proxy *proxy;
+ 
++   if (!e_system_services_enabled_get())
++     {
++        ERR("Fingerprint authentication is unavailable: system services are disabled");
++        return;
++     }
+    printf("FP: e_auth_fprint_begin\n");
+    if (conn)
+      {
+--- a/src/bin/e_backlight.c
++++ b/src/bin/e_backlight.c
+@@ -615,6 +615,8 @@
+ #endif
+    // ask enlightenment_system to list backlight devices. this is async so we have
+    // to respond to the device listing later
++   if (!e_system_services_enabled_get()) return;
++
+    _devices_pending_ops++;
+    e_system_handler_del("bklight-list", _backlight_system_list_cb, NULL);
+    e_system_handler_add("bklight-list", _backlight_system_list_cb, NULL);
+--- a/src/bin/e_desklock.c
++++ b/src/bin/e_desklock.c
+@@ -363,6 +363,11 @@
+ E_API int
+ e_desklock_show(Eina_Bool suspend)
+ {
++   if (!e_system_services_enabled_get())
++     {
++        ERR("Screen locking is unavailable: system services are disabled");
++        return EINA_FALSE;
++     }
+    _e_desklock_want = EINA_TRUE;
+    if ((_e_desklock_block > 0) && (!desklock_manual)) return EINA_FALSE;
+    return _desklock_show_internal(suspend);
+--- a/src/bin/e_sys.c
++++ b/src/bin/e_sys.c
+@@ -459,6 +459,23 @@
+    eldbus_proxy_send(login1_manger_proxy, m2, NULL, NULL, -1);
+ }
+ 
++static Eina_Bool
++_e_sys_action_allowed(E_Sys_Action a)
++{
++   if (e_system_services_enabled_get()) return EINA_TRUE;
++
++   switch (a)
++     {
++      case E_SYS_EXIT:
++      case E_SYS_RESTART:
++      case E_SYS_EXIT_NOW:
++      case E_SYS_LOGOUT:
++        return EINA_TRUE;
++      default:
++        return EINA_FALSE;
++     }
++}
++
+ /* externally accessible functions */
+ EINTERN int
+ e_sys_init(void)
+@@ -467,6 +484,10 @@
+    Eldbus_Object *obj;
+    Eldbus_Message *m;
+ 
++   E_EVENT_SYS_SUSPEND = ecore_event_type_new();
++   E_EVENT_SYS_RESUME = ecore_event_type_new();
++   if (!e_system_services_enabled_get()) return 1;
++
+    conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
+    obj = eldbus_object_get(conn, "org.freedesktop.login1",
+                            "/org/freedesktop/login1");
+@@ -509,8 +530,6 @@
+           }
+      }
+ 
+-   E_EVENT_SYS_SUSPEND = ecore_event_type_new();
+-   E_EVENT_SYS_RESUME = ecore_event_type_new();
+    return 1;
+ }
+ 
+@@ -570,6 +589,8 @@
+ E_API int
+ e_sys_action_possible_get(E_Sys_Action a)
+ {
++   if (!_e_sys_action_allowed(a)) return 0;
++
+    switch (a)
+      {
+       case E_SYS_EXIT:
+@@ -613,6 +634,11 @@
+ {
+    int ret = 0;
+ 
++   if (!_e_sys_action_allowed(a))
++     {
++        ERR("System action %d is unavailable: system services are disabled", a);
++        return 0;
++     }
+    if (_e_sys_action_current != E_SYS_NONE)
+      {
+         _e_sys_current_action();
+@@ -674,6 +700,11 @@
+ {
+    int ret = 0;
+ 
++   if (!_e_sys_action_allowed(a))
++     {
++        ERR("System action %d is unavailable: system services are disabled", a);
++        return 0;
++     }
+    e_config_save_flush();
+    if (_e_sys_action_current != E_SYS_NONE)
+      {
+--- a/src/bin/e_system.c
++++ b/src/bin/e_system.c
+@@ -271,6 +271,12 @@
+ }
+ 
+ /* externally accessible functions */
++EINTERN Eina_Bool
++e_system_services_enabled_get(void)
++{
++   return E_SYSTEM_SERVICES;
++}
++
+ EINTERN int
+ e_system_init(void)
+ {
+@@ -282,7 +288,10 @@
+    _handler_data = ecore_event_handler_add(ECORE_EXE_EVENT_DATA, _cb_exe_data, NULL);
+    _msg_buf = eina_binbuf_new();
+    _handlers = eina_hash_string_superfast_new(NULL);
+-   _system_spawn();
++   if (e_system_services_enabled_get())
++     _system_spawn();
++   else
++     WRN("System services are disabled by the build configuration");
+    return 1;
+ }
+ 
+@@ -324,6 +333,11 @@
+    int printed = 0;
+    va_list ap;
+ 
++   if (!e_system_services_enabled_get())
++     {
++        ERR("System command '%s' is unavailable: system services are disabled", cmd);
++        return;
++     }
+    if (!_system_exe)
+      {
+         ERR("Trying to send system command to non-existent process");
+--- a/src/bin/e_system.h
++++ b/src/bin/e_system.h
+@@ -6,6 +6,7 @@
+ 
+ EINTERN int e_system_init(void);
+ EINTERN int e_system_shutdown(void);
++EINTERN Eina_Bool e_system_services_enabled_get(void);
+ 
+ E_API void e_system_send(const char *cmd, const char *fmt, ...) EINA_PRINTF(2, 3);
+ E_API void e_system_handler_add(const char *cmd, void (*func) (void *data, const char *params), void *data);
+--- a/src/bin/meson.build
++++ b/src/bin/meson.build
+@@ -525,28 +525,33 @@
+            install            : true
+           )
+ 
+-executable('enlightenment_sys',
+-           [ 'e_sys_main.c' ],
+-           include_directories: include_directories('../..'),
+-           dependencies       : [dep_eina, dep_ecore, dep_bluez],
+-           c_args             : suid_cflags,
+-           link_args          : suid_ldflags,
+-           install_dir        : dir_e_utils,
+-           install            : true
+-          )
+-suid_exes += join_paths(dir_e_utils, 'enlightenment_sys')
++if get_option('system-services')
++  executable('enlightenment_sys',
++             [ 'e_sys_main.c' ],
++             include_directories: include_directories('../..'),
++             dependencies       : [dep_eina, dep_ecore, dep_bluez],
++             c_args             : suid_cflags,
++             link_args          : suid_ldflags,
++             install_dir        : dir_e_utils,
++             install            : true
++            )
++  suid_exes += join_paths(dir_e_utils, 'enlightenment_sys')
+ 
+-executable('enlightenment_ckpasswd',
+-           'e_ckpasswd_main.c',
+-           include_directories: include_directories('../..'),
+-           dependencies : deps_ckpass,
+-           c_args       : suid_cflags,
+-           link_args    : suid_ldflags,
+-           install_dir  : dir_e_utils,
+-           install      : true
+-          )
+-suid_exes += join_paths(dir_e_utils, 'enlightenment_ckpasswd')
++  executable('enlightenment_ckpasswd',
++             'e_ckpasswd_main.c',
++             include_directories: include_directories('../..'),
++             dependencies : deps_ckpass,
++             c_args       : suid_cflags,
++             link_args    : suid_ldflags,
++             install_dir  : dir_e_utils,
++             install      : true
++            )
++  suid_exes += join_paths(dir_e_utils, 'enlightenment_ckpasswd')
++
++endif
+ 
+ subdir('e_fm')
+-subdir('system')
++if get_option('system-services')
++  subdir('system')
++endif
+ subdir('tools')
+--- a/src/modules/meson.build
++++ b/src/modules/meson.build
+@@ -85,7 +85,9 @@
+ 
+   opt = '-'.join(m.split('_'))
+ 
+-  if get_option(opt) == true
++  if (m == 'polkit' or m == 'lokker') and not get_option('system-services')
++    disable = true
++  elif get_option(opt) == true
+     subdir(m)
+   else
+     disable = true

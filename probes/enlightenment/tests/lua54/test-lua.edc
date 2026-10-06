@@ -1,0 +1,23 @@
+collections {
+   group {
+      name: "lua54";
+      lua_script_only: 1;
+      lua_script {
+         -- Keep the object reachable through the resize callback.
+         local rect = edje.rect();
+         rect:geom(5.75, 9.25, 17.875, 13.5);
+         rect:color(200.5, 40.75, 20.25, 255);
+         rect:show();
+         local g = rect:geom();
+         local c = rect:color();
+         assert(g.x == 5 and g.y == 9 and g.w == 17 and g.h == 13);
+         assert(c.r == 200 and c.g == 40 and c.b == 20 and c.a == 255);
+         assert(_VERSION == "Lua 5.4");
+         edje.messagesend(501, "str", _VERSION);
+         edje.messagesend(502, "intset", {g.x, g.y, g.w, g.h, c.r, c.g, c.b, c.a});
+         function resize(w, h)
+            rect:geom(5.75, 9.25, 17.875, 13.5);
+         end
+      }
+   }
+}
