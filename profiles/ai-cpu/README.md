@@ -94,6 +94,9 @@ establish a signed binary release channel.
 ## Source and build policy
 
 - llama.cpp revision: `8345f333951c661d166b00e6f9362e553768f292`.
+- This retained 0.6.0 snapshot is one commit after the stable `v0.6.0` tag
+  (`d81235049384534c167caea52b85a694f6103d14`). The additional commit changes
+  the disabled Hexagon backend; this CPU profile keeps its existing installation.
 - whisper.cpp revision: `927cfce34f31707e17f2bff35c349632fb9e2c3a`.
 - Upstream GitHub archives are checked by pkgsrc `distinfo`; SHA256 and source
   identity are also recorded in each package's installed `SOURCE` file.
@@ -121,3 +124,10 @@ synthesis, and a C+Lua agent have not been validated by this profile.
 The VM's network remained available; the inference commands used local model
 files and a loopback HTTP connection. A physical disconnected-device trial
 is a separate acceptance step.
+
+The [local-document example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/ai/local-knowledge)
+extends this same installed engine with SQLite FTS5 retrieval and a model-selected
+verbatim quotation. On 2026-10-07 the AArch64 VM produced an actual grounded
+answer using one CPU thread. The application rejects missing evidence, forged
+source IDs and quotes absent from retrieved documents. This is extractive QA,
+not a general quality benchmark or a separate engine package.

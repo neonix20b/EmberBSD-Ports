@@ -31,6 +31,10 @@ runtime behavior are validated.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.
+- [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
+  installed C consumers pass FTS5/JSON, transactions, concurrent readers and
+  process-crash/reopen checks. A C application retrieves local documents and
+  validates quotations from the existing llama.cpp CPU server on AArch64.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
   libdrm, Mesa, wlroots and labwc sources and patches; native builds and
   software EGL readback pass. Native KMS and GPU runtime remain unverified.
