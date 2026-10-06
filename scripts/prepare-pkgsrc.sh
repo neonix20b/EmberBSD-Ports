@@ -27,7 +27,14 @@ trap 'exit 143' HUP TERM
 git -C "$root/upstream/pkgsrc" archive --format=tar --output="$archive" "$expected"
 mkdir "$destination"
 tar -xf "$archive" -C "$destination"
-[ ! -e "$destination/local-ai" ] || { echo 'Upstream already has local-ai; review the overlay.' >&2; exit 2; }
-cp -R "$root/pkgsrc/local-ai" "$destination/local-ai"
+for category in "$root"/pkgsrc/*; do
+    [ -d "$category" ] || continue
+    name=${category##*/}
+    [ ! -e "$destination/$name" ] && [ ! -L "$destination/$name" ] || {
+        echo "Upstream already has $name; review the overlay." >&2
+        exit 2
+    }
+    cp -R "$category" "$destination/$name"
+done
 printf '%s\n' "$expected" > "$destination/EMBERBSD-PKGSRC-REVISION"
 printf 'Prepared %s with pkgsrc %s\n' "$destination" "$expected"

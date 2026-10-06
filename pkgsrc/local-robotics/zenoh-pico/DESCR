@@ -1,0 +1,4 @@
+Zenoh-Pico is a native C implementation of Eclipse Zenoh for constrained
+devices. This package provides the shared library, headers, pkg-config and
+CMake development interfaces. The EmberBSD robotics example uses direct TCP
+peers and an explicit C++ bridge to ROS 2; this library is not a ROS RMW.

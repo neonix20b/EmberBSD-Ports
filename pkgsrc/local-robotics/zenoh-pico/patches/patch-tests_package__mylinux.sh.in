@@ -1,0 +1,45 @@
+$NetBSD$
+
+Use bounded parallelism for BSD make and the tested library when pkgsrc
+suppresses build-tree RPATH. Local AI-assisted patch; not submitted upstream.
+
+--- tests/package_mylinux.sh.in.orig
++++ tests/package_mylinux.sh.in
+@@ -16,7 +16,7 @@
+ cmake -S "$EXAMPLE_DIR" -B "$PACKAGE_BUILD_DIR" \
+   -DZENOH_PICO_SOURCE_DIR="$SOURCE_DIR" \
+   -DZENOH_PICO_CONFIG_INCLUDE_DIR="@PROJECT_BINARY_DIR@/include"
+-cmake --build "$PACKAGE_BUILD_DIR" -j
++cmake --build "$PACKAGE_BUILD_DIR" --parallel 2
+ cmake --install "$PACKAGE_BUILD_DIR" --prefix "$PREFIX_DIR"
+ 
+ cmake -S "$SOURCE_DIR" -B "$SHARED_BUILD_DIR" \
+@@ -27,14 +27,14 @@
+   -DCMAKE_PREFIX_PATH="$PREFIX_DIR" \
+   -DZP_PLATFORM=mylinux
+ 
+-cmake --build "$SHARED_BUILD_DIR" -j --target \
++cmake --build "$SHARED_BUILD_DIR" --parallel 2 --target \
+   z_endpoint_test \
+   z_tls_test \
+   z_executor_test \
+   z_background_executor_test \
+   z_local_loopback_test
+ 
+-ctest --test-dir "$SHARED_BUILD_DIR" --output-on-failure \
++LD_LIBRARY_PATH="$SHARED_BUILD_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ctest --test-dir "$SHARED_BUILD_DIR" --output-on-failure \
+   -R '^z_endpoint_test$|^z_tls_test$|^z_executor_test$|^z_background_executor_test$|^z_local_loopback_test$' \
+   --timeout 420
+ 
+@@ -48,9 +48,9 @@
+   -DCMAKE_PREFIX_PATH="$PREFIX_DIR" \
+   -DZP_PLATFORM=mylinux
+ 
+-cmake --build "$STATIC_BUILD_DIR" -j --target zenohpico_static
++cmake --build "$STATIC_BUILD_DIR" --parallel 2 --target zenohpico_static
+ cmake --install "$STATIC_BUILD_DIR" --prefix "$INSTALL_DIR"
+ 
+ cmake -S "$EXAMPLE_DIR/consumer" -B "$CONSUMER_BUILD_DIR" \
+   -DCMAKE_PREFIX_PATH="$INSTALL_DIR;$PREFIX_DIR"
+-cmake --build "$CONSUMER_BUILD_DIR" -j --target consumer
++cmake --build "$CONSUMER_BUILD_DIR" --parallel 2 --target consumer

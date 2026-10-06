@@ -14,11 +14,31 @@ cat > "$work/bin/git" <<'STUB'
 #!/bin/sh
 case "$*" in
     *ls-files*) printf '160000 1111111111111111111111111111111111111111 0\tupstream/pkgsrc\n' ;;
-    *rev-parse*) printf '2222222222222222222222222222222222222222\n' ;;
+    *rev-parse*)
+        if [ "${FAKE_MATCH:-0}" = 1 ]; then
+            printf '1111111111111111111111111111111111111111\n'
+        else
+            printf '2222222222222222222222222222222222222222\n'
+        fi ;;
+    *archive*)
+        for arg do
+            case "$arg" in --output=*) output=${arg#--output=} ;; esac
+        done
+        tar -cf "$output" -C "$FAKE_ARCHIVE" . ;;
     *) exit 99 ;;
 esac
 STUB
 chmod +x "$work/bin/git"
 if PATH="$work/bin:$PATH" sh "$root/scripts/prepare-pkgsrc.sh" "$work/mismatch"; then exit 1; fi
 [ ! -e "$work/mismatch" ]
-echo 'PASS: existing destination, relative path, mismatched submodule revision'
+mkdir "$work/upstream"
+FAKE_MATCH=1 FAKE_ARCHIVE="$work/upstream" PATH="$work/bin:$PATH" \
+    sh "$root/scripts/prepare-pkgsrc.sh" "$work/combined"
+[ -f "$work/combined/local-ai/llama-cpp/Makefile" ]
+[ -f "$work/combined/local-robotics/zenoh-pico/Makefile" ]
+mkdir "$work/upstream/local-robotics"
+printf upstream > "$work/upstream/local-robotics/sentinel"
+if FAKE_MATCH=1 FAKE_ARCHIVE="$work/upstream" PATH="$work/bin:$PATH" \
+    sh "$root/scripts/prepare-pkgsrc.sh" "$work/collision"; then exit 1; fi
+[ "$(cat "$work/collision/local-robotics/sentinel")" = upstream ]
+echo 'PASS: path/revision rejection, both overlays, upstream collision preserved'

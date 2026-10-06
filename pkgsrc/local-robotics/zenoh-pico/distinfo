@@ -1,0 +1,7 @@
+$NetBSD$
+
+BLAKE2s (zenoh-pico-1.10.1-e1ab223a28aaebb5dec1e70d98eab152332f777a.tar.gz) = c0bf8247fb31f99b1f4034e4193c515fec30228c5ce0f0f7733f17e91edc14d5
+SHA512 (zenoh-pico-1.10.1-e1ab223a28aaebb5dec1e70d98eab152332f777a.tar.gz) = 98dcac24ae5cdc7ac4a27f108b8fca3a734b02dcddfb1e5358bde65cf2c28d685916fa393dbbac026c527b050807771f816da92beabf00630daa8d1fc1606ba0
+Size (zenoh-pico-1.10.1-e1ab223a28aaebb5dec1e70d98eab152332f777a.tar.gz) = 807450 bytes
+SHA1 (patch-tests_package__mylinux.sh.in) = 2c7cd1883a51b8bc9f9518ebf6f2c88da00f18e5
+SHA1 (patch-src_link_transport_tcp_tcp__posix.c) = 6074244d23eeaa0a9f62390ae4477e6732ba932a
