@@ -1,104 +1,105 @@
 # Native Wayland and VirGL build probe
 
-This experimental probe builds libdrm, Mesa with the VirGL Gallium driver,
-wlroots and labwc in a private prefix on EmberBSD/NetBSD 11 aarch64.
-It does not replace the installed X11 libraries or change the login session.
-Kernel DRM/KMS and an accelerated host VirtIO-GPU are separate prerequisites.
-A successful build does not establish native Wayland or GPU acceleration.
+This experimental probe stages the common libdrm, Mesa, wlroots and labwc
+stack on EmberBSD/NetBSD 11 AArch64. It preserves the installed X11 libraries
+and login session. Kernel DRM/KMS and an accelerated host VirtIO-GPU are
+separate prerequisites; a build does not prove GPU acceleration.
 
-## Sources and patches
-
-[`sources.tsv`](sources.tsv) records the exact upstream archive URLs and
-SHA256. Each archive is checked before extraction. The downloaded bytes also
-matched the SHA512 in pkgsrc's pinned `distinfo` during initial preparation.
+## Selected source and acceptance level
 
 | Component | Version | Upstream license |
 |---|---|---|
 | libdrm | 2.4.134 | MIT and source-file notices |
-| Mesa | 21.3.9 | MIT and source-file notices |
+| Mesa | 26.2.4 | MIT and source-file notices |
 | wlroots | 0.19.3 | MIT |
 | labwc | 0.9.7 | GPL-2.0-only |
 
-The imported NetBSD adaptations under `patches/` are copied unchanged from
+[`sources.tsv`](sources.tsv) pins original archive URLs and SHA256, checked
+before extraction. Mesa 26.2.4 replaces the former 21.3.9 source selection.
+The current source recipe and narrow portability regressions are prepared;
+**complete Mesa 26 build and renderer runtime remain pending** on the common
+toolchain. Configuration does not establish a validated graphics stack.
+
+The [Mesa patch inventory](mesa-patches.md) explains all retained, replaced
+and removed adaptations, including original pkgsrc identifiers. Non-Mesa
+patches retain their imports from
 [pkgsrc 0491f5e57e8fba00998bf1a6c0958ef421fefaa1](https://github.com/NetBSD/pkgsrc/tree/0491f5e57e8fba00998bf1a6c0958ef421fefaa1):
-`x11/libdrm`, `graphics/MesaLib`, `wayland/wlroots`, `wayland/labwc` and
-`sysutils/seatd`.
-Their NetBSD identifiers and provenance notes are retained. These are pkgsrc
-patches; this probe does not claim upstream acceptance.
+x11/libdrm, wayland/wlroots, wayland/labwc and sysutils/seatd.
+Local AI-assisted fixes are not submitted upstream. Original source
+copyright and licenses remain unchanged. Our shell/C/C++ probes use the
+included BSD-2-Clause license.
 
-Local AI-assisted adaptations are not submitted upstream:
+## Common toolchain and private build
 
-- libdrm and Mesa symbol tests apply their existing ELF bookkeeping-symbol
-  allowlist to NetBSD. Missing public symbols and unknown API exports remain
-  errors.
-- Mesa's dispatch-index test uses POSIX expressions understood by NetBSD sed.
-- Mesa's half-to-float conversion normalizes with integer operations. The
-  original floating-point intermediate loses binary16 subnormals when the
-  process flushes binary32 subnormals. Its exhaustive 65536-value test exposed
-  2046 failures on the target VM before the fix and passes afterward.
+Use common GCC 16.2.0 C/C++ runtime, LLVM 23.1.2 shared library,
+Meson 1.12.1 and Python 3.14.8. Absolute `CC`, `CXX`, `LLVM_CONFIG`,
+`PYTHON` and `PKG_CONFIG` paths may select their common staging location.
+The helper verifies versions and records tool hashes and metadata. It refuses
+older installed LLVM instead of disabling llvmpipe. Python/Mako remain
+upstream build dependencies; no project helper is Python.
 
-Source license and copyright notices remain in the original archives.
-The project-owned shell helpers and regression test use the included
-BSD-2-Clause license; that license does not relicense upstream patches.
+The package environment supplies Ninja, Bison, Flex, Mako, seatd,
+libdisplay-info, libsfdo, hwdata, Wayland/protocols, libxkbcommon, pixman,
+libudev-bsd, expat, zlib/zstd, libepoll-shim, glib2, cairo, pango, librsvg,
+libxml2 and X11/XCB development metadata. This source probe is not a package
+dependency resolver. Complete the common toolchain transition first.
 
-The probe follows these pkgsrc versions to keep a known NetBSD adaptation
-base. It enables VirGL explicitly; pkgsrc's MesaLib recipe leaves it disabled.
-Mesa uses softpipe as its optional software fallback. LLVM is disabled in this
-private build: the installed LLVM 21 is newer than this Mesa release's supported
-LLVM interfaces. The installed GNOME llvmpipe stack remains separate.
+Build as an ordinary user into a new absolute directory. Set `INPUT_PREFIX`
+to the accepted private absolute-pointer libopeninput build described below.
+The helper preserves that selection while rebuilding wlroots/labwc.
+
+```sh
+INPUT_PREFIX="$HOME/.cache/emberbsd-libopeninput-build/install" \
+    sh build.sh "$HOME/.cache/emberbsd-wayland-current"
+```
+
+The optional second argument supplies the four archives locally, with the
+same hash checks. `JOBS` defaults to one; this also bounds Meson's implicit
+Ninja test-target rebuilds. Artifacts go into `install/`; source receipts,
+tool/library metadata and stage logs remain under `log/`. Failures preserve
+their status. Nothing overwrites package-owned shared libraries.
+
+The Mesa profile enables classic VirGL, softpipe, llvmpipe with LLVM ORC JIT,
+EGL, GBM, GLES and X11/Wayland GLX. Current Meson options replace the obsolete
+Mesa 21 options. Vulkan, Rusticl, video frontends and unrelated physical
+drivers/tools are disabled. This does not enable the kernel VirGL feature.
+
+## Regression and integration checks
+
+The helper runs upstream Meson tests plus actual-source DSO lifetime,
+half conversion and symbol-policy regressions under `tests/`.
+The DSO regression checks two owner-local copies, 64 unload cycles, an unused
+DSO, mixed C++/C registration order, normal exit and injected allocation/
+registration failures. A plain-atexit control must reproduce cleanup failure.
+The half regression checks all 65536 encodings with FP flush off and on.
+
+[`audit-libraries.sh`](audit-libraries.sh) records ELF dynamic dependencies,
+hashes and native loaded paths for staged graphics and compositors. It rejects
+mixed Mesa/libdrm/input/LLVM/C++ runtimes and legacy shared-libglapi links.
+Supply affected Qt, GNOME and Xorg consumer objects as further arguments for
+their separate migration audit. Never add fake SONAME compatibility links.
+
+After building, run the [Examples EGL/session checks](https://github.com/neonix20b/EmberBSD-Examples/tree/main/desktop/wayland-utm):
+64 allocation/render/destruction cycles checking every pixel with both softpipe
+and llvmpipe, normal exit/unload, GLX, native input and client sharing.
+Record actual paths again in live processes. A staged loader audit does not
+prove dynamically opened drivers or compositor runtime.
+
+The former Mesa 21.3.9 build passed 81 Mesa tests and 64 software EGL pixel
+cycles on 2026-10-06. Its 2D KMS session and physical keyboard/pointer checks
+passed with the matched experimental kernel and input library. Those results
+are **not transferred to Mesa 26**. Keep the old prefix only for comparison/
+recovery; remove it after current Mesa and the rebuilt compositor pass the
+same lifecycle/input/native-session checks. Further retention requires a
+named consumer incompatibility and a removal condition.
 
 ## Native render identity prerequisite
 
 The [libdrm identity probe](native-identity.md) uses matched kernel metadata
-without primary master or global PCI access. Its standalone build preserves
-the active desktop and does not select or install a Mesa stack. Host/native
-contracts and the isolated library build pass. Full matched kernel rebuilds
-and runtime acceptance are pending.
-
-## Build
-
-Use an ordinary user, an absolute new build directory and a compiler/toolchain
-appropriate for NetBSD 11. The helper never elevates its own privileges.
-Install dependencies through the normal package environment first:
-
-```sh
-pkgin install meson ninja-build bison flex py313-mako \
-    seatd libopeninput libdisplay-info libsfdo \
-    hwdata xcb-util-errors
-```
-
-The existing desktop environment supplies Wayland, Wayland protocols,
-libxkbcommon, pixman, libudev-bsd, expat, zlib, zstd, libepoll-shim, glib2,
-cairo, pango, librsvg, libxml2, XCB and related development metadata.
-Meson reports any missing or insufficient dependency and the helper stops.
-This is not yet a complete pkgsrc package or dependency resolver.
-
-Meson, upstream Mesa generators and libdrm tests require Python 3.13 and Mako.
-The project helper itself is shell. Set `PYTHON` only to another compatible
-absolute interpreter path; `JOBS` defaults to three.
-
-```sh
-sh build.sh "$HOME/.cache/emberbsd-wayland-build"
-```
-
-An optional second argument supplies a directory containing the four exact
-archives, with the same SHA256 checks. The build directory must not exist.
-Artifacts are under `install/`; source receipts, package inventory and each
-stage's output are under `log/`. Errors preserve their exit status and logs.
-The explicit private rpath and build-time pkg-config paths select this Mesa
-and libdrm. Record actual loaded paths again during runtime validation.
-
-On 2026-10-06 the final native build passed Mesa's 81 tests, labwc's three
-tests and three libdrm tests, with one libdrm device-dependent skip. wlroots
-defines no tests in this configuration. A separate EGL probe passed 64
-allocate/render/readback cycles with every pixel checked using softpipe,
-including normal context destruction and process exit. The tested loaded
-EGL, GLES, GBM and libdrm paths all belonged to this private prefix.
-
-The pkgsrc Mesa adaptations require `HAVE_NOATEXIT`: otherwise unload of a
-DRI module leaves exit callbacks pointing into unmapped code. The recipe
-sets that flag. A run without it crashed at process exit; the final build
-completed normally. These results establish software plumbing only.
+without primary master or global PCI access. Host/native contracts and the
+isolated library build pass; full matched kernel builds and runtime remain
+pending. The original recovery kernel cannot prove render-node discovery,
+KMS or dma-buf sharing. Software EGL on it establishes CPU plumbing only.
 
 ## seatd keyboard restoration probe
 
@@ -124,8 +125,8 @@ sh build-seatd.sh "$HOME/.cache/emberbsd-seatd-build"
 The test compiles the real patched `terminal.c`, replacing only its ioctl
 boundary, and checks both mode transitions and error propagation. It failed
 against the pkgsrc-only source and passed with the local patch. All three
-upstream seatd tests also passed on NetBSD/aarch64. Actual USB keyboard,
-VT switching and crash recovery still need a native session test.
+upstream seatd tests also passed on NetBSD/aarch64. Physical keyboard/pointer input passed in the matched native session.
+VT switching and visible exit/crash recovery remain pending.
 
 The staged prefix is `stage/usr/pkg`; no binary is made setuid. For the
 experimental runtime installation, an administrator should retain the
@@ -191,8 +192,8 @@ release events for ordinary letters, Shift and Return.
 
 The helper runs the available upstream test suites. libdrm's `drmdevice`
 test can legitimately skip when no DRM device is attached; a skip is not
-a successful GPU test. Native input, VT handoff, scanout, buffer sharing,
-VirGL pixel readback and reboot recovery must be checked separately.
+a successful GPU test. The accepted Mesa 21 native input/2D checks must be repeated after this
+transition. VT recovery, VirGL pixels and reboot recovery remain pending.
 
 Xwayland and Vulkan are initially disabled to isolate native Wayland and
 classic VirGL. Optional libliftoff is disabled: the available binary links

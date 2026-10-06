@@ -1,4 +1,4 @@
-Origin: EmberBSD; AI-assisted Mesa 21.3.9 adaptation.
+Origin: EmberBSD; AI-assisted Mesa 26.2.4 adaptation.
 Status: local; not submitted upstream.
 
 Preserve binary16 subnormals when the process FP state flushes binary32

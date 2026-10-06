@@ -1,17 +1,17 @@
-Origin: EmberBSD; AI-assisted adaptation of the Mesa 21.3.9 test.
+Origin: EmberBSD; AI-assisted Mesa 26.2.4 test adaptation.
 Status: local; not submitted upstream.
 
-Use the existing ELF bookkeeping-symbol allowlist on NetBSD as on Linux.
-Missing API symbols and unrelated extra symbols remain errors.
+Apply the existing ELF bookkeeping-symbol allowlist to NetBSD. Missing API
+symbols and unrelated extra exports still fail the upstream check.
 
 --- bin/symbols-check.py.orig
 +++ bin/symbols-check.py
-@@ -41,7 +41,7 @@ def get_symbols_nm(nm, lib):
-         if len(fields) == 2 or fields[1] == 'U':
+@@ -91,7 +91,7 @@
+         if len(fields) >= 2 and fields[1] == 'U':
              continue
          symbol_name = fields[0]
--        if platform_name == 'Linux':
-+        if platform_name in ('Linux', 'NetBSD'):
-             if symbol_name in PLATFORM_SYMBOLS:
+-        if platform_name == 'Linux' or platform_name == 'GNU' or platform_name.startswith('GNU/'):
++        if platform_name in ('Linux', 'NetBSD') or platform_name == 'GNU' or platform_name.startswith('GNU/'):
+             if symbol_name.split('@')[0] in PLATFORM_SYMBOLS:
                  continue
          elif platform_name == 'Darwin':

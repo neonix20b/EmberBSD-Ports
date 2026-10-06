@@ -32,8 +32,10 @@ runtime behavior are validated.
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
-  libdrm, Mesa, wlroots and labwc sources and patches; native builds and
-  software EGL readback pass. Native KMS and GPU runtime remain unverified.
+  current Mesa 26.2.4 source adaptation with DSO-lifetime and numeric
+  regressions, paired libdrm, wlroots and labwc recipes. Earlier Mesa 21
+  software EGL/native KMS-input checks pass; the common Mesa 26 build and
+  VirGL hardware runtime remain pending.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
