@@ -30,7 +30,7 @@ for id in 1 2; do
     fi
     readelf -sW "$work/owner$id.so" > "$work/owner$id.symbols"
 done
-"$cc" -std=c11 -Wall -Wextra -Werror -Wl,-export-dynamic \
+"$cc" -std=c11 -Wall -Wextra -Werror -pthread -Wl,-export-dynamic \
     "$recipe/mesa-atexit-main.c" -o "$work/main"
 "$work/main" close "$work/owner1.so" "$work/owner2.so" > "$work/close.log"
 "$work/main" exit "$work/owner1.so" "$work/owner2.so" > "$work/exit.log"

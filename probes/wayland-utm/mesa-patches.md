@@ -27,7 +27,9 @@ remaining plain callbacks are in unselected physical Vulkan drivers or tools;
 `tools=`, `vulkan-drivers=` and `vulkan-layers=` keep them outside this profile.
 Native complete EGL/GLX/GBM/llvmpipe lifecycle checks still gate promotion.
 The queue fixture tests callback dependencies; it does not replace the actual
-Mesa queue or EGL integration tests.
+Mesa queue or EGL integration tests. Its executable links pthread at startup:
+NetBSD cannot initialize threading by loading libpthread late through a plugin.
+Check this same constraint in dynamically loaded real graphics consumers.
 
 ## Disposition of all 44 previous patches
 
