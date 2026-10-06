@@ -56,8 +56,11 @@ patched tree:
 sh tests/native-identity.sh /path/to/patched/libdrm-2.4.134
 ```
 
-Host contracts pass. Native library/kernel compilation and live unprivileged
-render-only discovery remain pending; no acceleration is claimed. Runtime
+Host and native contracts pass. The isolated NetBSD 11/aarch64 library build
+passes with the documented warning policy; upstream tests report three passes
+and one device-dependent skip. The matched kernel changes pass targeted
+compilation, but full kernel rebuilds and live unprivileged render-only
+discovery remain pending; no acceleration is claimed. Runtime
 acceptance must check the actual loaded libdrm, both enumeration calls,
 render-name/type calls, and unchanged negative KMS permission checks. Drop
 supplementary groups after an authorized render open to avoid an admin's

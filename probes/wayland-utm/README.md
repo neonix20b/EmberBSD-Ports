@@ -51,8 +51,9 @@ LLVM interfaces. The installed GNOME llvmpipe stack remains separate.
 
 The [libdrm identity probe](native-identity.md) uses matched kernel metadata
 without primary master or global PCI access. Its standalone build preserves
-the active desktop and does not select or install a Mesa stack. Host contracts
-pass; native build and runtime acceptance are pending.
+the active desktop and does not select or install a Mesa stack. Host/native
+contracts and the isolated library build pass. Full matched kernel rebuilds
+and runtime acceptance are pending.
 
 ## Build
 
