@@ -16,6 +16,9 @@ archives or store generated binaries.
 - [Common development toolchain](profiles/development-toolchain/README.md):
   GCC 16.2.0 source profile and native acceptance probes; compiler build,
   coordinated C++ consumer rebuilds, and image integration remain pending.
+- [Current robotics libraries](probes/robotics-foundations/README.md): native
+  OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
+  numerical and synthetic GNSS workflows verified on AArch64.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.

@@ -11,6 +11,14 @@ not start a daemon. The example uses a TCP client-to-peer connection without
 a separate router. Its ROS bridge uses `rclcpp` with `rmw_fastrtps_cpp`;
 it does not emulate `rmw_zenoh` discovery or serialization.
 
+## Additional native libraries
+
+[OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5](../../probes/robotics-foundations/README.md)
+passed native installed-consumer checks for CPU vision, numerical computation
+and a synthetic GNSS stream. These remain source probes, with a local OpenCV
+AArch64 CPU-detection patch; they are not yet pkgsrc packages. Physical camera
+and receiver support is not established by these tests.
+
 ## Source and patches
 
 - Upstream: https://github.com/eclipse-zenoh/zenoh-pico, release 1.10.1.
