@@ -13,7 +13,11 @@ for library in libstdc++.so libgcc_s.so; do
     }
     loaded=$(cat "$output/$library.paths")
     actual=$(realpath "$loaded")
-    expected=$(realpath "$("$cxx" -print-file-name="$library")")
+    # GCC's t-slibgcc-libgcc makes libgcc_s.so a GNU ld GROUP script.
+    # Compare the loaded DSO with the compiler's real SONAME lookup.
+    lookup=$library
+    [ "$library" != libgcc_s.so ] || lookup=libgcc_s.so.1
+    expected=$(realpath "$("$cxx" -print-file-name="$lookup")")
     [ "$actual" = "$expected" ] || { echo "Wrong runtime: $actual != $expected" >&2; exit 1; }
     case "$actual" in "$prefix"/*) ;; *) echo "Runtime outside prefix: $actual" >&2; exit 1 ;; esac
 done

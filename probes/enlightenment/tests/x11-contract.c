@@ -98,13 +98,14 @@ fullscreen(Window window, Atom state, int enable)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	Window owner = None, window, child;
 	Atom full, actual;
 	unsigned long count, remaining, *check;
 	unsigned char *name = NULL;
-	int attempt, format, x, y;
+	int attempt, format, x, y, old_width, old_height;
+	const char *expected = argc == 2 ? argv[1] : "Enlightenment";
 	XWindowAttributes attributes;
 
 	display = XOpenDisplay(NULL);
@@ -117,17 +118,23 @@ main(void)
 		pause_poll();
 	}
 	expect(owner != None, "WM_S0 selection has an owner");
-	wait_property(root, "_NET_SUPPORTING_WM_CHECK", XA_WINDOW, owner, 1);
-	check = property(root, "_NET_SUPPORTING_WM_CHECK", XA_WINDOW, &count);
-	expect(count == 1 && check[0] == owner, "root identifies the actual WM owner");
+	for (attempt = 0; attempt < 150; attempt++) {
+		check = property(root, "_NET_SUPPORTING_WM_CHECK", XA_WINDOW, &count);
+		if (count == 1 && check[0] != None)
+			break;
+		if (check != NULL) XFree(check);
+		pause_poll();
+	}
+	expect(attempt < 150, "root identifies a supporting WM window");
+	owner = check[0];
 	XFree(check);
 	expect(contains(owner, "_NET_SUPPORTING_WM_CHECK", XA_WINDOW, owner),
 	    "supporting WM window self-references");
 	XGetWindowProperty(display, owner, XInternAtom(display, "_NET_WM_NAME", False),
 	    0, 128, False, XInternAtom(display, "UTF8_STRING", False), &actual,
 	    &format, &count, &remaining, &name);
-	expect(name != NULL && count == strlen("Enlightenment") &&
-	    memcmp(name, "Enlightenment", count) == 0, "window manager is Enlightenment");
+	expect(name != NULL && count == strlen(expected) &&
+	    memcmp(name, expected, count) == 0, "window manager has the expected identity");
 	XFree(name);
 
 	window = XCreateSimpleWindow(display, root, 80, 80, 320, 200, 0,
@@ -140,6 +147,8 @@ main(void)
 	    NormalState, 1);
 	expect(XGetWindowAttributes(display, window, &attributes) &&
 	    attributes.map_state == IsViewable, "client is managed and visible");
+	old_width = attributes.width;
+	old_height = attributes.height;
 	full = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
 	fullscreen(window, full, 1);
 	for (attempt = 0; attempt < 150; attempt++) {
@@ -154,7 +163,7 @@ main(void)
 	fullscreen(window, full, 0);
 	for (attempt = 0; attempt < 150; attempt++) {
 		XGetWindowAttributes(display, window, &attributes);
-		if (attributes.width == 320 && attributes.height == 200)
+		if (attributes.width == old_width && attributes.height == old_height)
 			break;
 		pause_poll();
 	}

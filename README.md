@@ -23,8 +23,9 @@ runtime behavior are validated.
   native package and tests verified; the Examples C controller exchanges
   typed commands and telemetry with ROS 2 Jazzy, including reconnect checks.
 - [Common development toolchain](profiles/development-toolchain/README.md):
-  GCC 16.2.0 source profile and native acceptance probes; compiler build,
-  coordinated C++ consumer rebuilds, and image integration remain pending.
+  GCC 16.2.0 builds and installs as an AArch64 VM candidate, passing native
+  C11/C++20 threads, TLS and shared-library runtime checks. Full upstream
+  tests, the common Qt/LLVM rebuild and image/default integration remain pending.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -40,8 +41,10 @@ runtime behavior are validated.
   process-crash/reopen checks. A C application retrieves local documents and
   validates quotations from the existing llama.cpp CPU server on AArch64.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
-  libdrm, Mesa, wlroots and labwc sources and patches; native builds and
-  software EGL readback pass. Native KMS and GPU runtime remain unverified.
+  current Mesa 26.2.4 source adaptation with DSO-lifetime and numeric
+  regressions, paired libdrm, wlroots and labwc recipes. Earlier Mesa 21
+  software EGL/native KMS-input checks pass; the common Mesa 26 build and
+  VirGL hardware runtime remain pending.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
@@ -52,11 +55,21 @@ runtime behavior are validated.
   application menu are checked. The complete mobile workflow still needs
   the common OpenGL stack and an enabled KWin shortcut backend.
 
-- [Enlightenment desktop](probes/enlightenment/README.md): EFL 1.28.1 and
-  Enlightenment 0.27.1 use system Lua 5.4 through compatibility patches.
-  Native software X11 rendering, window management and session exit pass.
+- [Openbox](probes/openbox/README.md) and
+  [Enlightenment](probes/enlightenment/README.md): Openbox 3.6.1 and
+  Enlightenment 0.27.1/EFL 1.28.1 pass native software X11 window management,
+  keyboard input through XTEST, text editing/saving and session exit.
+  The [shared launcher and runtime test](probes/x11-desktops/README.md)
+  retain the user's HOME and isolate session configuration and processes.
+- [awesomeWM](probes/awesome/README.md): the 4.3 source probe uses LGI 0.9.2
+  with the common system Lua. Native build, LGI/icon regressions and the
+  same X11 window/input/save/exit workflow pass. Patches correct startup
+  pthread linkage, Lua 5.4 version reporting and the WM selection name.
+- [Xfce](probes/xfce/README.md): pinned 4.20 components, libwnck 43.3 and
+  Mousepad 0.7.0 have a source recipe and isolated session profile.
+  Archive and profile checks pass; native build and runtime remain pending.
 
-The Wayland, Phosh, Plasma Mobile and Enlightenment entries remain experimental probes,
+The graphical entries remain experimental probes,
 not installable packages or phone images. Each recipe records its tested
 runtime and platform boundaries.
 Helpers stop on errors and keep output in private user directories.

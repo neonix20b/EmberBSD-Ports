@@ -1,0 +1,46 @@
+EmberBSD local adaptation, AI-assisted, 2026-10-07; not submitted upstream.
+Allow a dedicated icon converter for this release's two PNG operations.
+The default upstream ImageMagick path remains unchanged outside the probe.
+
+--- a/awesomeConfig.cmake
++++ b/awesomeConfig.cmake
+@@ -61,6 +61,8 @@
+ endif()
+ # theme graphics
+-a_find_program(CONVERT_EXECUTABLE convert TRUE)
++if(NOT AWESOME_ICON_CONVERTER)
++    a_find_program(CONVERT_EXECUTABLE convert TRUE)
++endif()
+ # pkg-config
+ include(FindPkgConfig)
+ # lua
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -335,6 +335,20 @@
+     if(NOT ${input} STREQUAL ${output} AND NOT ";${ALL_ICONS};" MATCHES ";${output};")
+         set(ALL_ICONS ${ALL_ICONS} ${output})
+ 
++        if(AWESOME_ICON_CONVERTER)
++            if("${replacement}" STREQUAL "_normal")
++                set(icon_mode normal)
++            elseif("${replacement}" STREQUAL "_inactive")
++                set(icon_mode inactive)
++            else()
++                message(FATAL_ERROR "Unsupported native icon operation")
++            endif()
++            add_custom_command(
++                COMMAND ${AWESOME_ICON_CONVERTER} ${icon_mode} ${input} ${output}
++                OUTPUT ${output}
++                DEPENDS ${input} ${AWESOME_ICON_CONVERTER}
++                VERBATIM)
++        else()
+         add_custom_command(
+             COMMAND ${CONVERT_EXECUTABLE} ${input} -strip ${ARGN} ${output}
+             OUTPUT  ${output}
+@@ -342,5 +356,6 @@
+             DEPENDS ${input}
+             VERBATIM)
++        endif()
+     endif()
+ endmacro()
+ 

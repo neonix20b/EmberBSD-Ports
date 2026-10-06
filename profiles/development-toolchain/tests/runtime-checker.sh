@@ -11,13 +11,15 @@ mkdir -p "$work/gcc16/bin" "$work/gcc16/lib" "$work/base" "$work/result"
 touch "$work/gcc16/lib/libstdc++.so.7" "$work/gcc16/lib/libgcc_s.so.1" \
     "$work/base/libstdc++.so.9"
 ln -s libstdc++.so.7 "$work/gcc16/lib/libstdc++.so"
-ln -s libgcc_s.so.1 "$work/gcc16/lib/libgcc_s.so"
+# GCC t-slibgcc-libgcc installs a linker script here, not an ELF symlink.
+printf 'GROUP ( libgcc_s.so.1 -lgcc )\n' > "$work/gcc16/lib/libgcc_s.so"
 cat > "$work/gcc16/bin/g++" <<'COMPILER'
 #!/bin/sh
 prefix=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$1" in
     -print-file-name=libstdc++.so) echo "$prefix/lib/libstdc++.so" ;;
     -print-file-name=libgcc_s.so) echo "$prefix/lib/libgcc_s.so" ;;
+    -print-file-name=libgcc_s.so.1) echo "$prefix/lib/libgcc_s.so.1" ;;
     *) exit 2 ;;
 esac
 COMPILER
@@ -32,4 +34,10 @@ if sh "$source/check-runtime.sh" "$work/gcc16" "$work/result"; then exit 1; fi
 printf 'LOADED %s\n' "$work/base/libstdc++.so.9" \
     "$work/gcc16/lib/libgcc_s.so.1" > "$work/result/loaded.txt"
 if sh "$source/check-runtime.sh" "$work/gcc16" "$work/result"; then exit 1; fi
-echo 'PASS: checker accepts matching paths and rejects dual/wrong C++ runtime fixtures'
+touch "$work/base/libgcc_s.so.1"
+printf 'LOADED %s\n' "$work/gcc16/lib/libstdc++.so.7" \
+    "$work/base/libgcc_s.so.1" > "$work/result/loaded.txt"
+if sh "$source/check-runtime.sh" "$work/gcc16" "$work/result"; then exit 1; fi
+printf 'LOADED %s\n' "$work/gcc16/lib/libgcc_s.so.1" >> "$work/result/loaded.txt"
+if sh "$source/check-runtime.sh" "$work/gcc16" "$work/result"; then exit 1; fi
+echo 'PASS: linker-script libgcc accepted; dual/wrong C++ and libgcc runtimes rejected'

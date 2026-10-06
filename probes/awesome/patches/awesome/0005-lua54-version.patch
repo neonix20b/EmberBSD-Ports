@@ -1,0 +1,17 @@
+EmberBSD local adaptation, AI-assisted, 2026-10-07; not submitted upstream.
+Lua 5.4 require returns loader data after the module value. Restrict the
+version query to one result so stack-relative Lua/LGI version fields remain
+correct. The upstream symptom is recorded in awesomeWM/awesome issue #3563:
+https://github.com/awesomeWM/awesome/issues/3563
+
+--- a/common/version.c
++++ b/common/version.c
+@@ -47,7 +47,7 @@
+         lua_pop(L, 1);
+ 
+     /* Either push version number or error message onto stack */
+-    (void) luaL_dostring(L, "return require('lgi.version')");
++    (void) luaL_dostring(L, "return (require('lgi.version'))");
+ 
+ #ifdef WITH_DBUS
+     const char *has_dbus = "✔";

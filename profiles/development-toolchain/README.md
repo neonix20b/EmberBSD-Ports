@@ -1,9 +1,11 @@
 # Common development toolchain (candidate)
 
-This profile prepares GCC 16.2.0 for native EmberBSD/NetBSD 11 AArch64.
-It is the compiler foundation for a reproducible distribution development
-environment. It has not yet been built, installed, or selected as default.
-The source checks below do not establish native compiler support.
+This profile builds GCC 16.2.0 for native EmberBSD/NetBSD 11 AArch64.
+The candidate package builds and installs in the AArch64 VM and passes native
+C11/C++20 thread, TLS, shared-library and runtime-identity probes. It is the
+compiler foundation for a reproducible distribution development environment.
+It is not selected as default; full upstream tests, the common C++ consumer
+rebuild and image integration remain acceptance gates.
 
 On the AArch64 NetBSD 11 VM, the native prerequisites are now validated:
 MPC 1.4.1 (75 tests), Texinfo 7.3 (required XS plus Info/HTML output),
@@ -124,6 +126,8 @@ The first check compiles and runs C11 atomics, pthreads, C/C++ TLS, C++20,
 cross-DSO strings and exception cleanup. It records DT_NEEDED and `ldd`, then
 uses the actual process link map to require exactly one libstdc++ and libgcc_s,
 both matching this compiler's reported runtime files under its own prefix.
+For libgcc, compare the actual `libgcc_s.so.1` DSO: upstream intentionally
+installs `libgcc_s.so` as a GNU linker script, not an ELF-library symlink.
 The Qt check exchanges real strings with QtCore and repeats runtime identity
 checks. It must fail on an unresolved old/new runtime mixture. Also audit LLVM's
 dynamic closure and run an LLVM consumer after its rebuild; Qt success cannot
@@ -162,11 +166,25 @@ remain visible; project-owned build/test helpers here do not use Python.
 TinyGo's LLVM compatibility needs validation and source repair against the
 common LLVM version; do not silently install another LLVM for that consumer.
 
-## Verified scope (2026-10-06)
+## Verified scope (2026-10-07)
 
-Verified: original archive hashes, upstream update application, all 23 remaining
-pkgsrc source patches against GCC16.2 without fuzz, and shell syntax. The C11
-probe runs on the development host; the DSO source compiles there. These host
-checks are probe checks, not GCC16/NetBSD evidence. Native build, installation,
-upstream test execution, runtime tests, consumer repairs, default selection,
-and image integration are pending coordinated build/install phases.
+GCC 16.2.0 built and packaged on the AArch64 NetBSD 11 VM with one worker,
+base GCC 12.5 and base binutils. Native pkgsrc check-files passed; the installed
+candidate's 1,633 files passed pkg_admin verification. The package build took
+1,303 seconds with a reported peak RSS of 995,952 KiB on a 4 GiB guest without swap.
+The recipe retains `--disable-bootstrap`; no three-stage bootstrap is claimed.
+
+The installed candidate passed C11 atomics/pthreads/TLS and C++20 shared-DSO
+string exchange, exception cleanup, threads and TLS. The actual process map
+contains one libstdc++ and one libgcc_s from `/usr/pkg/gcc16`. Base compiler
+and runtime file hashes stayed unchanged; global defaults were not changed.
+The installed old Qt 6.11 closure correctly fails the same identity check:
+it loads both candidate libstdc++.7 and base libstdc++.9. Its Qt/ICU/LLVM
+consumer rebuild remains required; a working isolated C++ probe cannot accept
+that mixed process. Full strict upstream test results remain pending.
+
+Source validation covers pinned archives, the upstream update, all 23 GCC
+source patches without fuzz, native prerequisite fixes, and negative checker
+fixtures for duplicate or foreign runtimes. Physical-board compiler testing,
+self-hosting, current-binutils validation, common consumer repairs, default
+selection and release-image integration are not established by this VM result.
