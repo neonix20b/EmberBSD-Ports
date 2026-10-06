@@ -1,0 +1,213 @@
+EmberBSD local, AI-assisted; not submitted upstream.
+Update MPC/Texinfo to current releases; preserve and refresh pkgsrc portability
+patches. Source URLs, hashes, upstream patch removals and ABI notes are in
+../prerequisites.md. Base pkgsrc revision remains unchanged.
+
+diff -ruN a/devel/gtexinfo/Makefile b/devel/gtexinfo/Makefile
+--- a/devel/gtexinfo/Makefile	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/Makefile	2026-10-06 23:01:43.371279162 +0300
+@@ -1,8 +1,7 @@
+ # $NetBSD: Makefile,v 1.131 2026/07/16 19:01:48 wiz Exp $
+ 
+-DISTNAME=	texinfo-7.2
++DISTNAME=	texinfo-7.3
+ PKGNAME=	g${DISTNAME}
+-PKGREVISION=	2
+ CATEGORIES=	devel sysutils
+ MASTER_SITES=	${MASTER_SITE_GNU:=texinfo/}
+ EXTRACT_SUFX=	.tar.xz
+diff -ruN a/devel/gtexinfo/distinfo b/devel/gtexinfo/distinfo
+--- a/devel/gtexinfo/distinfo	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/distinfo	2026-10-06 23:01:43.442934341 +0300
+@@ -1,13 +1,10 @@
+ $NetBSD: distinfo,v 1.68 2025/10/05 01:58:37 js Exp $
+ 
+-BLAKE2s (texinfo-7.2.tar.xz) = 2bb5d9812df4689d0c2e379077df5f617ea3e07c7bfe49669e9de74f9bb43e50
+-SHA512 (texinfo-7.2.tar.xz) = 8e67337ae12a552fc620c43725507a4978710ea6630e98b0f5e98eb3f79a90e191dde5225699aa6217c26f171d277461f76150f0459cd07b40c3234d2f3d89bf
+-Size (texinfo-7.2.tar.xz) = 6408432 bytes
+-SHA1 (patch-configure) = 207dc69f65b29db3ba937bd82a664c27f237fd57
+-SHA1 (patch-gnulib_lib_malloc_dynarray-skeleton.c) = 6e683e689bfc7573bf9d62d2bc9a1abb64d521df
+-SHA1 (patch-gnulib_lib_mbiter.h) = 3d932f20f69ec2531a2b797dcc02252e19ace163
+-SHA1 (patch-gnulib_lib_mbuiter.h) = a248a56818e46ca501f9dc57415c40f766a065f8
+-SHA1 (patch-info_filesys.h) = 7cc1819ac02deae957f95b84b11bed20609d0235
+-SHA1 (patch-tp_Texinfo_XS_configure) = 9aa1b01463cee53bb137e545719fdbbe41b9a175
+-SHA1 (patch-tp_Texinfo_XS_parsetexi_parser.c) = ba0ac6fc04dbf4cd5a555bce8071ca6fee2d66a5
+-SHA1 (patch-util_texi2dvi) = 72be61e607a393edf0cbd67747f7e0b360441466
++BLAKE2s (texinfo-7.3.tar.xz) = 7c595fca0e941075378970492d5fc6320c75f4786915bc189f8d40a510ce22af
++SHA512 (texinfo-7.3.tar.xz) = fb1a16df67f870e79c31f4b96d8431d9c944eb84e5aa71e9d94890417ce63047918d55620fa63bd582232c47e9b412a6f95a11a2479f53f40e92e49bc018d926
++Size (texinfo-7.3.tar.xz) = 6940392 bytes
++SHA1 (patch-configure) = d6495a41e5bcf21f6637c024bb9e9434e2cd8f2c
++SHA1 (patch-gnulib_lib_malloc_dynarray-skeleton.c) = 3c0ed7431704c281eb9088c0bf478c78355bc3b7
++SHA1 (patch-gnulib_lib_mbiter.h) = d4b230562fd46288e92ee3b3317f16360818bb37
++SHA1 (patch-gnulib_lib_mbuiter.h) = 4207fd9ee7ef84a2f83f578af004df8fdda48ddf
++SHA1 (patch-info_filesys.h) = 458e926cd285ab4f26717571c62f91f79cb8d55f
+diff -ruN a/devel/gtexinfo/patches/patch-info_filesys.h b/devel/gtexinfo/patches/patch-info_filesys.h
+--- a/devel/gtexinfo/patches/patch-info_filesys.h	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/patches/patch-info_filesys.h	2026-10-06 23:01:43.371686099 +0300
+@@ -4,12 +4,12 @@
+ 
+ --- info/filesys.h.orig	2014-12-29 11:29:54.000000000 +0000
+ +++ info/filesys.h
+-@@ -68,7 +68,7 @@ extern int is_dir_name (char *filename);
+- 
+- /* The default value of INFOPATH. */
+- #if !defined (DEFAULT_INFOPATH)
++@@ -71,7 +71,7 @@
++ #ifdef __DJGPP__
++ #  define DEFAULT_INFOPATH "c:/djgpp/info;/usr/local/info;/usr/info;."
++ #else
+ -#  define DEFAULT_INFOPATH "PATH:/usr/local/info:/usr/info:/usr/local/lib/info:/usr/lib/info:/usr/local/gnu/info:/usr/local/gnu/lib/info:/usr/gnu/info:/usr/gnu/lib/info:/opt/gnu/info:/usr/share/info:/usr/share/lib/info:/usr/local/share/info:/usr/local/share/lib/info:/usr/gnu/lib/emacs/info:/usr/local/gnu/lib/emacs/info:/usr/local/lib/emacs/info:/usr/local/emacs/info:."
+ +#  define DEFAULT_INFOPATH ".:" PKGSRC_INFOPATH ":PATH:/usr/local/info:/usr/info:/usr/local/lib/info:/usr/lib/info:/usr/local/gnu/info:/usr/local/gnu/lib/info:/usr/gnu/info:/usr/gnu/lib/info:/opt/gnu/info:/usr/share/info:/usr/share/lib/info:/usr/local/share/info:/usr/local/share/lib/info:/usr/gnu/lib/emacs/info:/usr/local/gnu/lib/emacs/info:/usr/local/lib/emacs/info:/usr/local/emacs/info"
+- #endif /* !DEFAULT_INFOPATH */
++ #endif
+  
+  #if !defined (S_ISREG) && defined (S_IFREG)
+diff -ruN a/devel/gtexinfo/patches/patch-tp_Texinfo_XS_configure b/devel/gtexinfo/patches/patch-tp_Texinfo_XS_configure
+--- a/devel/gtexinfo/patches/patch-tp_Texinfo_XS_configure	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/patches/patch-tp_Texinfo_XS_configure	1970-01-01 03:00:00.000000000 +0300
+@@ -1,39 +0,0 @@
+-$NetBSD: patch-tp_Texinfo_XS_configure,v 1.1 2024/11/01 08:37:29 adam Exp $
+-
+-Ignore iconv bug check for macOS for the sake of PLIST consistency.
+-This check has been introduced in gtexinfo 7.1.1.
+-
+---- tp/Texinfo/XS/configure.orig	2024-09-07 17:27:38.000000000 +0000
+-+++ tp/Texinfo/XS/configure
+-@@ -8597,6 +8597,7 @@ int result = 0;
+-         iconv_close (cd_utf8_to_88591);
+-       }
+-   }
+-+#if 0
+-   /* Test against macOS 14.4 bug: Failures are not distinguishable from
+-      successful returns.
+-      POSIX:2018 says: "The iconv() function shall ... return the number of
+-@@ -8626,6 +8627,7 @@ int result = 0;
+-         iconv_close (cd_utf8_to_88591);
+-       }
+-   }
+-+#endif
+-   /* Test against Solaris 10 bug: Failures are not distinguishable from
+-      successful returns.  */
+-   {
+-@@ -11338,6 +11340,7 @@ int result = 0;
+-         iconv_close (cd_utf8_to_88591);
+-       }
+-   }
+-+#if 0
+-   /* Test against macOS 14.4 bug: Failures are not distinguishable from
+-      successful returns.
+-      POSIX:2018 says: "The iconv() function shall ... return the number of
+-@@ -11367,6 +11370,7 @@ int result = 0;
+-         iconv_close (cd_utf8_to_88591);
+-       }
+-   }
+-+#endif
+-   /* Test against Solaris 10 bug: Failures are not distinguishable from
+-      successful returns.  */
+-   {
+diff -ruN a/devel/gtexinfo/patches/patch-tp_Texinfo_XS_parsetexi_parser.c b/devel/gtexinfo/patches/patch-tp_Texinfo_XS_parsetexi_parser.c
+--- a/devel/gtexinfo/patches/patch-tp_Texinfo_XS_parsetexi_parser.c	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/patches/patch-tp_Texinfo_XS_parsetexi_parser.c	1970-01-01 03:00:00.000000000 +0300
+@@ -1,16 +0,0 @@
+-$NetBSD: patch-tp_Texinfo_XS_parsetexi_parser.c,v 1.1 2025/10/05 01:58:37 js Exp $
+-
+---- tp/Texinfo/XS/parsetexi/parser.c.orig	2025-10-05 01:57:07.522519730 +0000
+-+++ tp/Texinfo/XS/parsetexi/parser.c
+-@@ -2133,9 +2133,10 @@ process_remaining_on_line (ELEMENT **cur
+-         {
+-            int whitespaces_len;
+-            int additional_newline = 0;
+-+           int i;
+-            whitespaces_len = strspn (line, whitespace_chars);
+- 
+--           for (int i = 0; i < whitespaces_len; i++)
+-+           for (i = 0; i < whitespaces_len; i++)
+-              {
+-                if (*(line + i) == '\n')
+-                  {
+diff -ruN a/devel/gtexinfo/patches/patch-util_texi2dvi b/devel/gtexinfo/patches/patch-util_texi2dvi
+--- a/devel/gtexinfo/patches/patch-util_texi2dvi	2026-10-02 21:24:59.000000000 +0300
++++ b/devel/gtexinfo/patches/patch-util_texi2dvi	1970-01-01 03:00:00.000000000 +0300
+@@ -1,23 +0,0 @@
+-$NetBSD: patch-util_texi2dvi,v 1.7 2019/10/08 14:30:09 ryoon Exp $
+-
+-As indicated in pkg/48075, pdksh doesn't support double-parens
+-if not containing an arithmetic expression of a particular form.
+-Older bash and ast-ksh apparently also had problems with this.
+-
+---- util/texi2dvi.orig	2019-09-23 18:28:10.000000000 +0000
+-+++ util/texi2dvi
+-@@ -22,10 +22,10 @@
+- # If possible, please send a copy of the output of the script called with
+- # the `--debug' option when making a bug report.
+- 
+--test -f /bin/ksh && test -z "$RUNNING_KSH" \
+--  && { UNAMES=`uname -s`; test "x$UNAMES" = xULTRIX; } 2>/dev/null \
+--  && { RUNNING_KSH=true; export RUNNING_KSH; exec /bin/ksh $0 ${1+"$@"}; }
+--unset RUNNING_KSH
+-+#test -f /bin/ksh && test -z "$RUNNING_KSH" \
+-+#  && { UNAMES=`uname -s`; test "x$UNAMES" = xULTRIX; } 2>/dev/null \
+-+#  && { RUNNING_KSH=true; export RUNNING_KSH; exec /bin/ksh $0 ${1+"$@"}; }
+-+#unset RUNNING_KSH
+- 
+- # No failure shall remain unpunished.
+- set -e
+diff -ruN a/math/mpcomplex/Makefile b/math/mpcomplex/Makefile
+--- a/math/mpcomplex/Makefile	2026-10-02 21:24:59.000000000 +0300
++++ b/math/mpcomplex/Makefile	2026-10-06 23:01:43.371112394 +0300
+@@ -1,7 +1,8 @@
+ # $NetBSD: Makefile,v 1.14 2025/12/23 07:48:21 wiz Exp $
+ 
+-DISTNAME=	mpc-1.3.1
++DISTNAME=	mpc-1.4.1
+ PKGNAME=	${DISTNAME:S/mpc/mpcomplex/}
++EXTRACT_SUFX=	.tar.xz
+ CATEGORIES=	math
+ MASTER_SITES=	${MASTER_SITE_GNU:=mpc/}
+ 
+diff -ruN a/math/mpcomplex/PLIST b/math/mpcomplex/PLIST
+--- a/math/mpcomplex/PLIST	2026-10-02 21:24:59.000000000 +0300
++++ b/math/mpcomplex/PLIST	2026-10-06 23:01:43.371321927 +0300
+@@ -2,3 +2,4 @@
+ include/mpc.h
+ info/mpc.info
+ lib/libmpc.la
++lib/pkgconfig/mpc.pc
+diff -ruN a/math/mpcomplex/distinfo b/math/mpcomplex/distinfo
+--- a/math/mpcomplex/distinfo	2026-10-02 21:24:59.000000000 +0300
++++ b/math/mpcomplex/distinfo	2026-10-06 23:01:43.416425480 +0300
+@@ -1,6 +1,6 @@
+ $NetBSD: distinfo,v 1.12 2023/10/29 18:06:32 wiz Exp $
+ 
+-BLAKE2s (mpc-1.3.1.tar.gz) = 5d2921ff2ec9523efd7063c63ee57dcb0905b398a8a2a2e58a952846e4dc934b
+-SHA512 (mpc-1.3.1.tar.gz) = 4bab4ef6076f8c5dfdc99d810b51108ced61ea2942ba0c1c932d624360a5473df20d32b300fc76f2ba4aa2a97e1f275c9fd494a1ba9f07c4cb2ad7ceaeb1ae97
+-Size (mpc-1.3.1.tar.gz) = 773573 bytes
+-SHA1 (patch-src_get__x.c) = 25495981765971c031b5a92dce098a44e53413c8
++BLAKE2s (mpc-1.4.1.tar.xz) = ec9bf1d17fe24b9877c80724c1ea20ad102359783338c8836132feb7dcaee86e
++SHA512 (mpc-1.4.1.tar.xz) = cdfbe64e80e30df64dbd536e8104a6bb10471582415d5b45a1dd30eb2a312781b38389a9531243413c14e0f88866a35159b20e77900718f28c1030253a1305b9
++Size (mpc-1.4.1.tar.xz) = 531992 bytes
++SHA1 (patch-src_get__x.c) = 8af29cee299334807fe6c55bc2bc5a1f9d4d5c62
+diff -ruN a/math/mpcomplex/patches/patch-src_get__x.c b/math/mpcomplex/patches/patch-src_get__x.c
+--- a/math/mpcomplex/patches/patch-src_get__x.c	2026-10-02 21:24:59.000000000 +0300
++++ b/math/mpcomplex/patches/patch-src_get__x.c	2026-10-06 23:01:43.371512162 +0300
+@@ -4,10 +4,10 @@
+ 
+ --- src/get_x.c.orig	2011-11-04 18:20:19.000000000 +0000
+ +++ src/get_x.c
+-@@ -35,6 +35,13 @@ along with this program. If not, see htt
++@@ -28,6 +28,13 @@
+  #include "mpc-impl.h"
+  
+- #ifdef HAVE_COMPLEX_H
++ #ifdef _MPC_HAVE_COMPLEX_H
+ +
+ +#if defined(__sun) && defined(__GNUC__) && defined(_Imaginary_I)
+ +#undef I
+@@ -15,6 +15,6 @@
+ +
+ +#endif
+ +
+- double _Complex
++ DOUBLE_COMPLEX
+  mpc_get_dc (mpc_srcptr op, mpc_rnd_t rnd) {
+     return I * mpfr_get_d (mpc_imagref (op), MPC_RND_IM (rnd))
