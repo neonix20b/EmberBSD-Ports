@@ -1,0 +1,35 @@
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -1,3 +1,6 @@
+ option('gtk_doc',
+        type: 'boolean', value: false,
+        description: 'Whether to generate the API reference for Callaudio')
++
++option('daemon', type: 'boolean', value: true,
++       description: 'Build the audio routing daemon and install its service file')
+--- a/meson.build
++++ b/meson.build
+@@ -108,6 +108,8 @@
+ 
+ subdir('data')
+ subdir('libcallaudio')
++if get_option('daemon')
+ subdir('src')
++endif
+ subdir('tools')
+ subdir('doc')
+--- a/data/meson.build
++++ b/data/meson.build
+@@ -28,6 +28,7 @@
+ install_data(dbus_interfaces, install_dir: ifacedir)
+ 
+ # systemd service file
++if get_option('daemon')
+ service_data = configuration_data()
+ service_data.set('bindir', bindir)
+ service_file = 'org.mobian_project.CallAudio.service'
+@@ -39,3 +40,4 @@
+   install : true,
+   install_dir: servicedir,
+ )
++endif

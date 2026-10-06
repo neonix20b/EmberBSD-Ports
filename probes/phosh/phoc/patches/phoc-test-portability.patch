@@ -1,0 +1,31 @@
+Origin: Local EmberBSD portability changes, AI-assisted, 2026-10-06.
+Status: Not submitted to or accepted by upstream.
+
+--- a/tests/test-run.c
++++ b/tests/test-run.c
+@@ -25,7 +25,7 @@
+   g_assert_true (PHOC_IS_SERVER (server));
+   g_assert_true (config);
+ 
+-  g_assert_true (phoc_server_setup (server, config, "/bin/true", loop,
++  g_assert_true (phoc_server_setup (server, config, "true", loop,
+                                     PHOC_SERVER_FLAG_NONE));
+   g_timeout_add_seconds (TEST_PHOC_CLIENT_TIMEOUT, on_timer_expired, NULL);
+   g_main_loop_run (loop);
+@@ -42,7 +42,7 @@
+   g_assert_true (PHOC_IS_SERVER (server));
+   g_assert_true (config);
+ 
+-  g_assert_true (phoc_server_setup (server, config, "/bin/false", loop,
++  g_assert_true (phoc_server_setup (server, config, "false", loop,
+                                     PHOC_SERVER_FLAG_NONE));
+   g_timeout_add_seconds (TEST_PHOC_CLIENT_TIMEOUT, on_timer_expired, NULL);
+   g_main_loop_run (loop);
+--- a/tools/check-indent
++++ b/tools/check-indent
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/bin/sh
+ 
+ export LC_ALL=C
+ 

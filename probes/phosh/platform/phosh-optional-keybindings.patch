@@ -1,0 +1,24 @@
+--- a/src/util.h
++++ b/src/util.h
+@@ -35,11 +35,19 @@
+  * Helper to construct keybindings easily
+  *
+  * Append the actions for the keybindings found in the settings and add the keybindings
+- * strings to builder.
++ * strings to builder. Missing schema keys are reported and skipped.
+  */
+ #define PHOSH_UTIL_BUILD_KEYBINDING(actions, builder, settings, key, callback) \
+   G_STMT_START {                                                        \
+-    GStrv _bindings = g_settings_get_strv (settings, key);              \
++    g_autoptr (GSettingsSchema) _schema = NULL;                         \
++    GStrv _bindings;                                                    \
++    g_object_get (settings, "settings-schema", &_schema, NULL);         \
++    if (!g_settings_schema_has_key (_schema, key)) {                    \
++      g_warning ("Skipping unavailable keybinding %s::%s",              \
++                 g_settings_schema_get_id (_schema), key);              \
++      break;                                                           \
++    }                                                                  \
++    _bindings = g_settings_get_strv (settings, key);                     \
+     for (int i = 0; _bindings[i]; i++) {                                \
+       GActionEntry _entry = { .name = _bindings[i], .activate = callback }; \
+       g_array_append_val (actions, _entry);                             \

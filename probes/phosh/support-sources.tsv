@@ -1,0 +1,4 @@
+gtk-3.24.52.tar.xz 80931fa472a77b9a164f6740e3c0b444fac6770054632d35a7ff9d679e5e7b9f https://download.gnome.org/sources/gtk/3.24/gtk-3.24.52.tar.xz
+gnome-bluetooth-46.2.tar.xz 1b48feec75b8b4f1a6e564cce7cc4ebd35b3225cb8d8be93c8efc44894003635 https://download.gnome.org/sources/gnome-bluetooth/46/gnome-bluetooth-46.2.tar.xz
+feedbackd-0.7.0.tar.xz c525932dfff2e16fe202bc3d5e3cc78949ba67a3192e60306b70db81ea725000 https://sources.phosh.mobi/releases/feedbackd/feedbackd-0.7.0.tar.xz
+callaudiod-0.1.99.tar.gz 6b8214fb1fa08fa89012d8c85d671a61be37ad33373065daf7ae17bd703bd0ad https://gitlab.com/mobian1/callaudiod/-/archive/0.1.99/callaudiod-0.1.99.tar.gz

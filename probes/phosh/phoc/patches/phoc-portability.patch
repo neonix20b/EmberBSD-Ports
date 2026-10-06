@@ -1,0 +1,127 @@
+Remove unused direct GLES dependencies, fix Xwayland-disabled build guards,
+and fix the non-Linux pidfd return syntax. Renderer behavior is unchanged.
+Origin: Local EmberBSD portability changes, AI-assisted, 2026-10-06.
+Status: Not submitted to or accepted by upstream.
+
+--- a/meson.build
++++ b/meson.build
+@@ -32,7 +32,6 @@
+ gio = dependency('gio-2.0', version: glib_ver_cmp)
+ glib = dependency('glib-2.0', version: glib_ver_cmp)
+ gobject = dependency('gobject-2.0', version: glib_ver_cmp)
+-glesv2 = dependency('glesv2')
+ gnome_desktop = dependency('gnome-desktop-3.0', version: '>=3.26')
+ gsettings_desktop_schemas_dep = dependency('gsettings-desktop-schemas')
+ input = dependency('libinput', version: '>= 1.27.0')
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -179,7 +179,6 @@
+   input,
+   drm,
+   gio,
+-  glesv2,
+   gmobile_dep,
+   gnome_desktop,
+   gsettings_desktop_schemas_dep,
+--- a/src/render.c
++++ b/src/render.c
+@@ -31,8 +31,6 @@
+ #include <wlr/config.h>
+ #include <wlr/render/drm_format_set.h>
+ #include <wlr/render/wlr_renderer.h>
+-#include <wlr/render/gles2.h>
+-#include <wlr/render/egl.h>
+ #include <wlr/types/wlr_alpha_modifier_v1.h>
+ #include <wlr/types/wlr_buffer.h>
+ #include <wlr/types/wlr_compositor.h>
+@@ -40,8 +38,6 @@
+ #include <wlr/util/region.h>
+ #include <wlr/util/transform.h>
+ #include <wlr/render/allocator.h>
+-#include <GLES2/gl2.h>
+-#include <GLES2/gl2ext.h>
+ 
+ #include <assert.h>
+ #include <drm_fourcc.h>
+@@ -435,6 +431,7 @@
+ }
+ 
+ 
++#ifdef PHOC_XWAYLAND
+ static void
+ render_unmanaged_surfaces (PhocRenderer *self, PhocWorkspace *workspace, PhocRenderContext *ctx)
+ {
+@@ -448,6 +445,7 @@
+   }
+ }
+ 
++#endif
+ 
+ static void
+ render_output_blings (PhocOutput *output, PhocRenderContext *ctx)
+@@ -711,8 +709,10 @@
+         render_view (output, view, ctx);
+     }
+ 
++#ifdef PHOC_XWAYLAND
+     /* Render unmanaged XWayland surfaces */
+     render_unmanaged_surfaces (self, workspace, ctx);
++#endif
+ 
+     /* Render top layer above views */
+     render_layer (ZWLR_LAYER_SHELL_V1_LAYER_TOP, ctx);
+--- a/src/xwayland-unmanaged.h
++++ b/src/xwayland-unmanaged.h
+@@ -6,7 +6,8 @@
+ 
+ #pragma once
+ 
+-#include <wlr/xwayland.h>
++struct wlr_xwayland_surface;
++struct wlr_surface;
+ 
+ #include <glib-object.h>
+ 
+--- a/src/server.c
++++ b/src/server.c
+@@ -32,8 +32,10 @@
+ #include <wlr/types/wlr_linux_dmabuf_v1.h>
+ #include <wlr/types/wlr_security_context_v1.h>
+ #include <wlr/types/wlr_xdg_toplevel_tag_v1.h>
++#ifdef PHOC_XWAYLAND
+ #include <wlr/xwayland.h>
+ #include <wlr/xwayland/shell.h>
++#endif
+ 
+ #include <errno.h>
+ #include <sys/resource.h>
+--- a/src/xdg-toplevel.c
++++ b/src/xdg-toplevel.c
+@@ -25,7 +25,9 @@
+ #include <wlr/types/wlr_xdg_toplevel_tag_v1.h>
+ #include <wlr/util/edges.h>
+ 
++#ifdef PHOC_XWAYLAND
+ #include <wlr/xwayland.h>
++#endif
+ #include <xcb/xproto.h>
+ 
+ #include <sys/socket.h>
+@@ -372,7 +374,7 @@
+ static int
+ get_pidfd (PhocView *view)
+ {
+-#if __linux__
++#ifdef __linux__
+ /* See https://www.openwall.com/lists/musl/2026/04/09/3 */
+ #ifndef SO_PEERPIDFD
+ # define SO_PEERPIDFD 77
+@@ -396,7 +398,7 @@
+ 
+   return pid_fd;
+ #else
+-  return -1
++  return -1;
+ #endif
+ }
+ 

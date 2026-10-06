@@ -1,0 +1,672 @@
+--- a/meson.build
++++ b/meson.build
+@@ -196,13 +196,17 @@
+   default_options: ['introspection=disabled'],
+ )
+ libcall_ui_dep = libcall_ui.get_variable('libcall_ui_dep')
+-libnm_dep = dependency('libnm', version: '>= 1.14')
++libnm_dep = dependency('libnm', version: '>= 1.14', required: get_option('networkmanager'))
++have_networkmanager = libnm_dep.found()
+ libpolkit_agent_dep = dependency('polkit-agent-1', version: '>= 0.122')
+ libsoup_dep = dependency('libsoup-3.0', version: '>= 3.6')
+ libsystemd_dep = dependency('libsystemd', 'libelogind', version: '>= 241',
+                            required: get_option('logind'))
+ have_logind = libsystemd_dep.found()
+-mm_glib_dep = dependency('mm-glib', version: '>= 1.24')
++mm_glib_dep = declare_dependency()
++if have_networkmanager
++  mm_glib_dep = dependency('mm-glib', version: '>= 1.24')
++endif
+ network_agent_dep = dependency('libsecret-1')
+ upower_glib_dep = dependency('upower-glib', version: '>=1.90')
+ wayland_client_dep = dependency('wayland-client', version: '>=1.14')
+@@ -239,6 +243,7 @@
+ config_h.set('HAVE_RFKILL_EVENT_EXT', have_rfkill_event_ext)
+ config_h.set10('PHOSH_HAVE_LOGIND', have_logind)
+ config_h.set10('PHOSH_HAVE_RFKILL', have_rfkill)
++config_h.set10('PHOSH_HAVE_NETWORKMANAGER', have_networkmanager)
+ config_h.set(
+   'PHOSH_HAVE_MEMFD_CREATE',
+   have_memfd_create,
+@@ -299,6 +304,7 @@
+     'Searchd': get_option('searchd'),
+     'Logind integration': have_logind,
+     'Linux rfkill monitoring': have_rfkill,
++    'Network and WWAN controls': have_networkmanager,
+   },
+   bool_yn: true,
+   section: 'Build',
+--- a/meson.options
++++ b/meson.options
+@@ -71,3 +71,7 @@
+ option('rfkill',
+        type: 'feature', value: 'auto',
+        description: 'Monitor hardware kill switches using Linux rfkill')
++
++option('networkmanager',
++       type: 'feature', value: 'enabled',
++       description: 'Enable NetworkManager Wi-Fi/VPN/connectivity and dependent WWAN controls')
+--- a/plugins/meson.build
++++ b/plugins/meson.build
+@@ -71,14 +71,15 @@
+   'caffeine-quick-setting',
+   'dark-mode-quick-setting',
+   'location-quick-setting',
+-  'mobile-data-quick-setting',
+   'night-light-quick-setting',
+   'pomodoro-quick-setting',
+   'scaling-quick-setting',
+   'simple-custom-quick-setting',
+   'syncthing-quick-setting',
+-  'wifi-hotspot-quick-setting',
+ ]
++if have_networkmanager
++  quick_setting_plugins += ['mobile-data-quick-setting', 'wifi-hotspot-quick-setting']
++endif
+ 
+ status_icon_plugins = ['load-meter-status-icon', 'simple-custom-status-icon']
+ 
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -47,9 +47,27 @@
+   description: 'Shared gsettings schema and enum headers for Phosh',
+ )
+ 
++phosh_resource_xml = files('phosh.gresources.xml')
++if not have_networkmanager
++  xsltproc = find_program('xsltproc')
++  foreach ui : ['quick-settings', 'top-panel']
++    configure_file(
++      input: ['ui/' + ui + '.ui', 'ui/no-network.xsl'],
++      output: ui + '-no-network.ui',
++      command: [xsltproc, '--nonet', '-o', '@OUTPUT@', '@INPUT1@', '@INPUT0@'],
++    )
++  endforeach
++  phosh_resource_xml = configure_file(
++    input: ['phosh.gresources.xml', 'ui/no-network.xsl'],
++    output: 'phosh-no-network.gresources.xml',
++    command: [xsltproc, '--nonet', '-o', '@OUTPUT@', '@INPUT1@', '@INPUT0@'],
++  )
++endif
++
+ phosh_resources = gnome.compile_resources(
+   'phosh-resources',
+-  'phosh.gresources.xml',
++  phosh_resource_xml,
++  source_dir: [meson.current_build_dir(), meson.current_source_dir()],
+   c_name: 'phosh',
+ )
+ 
+@@ -221,11 +239,8 @@
+   'call-notification.c',
+   'call.c',
+   'calls-manager.c',
+-  'cell-broadcast-manager.c',
+   'cell-broadcast-prompt.c',
+   'clamp.c',
+-  'connectivity-info.c',
+-  'connectivity-manager.c',
+   'debug-control.c',
+   'default-media-player.c',
+   'docked-info.c',
+@@ -280,21 +295,29 @@
+   'system-modal.c',
+   'udev-manager.c',
+   'util.c',
+-  'vpn-info.c',
+-  'vpn-manager.c',
+   'wall-clock.c',
+   'widget-box.c',
+-  'wifi-info.c',
+-  'wifi-manager.c',
+-  'wifi-network-row.c',
+-  'wifi-network.c',
+-  'wifi-status-page.c',
+   'wl-buffer.c',
+ ) + [
+   phosh_monitor_sources,
+   phosh_notifications_sources,
+ ]
+ 
++if have_networkmanager
++  phosh_tool_sources += files(
++    'cell-broadcast-manager.c',
++    'connectivity-info.c',
++    'connectivity-manager.c',
++    'vpn-info.c',
++    'vpn-manager.c',
++    'wifi-info.c',
++    'wifi-manager.c',
++    'wifi-network-row.c',
++    'wifi-network.c',
++    'wifi-status-page.c',
++  )
++endif
++
+ # Headers added here will be introspected and included in the GIR.
+ # Only API that is considered public to libphosh consumers should be added here.
+ # This list *must* be kept in sync with libphosh.h
+@@ -326,7 +349,6 @@
+   'bt-manager.h',
+   'bt-status-page.h',
+   'cell-broadcast-prompt.h',
+-  'contrib/shell-network-agent.h',
+   'emergency-calls-manager.h',
+   'fader.h',
+   'thumbnail-overlay.h',
+@@ -343,7 +365,6 @@
+   'metainfo-cache.h',
+   'monitor-manager.h',
+   'network-auth-manager.h',
+-  'network-auth-prompt.h',
+   'osk-manager.h',
+   'polkit-auth-agent.h',
+   'polkit-auth-prompt.h',
+@@ -372,9 +393,6 @@
+   'torch-info.h',
+   'torch-manager.h',
+   'wifi-info.h',
+-  'wifi-manager.h',
+-  'wifi-network-row.h',
+-  'wifi-network.h',
+   'wifi-status-page.h',
+   'wwan-info.h',
+ ) + [
+@@ -397,7 +415,6 @@
+   'bt-info.c',
+   'bt-manager.c',
+   'bt-status-page.c',
+-  'contrib/shell-network-agent.c',
+   'emergency-calls-manager.c',
+   'fader.c',
+   'thumbnail-overlay.c',
+@@ -413,8 +430,6 @@
+   'lockscreen-manager.c',
+   'lockscreen.c',
+   'monitor-manager.c',
+-  'network-auth-manager.c',
+-  'network-auth-prompt.c',
+   'osk-manager.c',
+   'polkit-auth-agent.c',
+   'polkit-auth-prompt.c',
+@@ -441,12 +456,27 @@
+   'toplevel.c',
+   'torch-info.c',
+   'torch-manager.c',
+-  'wwan-info.c',
+ ) + [
+   phosh_settings_sources,
+   phosh_wwan_sources,
+ ]
+ 
++if have_networkmanager
++  phosh_sources += files(
++    'contrib/shell-network-agent.c',
++    'network-auth-manager.c',
++    'network-auth-prompt.c',
++    'wwan-info.c',
++  )
++  phosh_headers += files(
++    'contrib/shell-network-agent.h',
++    'network-auth-prompt.h',
++    'wifi-manager.h',
++    'wifi-network.h',
++    'wifi-network-row.h',
++  )
++endif
++
+ # Headers are bundled as they're not shipped by gnome-bluetooth
+ # https://gitlab.gnome.org/GNOME/gnome-bluetooth/-/merge_requests/200
+ gnome_bluetooth_headers_dep = declare_dependency(
+@@ -616,6 +646,12 @@
+   ]
+ 
+   phosh_gir_extra_args = ['--quiet']
++  phosh_gir_includes = [
++    'Gcr-3', 'Gio-2.0', 'Gtk-3.0', 'GnomeDesktop-3.0', 'Handy-1', 'GnomeBluetooth-3.0',
++  ]
++  if have_networkmanager
++    phosh_gir_includes += ['NM-1.0']
++  endif
+ 
+   phosh_gir = gnome.generate_gir(
+     phosh_lib,
+@@ -627,15 +663,7 @@
+     symbol_prefix: 'phosh',
+     identifier_prefix: 'Phosh',
+     link_with: phosh_lib,
+-    includes: [
+-      'Gcr-3',
+-      'Gio-2.0',
+-      'Gtk-3.0',
+-      'GnomeDesktop-3.0',
+-      'Handy-1',
+-      'NM-1.0',
+-      'GnomeBluetooth-3.0',
+-    ],
++    includes: phosh_gir_includes,
+     extra_args: phosh_gir_extra_args,
+     dependencies: phosh_static_lib_dep,
+     fatal_warnings: true,
+@@ -660,10 +688,14 @@
+ 
+   apiversion = '0.0'
+   if get_option('vapi')
++    phosh_vapi_packages = ['gio-2.0', 'gtk+-3.0', 'gnome-desktop-3.0']
++    if have_networkmanager
++      phosh_vapi_packages += ['libnm']
++    endif
+     libphosh_vapi = gnome.generate_vapi(
+       'libphosh-' + libphosh_api_version,
+       sources: phosh_gir[0],
+-      packages: ['gio-2.0', 'gtk+-3.0', 'gnome-desktop-3.0', 'libnm'],
++      packages: phosh_vapi_packages,
+       install: true,
+       install_dir: vapidir,
+       metadata_dirs: [meson.current_source_dir()],
+--- a/src/plugin-shell.h
++++ b/src/plugin-shell.h
+@@ -8,12 +8,18 @@
+ 
+ #pragma once
+ 
++#include "phosh-config.h"
+ #include "launcher-entry-manager.h"
+ #include "monitor-manager.h"
+ #include "mpris-manager.h"
+ #include "session-manager.h"
+ #include "shell.h"
++#if PHOSH_HAVE_NETWORKMANAGER
+ #include "wifi-manager.h"
++#else
++/* No network-control API is provided by the disabled build. */
++typedef struct _PhoshWifiManager PhoshWifiManager;
++#endif
+ #include "wwan/phosh-wwan-iface.h"
+ 
+ G_BEGIN_DECLS
+--- a/src/quick-settings.c
++++ b/src/quick-settings.c
+@@ -48,6 +48,7 @@
+ G_DEFINE_TYPE (PhoshQuickSettings, phosh_quick_settings, GTK_TYPE_BIN);
+ 
+ 
++#if PHOSH_HAVE_NETWORKMANAGER
+ static void
+ on_wwan_clicked (PhoshQuickSettings *self, PhoshQuickSetting *child)
+ {
+@@ -78,6 +79,8 @@
+ }
+ 
+ 
++#endif
++
+ static void
+ on_bt_clicked (PhoshQuickSettings *self, PhoshQuickSetting *child)
+ {
+@@ -202,6 +205,7 @@
+ }
+ 
+ 
++#if PHOSH_HAVE_NETWORKMANAGER
+ static void
+ on_vpn_clicked (PhoshQuickSettings *self, PhoshQuickSetting *child)
+ {
+@@ -215,6 +219,8 @@
+ }
+ 
+ 
++#endif
++
+ static void
+ unload_custom_quick_setting (GtkWidget *quick_setting)
+ {
+@@ -278,15 +284,19 @@
+ 
+   g_type_ensure (PHOSH_TYPE_BT_STATUS_PAGE);
+   g_type_ensure (PHOSH_TYPE_FEEDBACK_STATUS_PAGE);
++#if PHOSH_HAVE_NETWORKMANAGER
+   g_type_ensure (PHOSH_TYPE_WIFI_STATUS_PAGE);
++#endif
+ 
+   gtk_widget_class_set_template_from_resource (widget_class,
+                                                "/mobi/phosh/ui/quick-settings.ui");
+ 
+   gtk_widget_class_bind_template_child (widget_class, PhoshQuickSettings, box);
+ 
++#if PHOSH_HAVE_NETWORKMANAGER
+   gtk_widget_class_bind_template_callback (widget_class, on_wwan_clicked);
+   gtk_widget_class_bind_template_callback (widget_class, on_wifi_clicked);
++#endif
+   gtk_widget_class_bind_template_callback (widget_class, on_bt_clicked);
+   gtk_widget_class_bind_template_callback (widget_class, on_battery_clicked);
+   gtk_widget_class_bind_template_callback (widget_class, on_rotate_clicked);
+@@ -294,7 +304,9 @@
+   gtk_widget_class_bind_template_callback (widget_class, on_feedback_clicked);
+   gtk_widget_class_bind_template_callback (widget_class, on_torch_clicked);
+   gtk_widget_class_bind_template_callback (widget_class, on_docked_clicked);
++#if PHOSH_HAVE_NETWORKMANAGER
+   gtk_widget_class_bind_template_callback (widget_class, on_vpn_clicked);
++#endif
+ }
+ 
+ 
+--- a/src/shell.c
++++ b/src/shell.c
+@@ -837,9 +837,14 @@
+   priv->splash_manager = phosh_splash_manager_new (priv->app_tracker);
+   priv->session_manager = phosh_session_manager_new ();
+   priv->mode_manager = phosh_mode_manager_new ();
++#if PHOSH_HAVE_NETWORKMANAGER
+   priv->wifi_manager = phosh_wifi_manager_new ();
+-  /* Connecivity manager needs Wi-Fi manager: */
++  /* Connectivity manager needs Wi-Fi manager: */
+   priv->connectivity_manager = phosh_connectivity_manager_new ();
++#else
++  g_message ("NetworkManager control is disabled: no Wi-Fi, VPN, WWAN or connectivity indicators; "
++             "applications use the existing OS network");
++#endif
+ 
+   priv->sensor_proxy_manager = phosh_sensor_proxy_manager_new (&err);
+   if (priv->sensor_proxy_manager)
+@@ -905,12 +910,16 @@
+   priv->gnome_shell_manager = phosh_gnome_shell_manager_get_default ();
+   priv->screenshot_manager = phosh_screenshot_manager_new ();
+   priv->run_command_manager = phosh_run_command_manager_new ();
++#if PHOSH_HAVE_NETWORKMANAGER
+   priv->network_auth_manager = phosh_network_auth_manager_new ();
++#endif
+   priv->portal_access_manager = phosh_portal_access_manager_new ();
+   priv->suspend_manager = phosh_suspend_manager_new ();
+   priv->emergency_calls_manager = phosh_emergency_calls_manager_new ();
+   priv->power_menu_manager = phosh_power_menu_manager_new ();
++#if PHOSH_HAVE_NETWORKMANAGER
+   priv->cell_broadcast_manager = phosh_cell_broadcast_manager_new ();
++#endif
+ 
+   setup_primary_monitor_signal_handlers (self);
+   /* Setup event hooks late so state changes in UI files don't trigger feedback */
+@@ -937,7 +946,9 @@
+ {
+   g_type_ensure (PHOSH_TYPE_BATTERY_INFO);
+   g_type_ensure (PHOSH_TYPE_BT_INFO);
++#if PHOSH_HAVE_NETWORKMANAGER
+   g_type_ensure (PHOSH_TYPE_CONNECTIVITY_INFO);
++#endif
+   g_type_ensure (PHOSH_TYPE_DOCKED_INFO);
+   g_type_ensure (PHOSH_TYPE_FEEDBACK_INFO);
+   g_type_ensure (PHOSH_TYPE_HKS_INFO);
+@@ -951,9 +962,15 @@
+   g_type_ensure (PHOSH_TYPE_SYSTEM_MODAL);
+   g_type_ensure (PHOSH_TYPE_SYSTEM_MODAL_DIALOG);
+   g_type_ensure (PHOSH_TYPE_TORCH_INFO);
++#if PHOSH_HAVE_NETWORKMANAGER
+   g_type_ensure (PHOSH_TYPE_VPN_INFO);
++#endif
++#if PHOSH_HAVE_NETWORKMANAGER
+   g_type_ensure (PHOSH_TYPE_WIFI_INFO);
++#endif
++#if PHOSH_HAVE_NETWORKMANAGER
+   g_type_ensure (PHOSH_TYPE_WWAN_INFO);
++#endif
+ }
+ 
+ 
+@@ -1690,11 +1707,12 @@
+  *
+  * Get the connectivity manager
+  *
+- * Returns: (transfer none): The connectivity manager
++ * Returns: (transfer none)(nullable): The manager, or NULL without network control
+  */
+ PhoshConnectivityManager *
+ phosh_shell_get_connectivity_manager (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   PhoshShellPrivate *priv;
+ 
+   g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
+@@ -1702,6 +1720,10 @@
+ 
+   g_return_val_if_fail (PHOSH_IS_CONNECTIVITY_MANAGER (priv->connectivity_manager), NULL);
+   return priv->connectivity_manager;
++#else
++  g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
++  return NULL;
++#endif
+ }
+ 
+ /**
+@@ -1990,11 +2012,12 @@
+  *
+  * Get the Wifi manager
+  *
+- * Returns: (transfer none): The Wifi manager
++ * Returns: (transfer none)(nullable): The manager, or NULL without network control
+  */
+ PhoshWifiManager *
+ phosh_shell_get_wifi_manager (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   PhoshShellPrivate *priv;
+ 
+   g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
+@@ -2002,6 +2025,10 @@
+ 
+   g_return_val_if_fail (PHOSH_IS_WIFI_MANAGER (priv->wifi_manager), NULL);
+   return priv->wifi_manager;
++#else
++  g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
++  return NULL;
++#endif
+ }
+ 
+ /* Manager getters that create them as needed */
+@@ -2257,11 +2284,12 @@
+  *
+  * Get the VPN manager
+  *
+- * Returns: (transfer none): The VPN manager
++ * Returns: (transfer none)(nullable): The manager, or NULL without network control
+  */
+ PhoshVpnManager *
+ phosh_shell_get_vpn_manager (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   PhoshShellPrivate *priv;
+ 
+   g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
+@@ -2272,6 +2300,10 @@
+ 
+   g_return_val_if_fail (PHOSH_IS_VPN_MANAGER (priv->vpn_manager), NULL);
+   return priv->vpn_manager;
++#else
++  g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
++  return NULL;
++#endif
+ }
+ 
+ /**
+@@ -2280,11 +2312,12 @@
+  *
+  * Get the WWAN manager
+  *
+- * Returns: (transfer none): The WWAN manager
++ * Returns: (transfer none)(nullable): The manager, or NULL without network control
+  */
+ PhoshWWan *
+ phosh_shell_get_wwan (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   PhoshShellPrivate *priv;
+ 
+   g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
+@@ -2306,6 +2339,10 @@
+ 
+   g_return_val_if_fail (PHOSH_IS_WWAN (priv->wwan), NULL);
+   return priv->wwan;
++#else
++  g_return_val_if_fail (PHOSH_IS_SHELL (self), NULL);
++  return NULL;
++#endif
+ }
+ 
+ /**
+--- a/src/suspend-manager.c
++++ b/src/suspend-manager.c
+@@ -14,7 +14,9 @@
+ #include "util.h"
+ #include "shell-priv.h"
+ #include "suspend-manager.h"
++#if PHOSH_HAVE_NETWORKMANAGER
+ #include "wifi-manager.h"
++#endif
+ 
+ #include <gio/gunixfdlist.h>
+ 
+@@ -37,6 +39,7 @@
+ G_DEFINE_TYPE (PhoshSuspendManager, phosh_suspend_manager, PHOSH_TYPE_MANAGER)
+ 
+ 
++#if PHOSH_HAVE_NETWORKMANAGER
+ static void
+ inhibit_suspend (PhoshSuspendManager *self, const char *what, const char *reason)
+ {
+@@ -84,6 +87,8 @@
+ 
+ 
+ 
++#endif
++
+ static void
+ uninhibit (gpointer pointer)
+ {
+@@ -117,7 +122,9 @@
+                                             PhoshSuspendManager *self)
+ {
+   g_autoptr (GError) err = NULL;
++#if PHOSH_HAVE_NETWORKMANAGER
+   PhoshWifiManager *wifi_manager;
++#endif
+   PhoshDBusLoginManager *proxy;
+ 
+   proxy = phosh_dbus_login_manager_proxy_new_for_bus_finish (res, &err);
+@@ -133,12 +140,14 @@
+                             G_CALLBACK (on_logind_name_owner_changed), self);
+   on_logind_name_owner_changed (self);
+ 
++#if PHOSH_HAVE_NETWORKMANAGER
+   wifi_manager = phosh_shell_get_wifi_manager (phosh_shell_get_default());
+   g_signal_connect_swapped (wifi_manager,
+                             "notify::is-hotspot-master",
+                             G_CALLBACK (on_is_hotspot_master_changed),
+                             self);
+   on_is_hotspot_master_changed (self, NULL, wifi_manager);
++#endif
+ }
+ 
+ 
+--- a/src/wwan/meson.build
++++ b/src/wwan/meson.build
+@@ -1,5 +1,11 @@
+ phosh_wwan_inc = include_directories('.')
+ 
++if not have_networkmanager
++  phosh_wwan_headers = []
++  phosh_wwan_sources = []
++  subdir_done()
++endif
++
+ phosh_wwan_headers = files(
+   'phosh-wwan-iface.h',
+   'phosh-wwan-mm.h',
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -114,7 +114,6 @@
+   'app-grid-folder-button',
+   'app-list-model',
+   'auto-brightness-bucket',
+-  'connectivity-info',
+   'css',
+   'fading-label',
+   'favorite-model',
+@@ -144,6 +143,10 @@
+ 
+ tests_searchd = ['search-result-meta', 'search-source', 'search-provider']
+ 
++if have_networkmanager
++  tests_unit += ['connectivity-info']
++endif
++
+ tests_phoc = [
+   'app-auth-prompt',
+   'background',
+--- a/tests/stubs/phosh.c
++++ b/tests/stubs/phosh.c
+@@ -6,6 +6,7 @@
+ 
+ /* Stubs so we don't need to run the shell */
+ 
++#include "phosh-config.h"
+ #include <glib.h>
+ #include "phosh-wayland.h"
+ #include "connectivity-manager.h"
+@@ -14,7 +15,9 @@
+ static PhoshToplevelManager *toplevel_manager = NULL;
+ static PhoshBackgroundManager *background_manager = NULL;
+ static GObject *shell = NULL;
++#if PHOSH_HAVE_NETWORKMANAGER
+ static GObject *wifi_manager = NULL;
++#endif
+ 
+ PhoshShell *
+ phosh_shell_get_default (void)
+@@ -99,16 +102,24 @@
+ PhoshWifiManager *
+ phosh_shell_get_wifi_manager (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   if (wifi_manager == NULL)
+     wifi_manager = g_object_new (G_TYPE_OBJECT, NULL);
+   return (PhoshWifiManager*)(wifi_manager);
++#else
++  return NULL;
++#endif
+ }
+ 
+ 
+ PhoshConnectivityManager *
+ phosh_shell_get_connectivity_manager (PhoshShell *self)
+ {
++#if PHOSH_HAVE_NETWORKMANAGER
+   return phosh_connectivity_manager_new ();
++#else
++  return NULL;
++#endif
+ }
+ 
+ 
+--- /dev/null
++++ b/src/ui/no-network.xsl
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
++<!-- Remove controls whose backends are not built; do not invent connectivity. -->
++<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
++  <xsl:output method="xml" encoding="UTF-8"/>
++  <xsl:template match="@*|node()">
++    <xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy>
++  </xsl:template>
++  <xsl:template match="object[@class='PhoshWifiInfo' or @class='PhoshWWanInfo' or
++                              @class='PhoshVpnInfo' or @class='PhoshConnectivityInfo' or
++                              @class='PhoshWifiStatusPage']"/>
++  <xsl:template match="child[object/property[(@name='child' or @name='status-icon') and
++                                      (.='wifiinfo' or .='wwaninfo' or .='vpninfo' or
++                                       .='vpn_info' or .='connectivity_info')]]"/>
++  <xsl:template match="file[.='ui/quick-settings.ui']">
++    <file preprocess="xml-stripblanks" alias="ui/quick-settings.ui">quick-settings-no-network.ui</file>
++  </xsl:template>
++  <xsl:template match="file[.='ui/top-panel.ui']">
++    <file preprocess="xml-stripblanks" alias="ui/top-panel.ui">top-panel-no-network.ui</file>
++  </xsl:template>
++</xsl:stylesheet>

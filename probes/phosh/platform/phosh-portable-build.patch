@@ -1,0 +1,329 @@
+--- a/meson.build
++++ b/meson.build
+@@ -229,7 +229,7 @@
+ '''
+   have_rfkill_event_ext = cc.compiles(code, name: 'Have rfkill_event_ext')
+ endif
+-have_memfd_create = cc.has_function(
++have_memfd_create = host_machine.system() == 'linux' and cc.has_function(
+   'memfd_create',
+   prefix: ['#define _GNU_SOURCE', '#include <sys/mman.h>'],
+ )
+@@ -239,6 +239,7 @@
+ config_h.set_quoted('LOCALEDIR', localedir)
+ config_h.set_quoted('PHOSH_PLUGINS_DIR', plugins_dir)
+ config_h.set_quoted('PHOSH_VERSION', meson.project_version())
++config_h.set('PHOSH_GNOME_DESKTOP_MAJOR_VERSION', gnome_desktop_dep.version().split('.')[0].to_int())
+ config_h.set('PHOSH_ANIMATION_SLOWDOWN', get_option('animation-slowdown'))
+ config_h.set('HAVE_RFKILL_EVENT_EXT', have_rfkill_event_ext)
+ config_h.set10('PHOSH_HAVE_LOGIND', have_logind)
+@@ -247,7 +248,7 @@
+ config_h.set(
+   'PHOSH_HAVE_MEMFD_CREATE',
+   have_memfd_create,
+-  description: 'Whether we have memdfd_create on Linux',
++  description: 'Whether the Linux sealed-memfd backend is available',
+ )
+ config_h.set(
+   'PHOSH_USES_ASAN',
+--- a/src/gnome-shell-manager.c
++++ b/src/gnome-shell-manager.c
+@@ -16,9 +16,6 @@
+ #include "shell-priv.h"
+ #include "lockscreen-manager.h"
+ 
+-#define GNOME_DESKTOP_USE_UNSTABLE_API
+-#include <libgnome-desktop/gnome-desktop-version.h>
+-
+ #define PHOSH_VERSION_SUFFIX " (phosh " PHOSH_VERSION ")"
+ 
+ /**
+@@ -450,7 +447,7 @@
+ {
+   /* We don't want to infringe on the GNOME version and not upset
+      anyone so make it very visible this is not GNOMEs version */
+-  return g_strdup_printf ("%d%s", GNOME_DESKTOP_PLATFORM_VERSION, PHOSH_VERSION_SUFFIX);
++  return g_strdup_printf ("%d%s", PHOSH_GNOME_DESKTOP_MAJOR_VERSION, PHOSH_VERSION_SUFFIX);
+ }
+ 
+ 
+--- a/src/backlight.c
++++ b/src/backlight.c
+@@ -104,7 +104,7 @@
+   if (priv->scale == PHOSH_BACKLIGHT_SCALE_NON_LINEAR)
+     return round (brightness);
+ 
+-  level = round (exp10 (brightness));
++  level = round (pow (10.0, brightness));
+   return CLAMP (level, priv->level.min, priv->level.max);
+ }
+ 
+--- a/src/phosh-wayland.c
++++ b/src/phosh-wayland.c
+@@ -14,6 +14,8 @@
+ 
+ #include <gdk/gdkwayland.h>
+ 
++#include <errno.h>
++
+ /**
+  * PhoshWayland:
+  *
+@@ -264,7 +266,7 @@
+   self->display = gdk_wayland_display_get_wl_display (gdk_display);
+ 
+   if (self->display == NULL)
+-    g_error ("Failed to get display: %m\n");
++    g_error ("Failed to get display: %s\n", g_strerror (errno));
+ 
+   self->registry = wl_display_get_registry (self->display);
+   wl_registry_add_listener (self->registry, &registry_listener, self);
+--- a/src/util.c
++++ b/src/util.c
+@@ -37,7 +37,9 @@
+ #endif
+ 
+ #include <sys/mman.h>
++#include <errno.h>
+ #include <fcntl.h>
++#include <unistd.h>
+ 
+ #include <math.h>
+ 
+@@ -340,7 +342,13 @@
+     /* shm_open guarantees that O_CLOEXEC is set */
+     fd = shm_open (name, O_RDWR | O_CREAT | O_EXCL, 0600);
+     if (fd >= 0) {
+-      shm_unlink (name);
++      if (shm_unlink (name) < 0) {
++        int saved_errno = errno;
++
++        close (fd);
++        errno = saved_errno;
++        return -1;
++      }
+       return fd;
+     }
+   } while (retries > 0 && errno == EEXIST);
+@@ -366,7 +374,10 @@
+   }
+ 
+   if (ftruncate (fd, size) < 0) {
++    int saved_errno = errno;
++
+     close (fd);
++    errno = saved_errno;
+     return -1;
+   }
+ 
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -114,6 +114,7 @@
+   'app-grid-folder-button',
+   'app-list-model',
+   'auto-brightness-bucket',
++  'backlight',
+   'css',
+   'fading-label',
+   'favorite-model',
+@@ -134,6 +135,7 @@
+   'quick-setting',
+   'quick-settings-box',
+   'shell-notification',
++  'shm',
+   'status-icon',
+   'status-icons-box',
+   'timestamp-label',
+--- a/tests/test-backlight.c
++++ b/tests/test-backlight.c
+@@ -0,0 +1,116 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * Test backend for the Phosh backlight brightness conversion.
++ */
++
++#include "backlight-priv.h"
++
++typedef struct {
++  PhoshBacklight parent;
++  int level;
++} TestBacklight;
++
++typedef PhoshBacklightClass TestBacklightClass;
++
++G_DEFINE_TYPE (TestBacklight, test_backlight, PHOSH_TYPE_BACKLIGHT)
++
++
++static void
++test_backlight_set_level (PhoshBacklight      *backlight,
++                         int                  level,
++                         GCancellable        *cancellable,
++                         GAsyncReadyCallback  callback,
++                         gpointer             user_data)
++{
++  TestBacklight *self = (TestBacklight *) backlight;
++  g_autoptr (GTask) task = g_task_new (backlight, cancellable, callback, user_data);
++
++  self->level = level;
++  g_task_return_int (task, level);
++}
++
++
++static int
++test_backlight_set_level_finish (PhoshBacklight  *backlight,
++                                GAsyncResult    *result,
++                                GError         **error)
++{
++  g_assert_true (g_task_is_valid (result, backlight));
++  return g_task_propagate_int (G_TASK (result), error);
++}
++
++
++static void
++test_backlight_class_init (TestBacklightClass *klass)
++{
++  klass->set_level = test_backlight_set_level;
++  klass->set_level_finish = test_backlight_set_level_finish;
++}
++
++
++static void
++test_backlight_init (TestBacklight *self)
++{
++  self->level = -1;
++}
++
++
++static void
++assert_relative_level (TestBacklight *self, double relative, int expected)
++{
++  phosh_backlight_set_relative (PHOSH_BACKLIGHT (self), relative);
++  while (g_main_context_iteration (NULL, FALSE));
++  g_assert_cmpint (self->level, ==, expected);
++  g_assert_cmpfloat_with_epsilon (phosh_backlight_get_relative (PHOSH_BACKLIGHT (self)),
++                                relative, 0.000001);
++}
++
++
++static void
++test_phosh_backlight_linear (void)
++{
++  TestBacklight *self = g_object_new (test_backlight_get_type (), NULL);
++  PhoshBacklight *backlight = PHOSH_BACKLIGHT (self);
++
++  phosh_backlight_set_range (backlight, 1, 10000, PHOSH_BACKLIGHT_SCALE_LINEAR);
++  assert_relative_level (self, 0.0, 1);
++  assert_relative_level (self, 0.25, 10);
++  assert_relative_level (self, 0.5, 100);
++  assert_relative_level (self, 0.75, 1000);
++  assert_relative_level (self, 1.0, 10000);
++
++  /* A fractional exponent must round the hardware level, not the exponent. */
++  phosh_backlight_set_brightness (backlight, 1.25);
++  while (g_main_context_iteration (NULL, FALSE));
++  g_assert_cmpint (self->level, ==, 18);
++
++  phosh_backlight_backend_update_level (backlight, 100);
++  g_assert_cmpfloat_with_epsilon (phosh_backlight_get_relative (backlight), 0.5, 0.000001);
++  g_object_unref (self);
++}
++
++
++static void
++test_phosh_backlight_non_linear (void)
++{
++  TestBacklight *self = g_object_new (test_backlight_get_type (), NULL);
++
++  phosh_backlight_set_range (PHOSH_BACKLIGHT (self), 1, 101, PHOSH_BACKLIGHT_SCALE_NON_LINEAR);
++  assert_relative_level (self, 0.0, 1);
++  assert_relative_level (self, 0.25, 26);
++  assert_relative_level (self, 0.5, 51);
++  assert_relative_level (self, 0.75, 76);
++  assert_relative_level (self, 1.0, 101);
++  g_object_unref (self);
++}
++
++
++int
++main (int argc, char *argv[])
++{
++  g_test_init (&argc, &argv, NULL);
++  g_test_add_func ("/phosh/backlight/linear", test_phosh_backlight_linear);
++  g_test_add_func ("/phosh/backlight/non-linear", test_phosh_backlight_non_linear);
++  return g_test_run ();
++}
+--- a/tests/test-shm.c
++++ b/tests/test-shm.c
+@@ -0,0 +1,71 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * Shared-memory descriptor contract for Wayland buffers.
++ */
++
++#include "util.h"
++
++#include <errno.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++
++static void
++test_phosh_shm_file (void)
++{
++  const size_t size = 4096;
++  struct stat statbuf;
++  unsigned char *first, *second;
++  int flags;
++  int fd = phosh_create_shm_file (size);
++
++  g_assert_cmpint (fd, >=, 0);
++  flags = fcntl (fd, F_GETFD);
++  g_assert_cmpint (flags, >=, 0);
++  g_assert_true (flags & FD_CLOEXEC);
++  g_assert_cmpint (fstat (fd, &statbuf), ==, 0);
++  /* Some shm implementations round the allocation up to a page. */
++  g_assert_cmpint (statbuf.st_size, >=, size);
++
++  first = mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++  second = mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++  g_assert_true (first != MAP_FAILED);
++  g_assert_true (second != MAP_FAILED);
++  g_assert_cmpint (first[0], ==, 0);
++  g_assert_cmpint (second[size - 1], ==, 0);
++
++  first[0] = 23;
++  second[size - 1] = 42;
++  g_assert_cmpint (second[0], ==, 23);
++  g_assert_cmpint (first[size - 1], ==, 42);
++
++  g_assert_cmpint (close (fd), ==, 0);
++  g_assert_cmpint (first[size - 1], ==, 42);
++  g_assert_cmpint (munmap (first, size), ==, 0);
++  g_assert_cmpint (munmap (second, size), ==, 0);
++}
++
++
++static void
++test_phosh_shm_invalid_size (void)
++{
++  int fd;
++
++  errno = 0;
++  fd = phosh_create_shm_file (-1);
++  g_assert_cmpint (fd, ==, -1);
++  g_assert_cmpint (errno, ==, EINVAL);
++}
++
++
++int
++main (int argc, char *argv[])
++{
++  g_test_init (&argc, &argv, NULL);
++  g_test_add_func ("/phosh/shm/file", test_phosh_shm_file);
++  g_test_add_func ("/phosh/shm/invalid-size", test_phosh_shm_invalid_size);
++  return g_test_run ();
++}

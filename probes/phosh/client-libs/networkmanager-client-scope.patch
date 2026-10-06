@@ -1,0 +1,107 @@
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -1,4 +1,5 @@
+ # system paths
++option('client_only', type: 'boolean', value: false, description: 'build only libnm and its internal dependencies')
+ option('systemdsystemunitdir', type: 'string', value: '', description: 'Directory for systemd service files')
+ option('system_ca_path', type: 'string', value: '/etc/ssl/certs', description: 'path to system CA certificates')
+ option('udev_dir', type: 'string', value: '', description: 'Absolute path of the udev base directory. Set to \'no\' not to install the udev rule')
+--- a/meson.build
++++ b/meson.build
+@@ -263,7 +263,7 @@
+ libelogind_dep = dependency('libelogind', version: '>= 219', required: false)
+ libudev_dep = dependency('libudev', version: '>= 175')
+ dbus_dep = dependency('dbus-1', version: '>= 1.1')
+-libndp_dep = dependency('libndp')
++libndp_dep = dependency('libndp', required: not get_option('client_only'))
+ 
+ jansson_dep = dependency('jansson', version: '>= 2.7', required: false)
+ config_h.set10('WITH_JANSSON', jansson_dep.found())
+@@ -336,7 +336,11 @@
+ config_h.set10('HAVE_WEXT', enable_wext)
+ 
+ # Checks for libdl - on certain platforms its part of libc
+-dl_dep = cc.find_library('dl')
++if cc.has_function('dlopen', prefix: '#include <dlfcn.h>')
++  dl_dep = declare_dependency()
++else
++  dl_dep = cc.find_library('dl')
++endif
+ '''
+ dl_deps = []
+ 
+@@ -1000,8 +1004,10 @@
+ 
+ subdir('introspection')
+ subdir('src')
++if not get_option('client_only')
+ subdir('data')
+ subdir('po')
++endif
+ 
+ if enable_vapi
+   subdir('vapi')
+@@ -1017,7 +1023,9 @@
+   find_program(join_paths(source_root, 'tools', 'check-nm-autoptr.sh')),
+ )
+ 
+-subdir('examples/C/glib')
++if not get_option('client_only')
++  subdir('examples/C/glib')
++endif
+ 
+ enable_qt = get_option('qt')
+ if enable_qt != 'false'
+@@ -1077,6 +1085,7 @@
+   configuration: config_extra_h,
+ )
+ 
++if not get_option('client_only')
+ meson.add_install_script(
+   join_paths('tools', 'meson-post-install.sh'),
+   nm_datadir,
+@@ -1091,6 +1100,7 @@
+   enable_nm_cloud_setup ? '1' : '0',
+   install_systemdunitdir ? '1' : '0',
+ )
++endif
+ 
+ output = '\nSystem paths:\n'
+ output += '  prefix: ' + nm_prefix + '\n'
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -2,6 +2,29 @@
+ 
+ src_inc = include_directories('.')
+ 
++if get_option('client_only')
++  libc_siphash = static_library(
++    'c-siphash',
++    sources: 'c-siphash/src/c-siphash.c',
++    include_directories: include_directories('c-stdaux/src'),
++    c_args: '-std=c11',
++  )
++  libnm_systemd_common_cflags = cc.get_supported_arguments(['-Wno-nonnull-compare'])
++  subdir('libnm-std-aux')
++  subdir('libnm-glib-aux')
++  subdir('libnm-log-null')
++  subdir('libnm-systemd-shared')
++  subdir('libnm-udev-aux')
++  subdir('libnm-base')
++  subdir('libnm-crypto')
++  subdir('libnm-core-public')
++  subdir('libnm-core-intern')
++  subdir('libnm-core-aux-intern')
++  subdir('libnm-core-impl')
++  subdir('libnm-client-public')
++  subdir('libnm-client-impl')
++else
++
+ ###############################################################################
+ 
+ libc_siphash = static_library(
+@@ -132,3 +155,4 @@
+   subdir('tests/client')
+   subdir('contrib/tests')
+ endif
++endif

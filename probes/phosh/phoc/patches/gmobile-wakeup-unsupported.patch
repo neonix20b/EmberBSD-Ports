@@ -1,0 +1,78 @@
+Return G_IO_ERROR_NOT_SUPPORTED when the platform has no wakeup timer clock.
+Exercise the documented error return; do not replace the wakeup clock.
+Origin: Local EmberBSD portability changes, AI-assisted, 2026-10-06.
+Status: Not submitted to or accepted by upstream.
+
+--- a/src/gm-timeout.c
++++ b/src/gm-timeout.c
+@@ -110,8 +110,10 @@
+   switch (clockid) {
+   case CLOCK_BOOTTIME:
+     return "[gm] boottime timeout source";
++#ifdef CLOCK_BOOTTIME_ALARM
+   case CLOCK_BOOTTIME_ALARM:
+     return "[gm] boottime wakeup timeout source";
++#endif
+   default:
+     g_assert_not_reached();
+     return "";
+@@ -272,6 +274,11 @@
+ 
+   g_return_val_if_fail (function != NULL, 0);
+ 
++#ifndef CLOCK_BOOTTIME_ALARM
++  g_set_error_literal (err, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
++                       "Wakeup timers are not supported on this platform");
++  return 0;
++#else
+   source = gm_timeout_source_once_new (1000L * seconds, CLOCK_BOOTTIME_ALARM, err);
+   if (!source)
+     return 0;
+@@ -283,6 +290,7 @@
+   id = g_source_attach (source, NULL);
+ 
+   return id;
++#endif
+ }
+ 
+ /**
+--- a/tests/test-timeout.c
++++ b/tests/test-timeout.c
+@@ -8,6 +8,8 @@
+ 
+ #define GMOBILE_USE_UNSTABLE_API
+ #include "gmobile.h"
++#include <gio/gio.h>
++#include <sys/timerfd.h>
+ 
+ 
+ static void
+@@ -63,6 +65,18 @@
+ }
+ 
+ 
++#ifndef CLOCK_BOOTTIME_ALARM
++static void
++test_gm_timeout_wakeup_unsupported (void)
++{
++  g_autoptr (GError) error = NULL;
++  guint id = gm_wakeup_timeout_add_seconds_once (1, on_timeout2, NULL, &error);
++
++  g_assert_cmpuint (id, ==, 0);
++  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
++}
++#endif
++
+ gint
+ main (gint argc,
+       gchar *argv[])
+@@ -71,6 +85,9 @@
+ 
+   g_test_add_func ("/Gm/timeout/simple", test_gm_timeout_simple);
+   g_test_add_func ("/Gm/timeout/remove", test_gm_timeout_remove);
++#ifndef CLOCK_BOOTTIME_ALARM
++  g_test_add_func ("/Gm/timeout/wakeup-unsupported", test_gm_timeout_wakeup_unsupported);
++#endif
+ 
+   return g_test_run ();
+ }

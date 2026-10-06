@@ -1,0 +1,16 @@
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -1,11 +1,13 @@
+ if get_option('tests')
+ 
++if get_option('daemon')
+ umockdev_dep = dependency('umockdev-1.0')
+ 
+ add_test_setup ('umockdev',
+   exe_wrapper: 'umockdev-wrapper',
+   is_default: true
+ )
++endif
+ 
+ test_env = environment()
+ test_env.set('G_TEST_SRCDIR', meson.current_source_dir())

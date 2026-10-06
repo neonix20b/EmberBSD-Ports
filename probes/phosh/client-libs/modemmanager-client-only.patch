@@ -1,0 +1,78 @@
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -1,6 +1,8 @@
+ # SPDX-License-Identifier: GPL-2.0-or-later
+ # Copyright (C) 2021 Iñigo Martinez <inigomartinez@gmail.com>
+ 
++option('client_only', type: 'boolean', value: false, description: 'build only libmm-glib and its tests')
++
+ option('udev', type: 'boolean', value: true, description: 'enable udev support')
+ option('udevdir', type: 'string', value: '', description: 'udev base directory')
+ 
+--- a/meson.build
++++ b/meson.build
+@@ -403,32 +403,48 @@
+   'VERSION': mm_version,
+ }
+ 
+-subdir('po')
+-subdir('data')
+-if get_option('examples')
+-  subdir('data/dispatcher-connection')
+-  subdir('data/dispatcher-fcc-unlock')
+-  subdir('data/dispatcher-modem-setup')
++if not get_option('client_only')
++  subdir('po')
++  subdir('data')
++  if get_option('examples')
++    subdir('data/dispatcher-connection')
++    subdir('data/dispatcher-fcc-unlock')
++    subdir('data/dispatcher-modem-setup')
++  endif
+ endif
+ subdir('introspection')
+ subdir('include')
+ 
+-subdir('libqcdm/src')
+-if enable_tests
+-  subdir('libqcdm/tests')
++if get_option('client_only')
++  pkg.generate(
++    name: mm_name,
++    description: 'Common headers provided by ModemManager',
++    version: mm_version,
++    subdirs: mm_name,
++    variables: 'exec_prefix=${prefix}',
++  )
++endif
++
++if not get_option('client_only')
++  subdir('libqcdm/src')
++  if enable_tests
++    subdir('libqcdm/tests')
++  endif
+ endif
+ 
+ subdir('libmm-glib')
+-subdir('src')
+-subdir('cli')
++if not get_option('client_only')
++  subdir('src')
++  subdir('cli')
++
++  if enable_tests
++    subdir('test')
++    subdir('tools/tests')
++  endif
+ 
+-if enable_tests
+-  subdir('test')
+-  subdir('tools/tests')
++  subdir('examples/sms-c')
+ endif
+ 
+-subdir('examples/sms-c')
+-
+ enable_man = get_option('man')
+ if enable_man
+   subdir('docs/man')

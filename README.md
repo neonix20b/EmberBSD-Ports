@@ -13,13 +13,13 @@ archives or store generated binaries.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
   libdrm, Mesa, wlroots and labwc sources and patches; native builds and
   software EGL readback pass. Native KMS and GPU runtime remain unverified.
-- [Phosh native build probe](probes/phosh/README.md): GNOME Bluetooth and
-  gmobile libraries build; Phosh 0.58.0 configuration is blocked by missing
-  GTK3 Wayland and further system integration dependencies.
+- [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
+  runs inside GNOME/X11 through Phoc and software-rendered Wayland.
+  The app list, keyboard input and a launched text editor were verified.
 
-These entries are experimental probes, not installable packages or proof of
-working native desktop sessions. Their helpers stop on errors and keep
-build output in private user directories.
+These entries are experimental probes, not installable packages or phone
+images. Each recipe records its tested runtime and platform boundaries.
+Helpers stop on errors and keep output in private user directories.
 
 ## Package integration
 

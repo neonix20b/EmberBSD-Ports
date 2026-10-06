@@ -1,0 +1,14 @@
+Origin: Local EmberBSD portability changes, AI-assisted, 2026-10-06.
+Status: Not submitted to or accepted by upstream.
+
+--- a/backend/x11/backend.c
++++ b/backend/x11/backend.c
+@@ -422,7 +422,7 @@
+ 
+ 	for (size_t i = 0; i < sizeof(atom) / sizeof(atom[0]); ++i) {
+ 		atom[i].cookie = xcb_intern_atom(x11->xcb,
+-			true, strlen(atom[i].name), atom[i].name);
++			false, strlen(atom[i].name), atom[i].name);
+ 	}
+ 
+ 	for (size_t i = 0; i < sizeof(atom) / sizeof(atom[0]); ++i) {

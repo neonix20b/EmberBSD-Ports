@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<schemalist>
+  <schema id="org.example.phosh.test.keybindings" path="/org/example/phosh/test/keybindings/">
+    <key name="existing" type="as"><default>['&lt;Super&gt;a', 'F9']</default></key>
+    <key name="empty" type="as"><default>[]</default></key>
+  </schema>
+</schemalist>
