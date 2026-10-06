@@ -1,0 +1,4 @@
+libdrm-2.4.134.tar.xz	ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95	https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz
+mesa-21.3.9.tar.xz	91fe6f20339884e37a7c47bfba42fb1cd397512c9ed5ad423de369f047cd8b5c	https://archive.mesa3d.org/older-versions/21.x/mesa-21.3.9.tar.xz
+wlroots-0.19.3.tar.gz	a6ff89b64ea15e424d1b0db4a22145fccf5ec2ff2e7b8af0fa35e2ac8975986f	https://gitlab.freedesktop.org/wlroots/wlroots/-/archive/0.19.3/wlroots-0.19.3.tar.gz
+labwc-0.9.7.tar.gz	4ad4e5e7f29e0d0704fadb4a072037173d850b46f12122b79168879b922e0f43	https://github.com/labwc/labwc/archive/refs/tags/0.9.7.tar.gz
