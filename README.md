@@ -28,6 +28,10 @@ runtime behavior are validated.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
+- [Media and OpenCV videoio](probes/media/README.md): FFmpeg 9.0.2,
+  GStreamer 1.28.7 and OpenCV 5.0.0 pass installed file/video pipeline checks
+  on AArch64, including both videoio backends, timestamps, seeking, lossless
+  output and malformed input. Camera capture and acceleration are unverified.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.
