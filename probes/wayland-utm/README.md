@@ -78,7 +78,12 @@ GCC 12.5: 64 two-DSO unload cycles, mixed C++/C order, ordinary exit, local
 ELF bindings and injected failures. Plain atexit fails the same cleanup
 contract. Patched half conversion has zero failures; pristine Mesa has 2046.
 The upstream symbol-policy check passes with the existing Python 3.13.
-These results do not establish the selected compiler, complete Mesa or JIT.
+The DSO and half-conversion checks also pass with the installed GCC 16.2
+candidate on NetBSD 11/AArch64. The DSO process loads exactly one candidate
+libstdc++ and libgcc runtime, checked by canonical file identity. This
+establishes those narrow helpers with the selected compiler; complete Mesa,
+LLVM 23 JIT, actual util_queue/ORC lifetime and consumer migration remain
+unverified.
 
 [`audit-libraries.sh`](audit-libraries.sh) records ELF dynamic dependencies,
 hashes and native loaded paths for staged graphics and compositors. It rejects
