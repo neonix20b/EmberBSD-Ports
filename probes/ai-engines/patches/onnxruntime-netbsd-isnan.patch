@@ -1,0 +1,25 @@
+--- a/include/onnxruntime/core/common/float16.h
++++ b/include/onnxruntime/core/common/float16.h
+@@ -3,6 +3,9 @@
+ #pragma once
+ 
+ #include <math.h>
++#if defined(__NetBSD__)
++#include <cmath>
++#endif
+ 
+ #include "core/common/endian.h"
+ #if defined(CUDA_VERSION) && CUDA_VERSION >= 11000
+@@ -121,8 +124,12 @@
+     }
+ #else
+ 
++#if defined(__NetBSD__)
++    if (std::isnan(v)) {
++#else
+     // Use C isnan to work both in host and device
+     if (::isnan(v)) {
++#endif
+       val = kPositiveQNaNBits;
+     } else {
+       auto get_msb_half = [](float fl) {

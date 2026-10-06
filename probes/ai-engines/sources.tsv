@@ -1,0 +1,5 @@
+onnxruntime-1.30.0.tar.gz f6681ecbddf53898adf0cc9e8e9e84657485b84d2eca3c8aa353de6d7dd417ef https://codeload.github.com/microsoft/onnxruntime/tar.gz/refs/tags/v1.30.0
+ncnn-20260526.tar.gz da1ade826bc22858a9fb87ae052789bbd614d042b3ec2c22e6544ca83db6bc04 https://codeload.github.com/Tencent/ncnn/tar.gz/refs/tags/20260526
+rnnoise-0.2.tar.gz 90fce4b00b9ff24c08dbfe31b82ffd43bae383d85c5535676d28b0a2b11c0d37 https://github.com/xiph/rnnoise/releases/download/v0.2/rnnoise-0.2.tar.gz
+silero-vad-6.2.3.tar.gz bc53dd7437f6f4a04e9bb946081b08db5ad8268df12ffaf10bc147c50294f95b https://codeload.github.com/snakers4/silero-vad/tar.gz/refs/tags/v6.2.3
+eigen-5.0.1.tar.gz e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz

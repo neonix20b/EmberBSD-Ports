@@ -1,0 +1,11 @@
+--- a/cmake/external/onnxruntime_external_deps.cmake
++++ b/cmake/external/onnxruntime_external_deps.cmake
+@@ -556,7 +556,7 @@
+   message(STATUS "Aliasing ONNX::onnx_proto to onnx_proto")
+   add_library(onnx_proto ALIAS ONNX::onnx_proto)
+ endif()
+-if(onnxruntime_USE_VCPKG)
++if(onnxruntime_USE_VCPKG OR onnxruntime_USE_PREINSTALLED_EIGEN)
+   find_package(Eigen3 CONFIG REQUIRED)
+ else()
+   include(external/eigen.cmake)

@@ -36,6 +36,11 @@ runtime behavior are validated.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.
+- [CPU inference and audio](probes/ai-engines/README.md): ONNX Runtime 1.30.0,
+  ncnn 20260526, RNNoise 0.2 and Silero VAD 6.2.3 pass seven native installed
+  consumer checks on AArch64. They cover numerical inference, stream state,
+  speech/silence and invalid inputs; explicit ORT worker affinity is checked
+  separately. These are source probes, without microphone or accelerator validation.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and
   process-crash/reopen checks. A C application retrieves local documents and

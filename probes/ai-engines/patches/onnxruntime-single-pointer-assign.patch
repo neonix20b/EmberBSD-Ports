@@ -1,0 +1,25 @@
+--- a/onnxruntime/core/optimizer/group_query_attention_fusion.cc
++++ b/onnxruntime/core/optimizer/group_query_attention_fusion.cc
+@@ -393,10 +393,8 @@
+     graph.RemoveNode(node->Index());
+   }
+ 
+-  const std::array output_defs{&new_node_output_arg};
+-
+   auto& new_node_output_defs = new_node->MutableOutputDefs();
+-  new_node_output_defs.assign(output_defs.begin(), output_defs.end());
++  new_node_output_defs.assign(1, &new_node_output_arg);
+ }
+ 
+ Status GroupQueryAttentionFusion::ApplyImpl(
+--- a/onnxruntime/core/session/model_package/model_package_variant_selector.cc
++++ b/onnxruntime/core/session/model_package/model_package_variant_selector.cc
+@@ -126,7 +126,7 @@
+     }
+     if (const auto* matched_hd = FindMatchingHardwareDevice(*ec.device, ep_info.hardware_devices)) {
+       device_ok = true;
+-      constraint_devices = {matched_hd};
++      constraint_devices.assign(1, matched_hd);
+     }
+   }
+ 

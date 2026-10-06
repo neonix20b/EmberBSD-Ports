@@ -1,0 +1,112 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+set -eu
+umask 022
+[ "$(uname -s)" = NetBSD ] || { echo 'Native EmberBSD/NetBSD required.' >&2; exit 2; }
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] || { echo 'Usage: build.sh NEW_WORK [ARCHIVE_DIRECTORY]' >&2; exit 2; }
+work=$1
+case "$work" in /*) ;; *) echo 'Use an absolute work path.' >&2; exit 2 ;; esac
+case "$work" in *[!a-zA-Z0-9_./-]*) echo 'Use a simple path without whitespace.' >&2; exit 2 ;; esac
+jobs=${JOBS:-1}
+case "$jobs" in ''|0|*[!0-9]*) echo 'JOBS must be positive.' >&2; exit 2 ;; esac
+[ "$jobs" -gt 0 ] 2>/dev/null || { echo 'JOBS must be positive.' >&2; exit 2; }
+recipe=$(CDPATH= cd "$(dirname "$0")" && pwd)
+patch_tool=${PATCH:-gpatch}
+python=${PYTHON:-python3.13}
+for tool in cc c++ cmake ninja gmake "$patch_tool" "$python" sha256 curl tar pkg-config; do
+    command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 2; }
+done
+mkdir "$work"
+mkdir "$work/src" "$work/archives" "$work/logs" "$work/dependencies"
+prefix=$work/install
+if [ "$#" = 2 ]; then
+    while read -r name hash url; do cp "$2/$name" "$work/archives/$name"; done < "$recipe/sources.tsv"
+    while read -r name hash url; do cp "$2/$name" "$work/archives/$name"; done < "$recipe/dependencies.tsv"
+fi
+# Verify all archives before extracting any source. fetch.sh rejects corrupt caches.
+sh "$recipe/fetch.sh" "$work/archives" > "$work/logs/sources.txt"
+while read -r name hash url; do tar -xzf "$work/archives/$name" -C "$work/src"; done < "$recipe/sources.tsv"
+while read -r name hash url; do
+    mirror=$work/dependencies/${url#https://}
+    mkdir -p "$(dirname "$mirror")"
+    cp "$work/archives/$name" "$mirror"
+done < "$recipe/dependencies.tsv"
+while read -r file hash; do
+    [ "$(sha256 -q "$work/src/silero-vad-6.2.3/$file")" = "$hash" ] || { echo "Model/fixture checksum mismatch: $file" >&2; exit 1; }
+done < "$recipe/models.tsv"
+run()
+{
+    stage=$1
+    shift
+    printf '%s\n' "$stage"
+    status=0
+    /usr/bin/time -l "$@" > "$work/logs/$stage.log" 2>&1 || status=$?
+    if [ "$status" -ne 0 ]; then
+        tail -60 "$work/logs/$stage.log" >&2
+        echo "Failed: $stage ($status)" >&2
+        exit "$status"
+    fi
+}
+{ uname -a; cc --version; c++ --version; cmake --version; ninja --version; "$python" --version; } > "$work/logs/tools.txt"
+run rnnoise-upstream-arm-build "$patch_tool" -d "$work/src/rnnoise-0.2" -p1 < "$recipe/patches/rnnoise-upstream-arm-build.patch"
+cd "$work/src/rnnoise-0.2"
+run rnnoise-configure ./configure --prefix="$prefix" --enable-shared --disable-static --disable-examples
+run rnnoise-build gmake -j "$jobs"
+run rnnoise-check gmake check
+run rnnoise-install gmake install
+run ncnn-configure cmake -S "$work/src/ncnn-20260526" -B "$work/ncnn-build" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" -DNCNN_VERSION=20260526 \
+    -DNCNN_SHARED_LIB=ON -DNCNN_VULKAN=OFF -DNCNN_OPENMP=OFF \
+    -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_BENCHMARK=OFF \
+    -DNCNN_BUILD_TESTS=OFF -DNCNN_PYTHON=OFF
+run ncnn-build cmake --build "$work/ncnn-build" --parallel "$jobs"
+run ncnn-install cmake --install "$work/ncnn-build"
+run eigen-configure cmake -S "$work/src/eigen-5.0.1" -B "$work/eigen-build" -G Ninja \
+    -DCMAKE_INSTALL_PREFIX="$prefix" -DEIGEN_BUILD_TESTING=OFF -DEIGEN_BUILD_DOC=OFF \
+    -DEIGEN_BUILD_BLAS=OFF -DEIGEN_BUILD_LAPACK=OFF -DEIGEN_BUILD_DEMOS=OFF
+run eigen-install cmake --install "$work/eigen-build"
+for patch in "$recipe"/patches/onnxruntime-*.patch; do
+    run "$(basename "$patch" .patch)" "$patch_tool" -d "$work/src/onnxruntime-1.30.0" -p1 < "$patch"
+done
+run onnx-configure cmake -S "$work/src/onnxruntime-1.30.0/cmake" -B "$work/onnx-build" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_PREFIX_PATH="$prefix" \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DFETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER \
+    -Donnxruntime_CMAKE_DEPS_MIRROR_DIR="$work/dependencies" \
+    -DPatch_EXECUTABLE="$(command -v "$patch_tool")" -DPython_EXECUTABLE="$(command -v "$python")" \
+    -Donnxruntime_BUILD_SHARED_LIB=ON -Donnxruntime_BUILD_UNIT_TESTS=OFF -Donnxruntime_BUILD_BENCHMARKS=OFF \
+    -Donnxruntime_ENABLE_PYTHON=OFF -Donnxruntime_ENABLE_TRAINING=OFF \
+    -Donnxruntime_USE_TELEMETRY=OFF -Donnxruntime_ENABLE_CPUINFO=OFF -Donnxruntime_USE_MIMALLOC=OFF \
+    -Donnxruntime_USE_PREINSTALLED_EIGEN=ON -Donnxruntime_USE_KLEIDIAI=OFF \
+    -Donnxruntime_USE_SVE=OFF -Donnxruntime_USE_XNNPACK=OFF \
+    -Donnxruntime_DISABLE_CONTRIB_OPS=ON -Donnxruntime_DISABLE_ML_OPS=ON \
+    -Donnxruntime_USE_CUDA=OFF -Donnxruntime_USE_DNNL=OFF -Donnxruntime_USE_OPENVINO=OFF
+run onnx-float16-contract sh "$recipe/tests/check-float16-source.sh" "$work"
+run onnx-cpu-id-contract sh "$recipe/tests/check-netbsd-cpu-source.sh" "$work"
+run onnx-build cmake --build "$work/onnx-build" --parallel "$jobs"
+run onnx-install cmake --install "$work/onnx-build"
+share=$prefix/share/ai-engines
+mkdir -p "$share/models" "$share/fixtures" "$share/licenses"
+cp "$work/src/silero-vad-6.2.3/src/silero_vad/data/silero_vad.onnx" "$share/models/"
+cp "$work/src/silero-vad-6.2.3/tests/data/test.wav" "$share/fixtures/silero-test.wav"
+cp "$recipe/sources.tsv" "$recipe/dependencies.tsv" "$recipe/models.tsv" "$recipe/PROVENANCE.md" "$share/"
+cp "$recipe/LICENSE" "$share/licenses/EmberBSD-probe-LICENSE"
+cp -R "$recipe/patches" "$share/"
+cp "$work/src/onnxruntime-1.30.0/LICENSE" "$share/licenses/ONNX-Runtime-LICENSE"
+cp "$work/src/onnxruntime-1.30.0/ThirdPartyNotices.txt" "$share/licenses/ONNX-Runtime-ThirdPartyNotices.txt"
+for dependency in "$work"/onnx-build/_deps/*-src; do
+    [ -d "$dependency" ] || continue
+    destination=$share/licenses/$(basename "$dependency")
+    mkdir -p "$destination"
+    for notice in "$dependency"/LICENSE* "$dependency"/COPYING* "$dependency"/NOTICE*; do
+        [ -f "$notice" ] || continue
+        cp "$notice" "$destination/"
+    done
+done
+cp "$work/src/ncnn-20260526/LICENSE.txt" "$share/licenses/ncnn-LICENSE.txt"
+cp "$work/src/rnnoise-0.2/COPYING" "$share/licenses/RNNoise-COPYING"
+cp "$work/src/silero-vad-6.2.3/LICENSE" "$share/licenses/Silero-LICENSE"
+mkdir -p "$share/licenses/eigen"
+cp "$work/src/eigen-5.0.1"/COPYING* "$share/licenses/eigen/"
+du -sk "$work" "$prefix" > "$work/logs/disk-kib.txt"
+echo "Installed in $prefix; run test.sh to validate the installed consumers."
