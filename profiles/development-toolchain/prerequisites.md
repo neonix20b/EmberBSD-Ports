@@ -1,7 +1,8 @@
 # Current compiler prerequisites
 
-The GCC profile updates two recipes from the pinned pkgsrc base using
-`patches/current-prerequisites.patch`. This is an AI-assisted EmberBSD delta,
+The GCC profile updates MPC/Texinfo recipes using
+`patches/current-prerequisites.patch` and the test harness using
+`patches/stable-expect.patch`. These are AI-assisted EmberBSD deltas,
 not submitted upstream. Versions are selected from upstream releases, not
 from the age of the pkgsrc recipe. Full archive SHA256 values are in
 `sources.tsv`; BLAKE2s, SHA512 and byte counts are in the resulting distinfo.
@@ -63,10 +64,20 @@ GNU make 4.4.1 and DejaGNU 1.6.3 remain upstream current releases. GNU sed
 4.10 is supplied by the pinned recipe. Tcl 8.6.18 is the latest supported
 8.6 release in 2026, with development ending in 2026 according to
 <https://www.tcl-lang.org/software/tcltk/8.6.html>.
-Its use for the existing Expect/DejaGNU recipe is a bounded test-harness
-compatibility question, not permission to install parallel Tcl versions.
-Before installation, verify the actual Expect compatibility requirement
-and record the removal/update gate if 8.6 must be retained.
+The profile updates Expect from 5.45.0 to the last stable 5.45.4;
+the [official site](https://core.tcl-lang.org/expect/home) publishes its
+archive SHA256. The three pkgsrc portability patches are retained with
+refreshed contexts, including the generated configure substitution for
+`SHLIB_VERSION`. Library names follow 5.45.4's undotted `5454` suffix.
+
+The official site points to the maintained
+[Tcl 9 port](https://github.com/tcltk-depot/expect). Its README identifies
+6.0a0 as work in progress, not production ready, with only Linux tested.
+Thus this test harness uses the supported Tcl 8.6.18 branch, rather than
+an alpha Expect dependency. No other Tcl runtime is installed alongside it.
+Remove this exception when a stable Expect supporting Tcl 9 passes the
+NetBSD PTY/spawn tests and DejaGNU/GCC test driver checks. This is a bounded
+compiler-test dependency, not the release development-runtime selection.
 
 These recipe adaptations and archive checks are source preparation only.
 They are not evidence of a passed native GCC build or complete test suite.

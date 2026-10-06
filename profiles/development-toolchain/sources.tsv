@@ -3,3 +3,4 @@ gcc	16.2.0	https://gcc.gnu.org/pub/gcc/releases/gcc-16.2.0/gcc-16.2.0.tar.xz	e67
 pkgsrc-gcc16-update	823a3b483b7ffeb73973f911458d6ba22c74efc4	https://github.com/NetBSD/pkgsrc/commit/823a3b483b7ffeb73973f911458d6ba22c74efc4.patch	bdaf9c376aebcbe5b9796b14295a8abb7499d596e3d24c1fb5576ff4dc3fb7d8
 mpc	1.4.1	https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz	91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931
 texinfo	7.3	https://ftp.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz	51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e
+expect	5.45.4	https://downloads.sourceforge.net/project/expect/Expect/5.45.4/expect5.45.4.tar.gz	49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34

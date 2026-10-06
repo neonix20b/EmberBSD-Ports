@@ -45,7 +45,7 @@ for category in "$root"/pkgsrc/*; do
     cp -R "$category" "$destination/$name"
 done
 if [ "$profile" = development-toolchain ]; then
-    for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch; do
+    for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch; do
         patch -f -E -d "$destination" -p1 -F 0 < \
             "$root/profiles/development-toolchain/patches/$delta"
     done

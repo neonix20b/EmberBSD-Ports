@@ -1,0 +1,223 @@
+EmberBSD local, AI-assisted; not submitted upstream.
+Update the stable Expect test harness to 5.45.4; retain pkgsrc portability
+changes and refresh their contexts. Tcl 9 support is upstream 6.0a0, not
+a stable release. See ../prerequisites.md for the bounded Tcl 8.6 gate.
+
+diff -ruN a/lang/tcl-expect/Makefile b/lang/tcl-expect/Makefile
+--- a/lang/tcl-expect/Makefile	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/Makefile	2026-10-06 23:17:39.124660945 +0300
+@@ -3,7 +3,6 @@
+ .include "Makefile.common"
+ 
+ PKGNAME=	tcl-expect-${EXPECT_VERSION}
+-PKGREVISION=	6
+ CATEGORIES=	lang
+ 
+ MAINTAINER=	pkgsrc-users@NetBSD.org
+diff -ruN a/lang/tcl-expect/Makefile.common b/lang/tcl-expect/Makefile.common
+--- a/lang/tcl-expect/Makefile.common	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/Makefile.common	2026-10-06 23:17:39.124743860 +0300
+@@ -8,9 +8,9 @@
+ HOMEPAGE=	https://expect.sourceforge.net/
+ #HOMEPAGE+=	https://core.tcl-lang.org/expect/index
+ 
+-EXPECT_FNAME=	5.45
+-EXPECT_VERSION=	5.45.0
+-EXPECT_SONUM=	545
++EXPECT_FNAME=	5.45.4
++EXPECT_VERSION=	5.45.4
++EXPECT_SONUM=	5454
+ 
+ # upstream is no longer maintaining expect
+ #   https://sourceforge.net/p/expect/bugs/107/
+diff -ruN a/lang/tcl-expect/distinfo b/lang/tcl-expect/distinfo
+--- a/lang/tcl-expect/distinfo	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/distinfo	2026-10-06 23:18:09.403337701 +0300
+@@ -1,8 +1,8 @@
+ $NetBSD: distinfo,v 1.27 2025/03/30 21:10:45 wiz Exp $
+ 
+-BLAKE2s (expect5.45.tar.gz) = 38c440ed0868322b6ec7438decaa036a636e7d700191b754c1e4a7dc0fdd0c46
+-SHA512 (expect5.45.tar.gz) = be991c68241e607b3a689eae7e7966056dbfb577e857331d54a4911bd178c1816425217603b43918ad1b6d2e966271a0f01e79d7028a22e223562d59d10c8c51
+-Size (expect5.45.tar.gz) = 628808 bytes
+-SHA1 (patch-Makefile.in) = 06858e50b7517901d0a7dc58f2149e7ef09b615b
+-SHA1 (patch-configure) = ebe06d97627f0ac3e16a7a350554655e17031654
+-SHA1 (patch-exp__chan.c) = 20fa6d6902f0a60c6f9767de60178ad8860a2229
++BLAKE2s (expect5.45.4.tar.gz) = 41310882c3658679f60911aca1a3cf9c353784f164410abf919ce7adefdc73e0
++SHA512 (expect5.45.4.tar.gz) = a8dc25e8175f67e029e15cbcfca1705165c1c4cb2dd37eaaaebffb61e3ba132d9519cd73ca5add4c3358a2b0b7a91e878279e8d0b72143ff2c287fce07e4659a
++Size (expect5.45.4.tar.gz) = 632363 bytes
++SHA1 (patch-Makefile.in) = c0166b0cff9d3d9e610f61bd719be0d8a3e484c4
++SHA1 (patch-configure) = ff3789dc4c61e7f666a04fc0dc30d6caeaac5de6
++SHA1 (patch-exp__chan.c) = 79ef66d2d3e012572207af37b329b3be52c1c8f0
+diff -ruN a/lang/tcl-expect/patches/patch-Makefile.in b/lang/tcl-expect/patches/patch-Makefile.in
+--- a/lang/tcl-expect/patches/patch-Makefile.in	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/patches/patch-Makefile.in	2026-10-06 23:17:39.116066823 +0300
+@@ -16,9 +16,9 @@
+ 
+ \todo File changes upstream (but upstream is not functioning).
+ 
+---- Makefile.in.orig	2010-09-30 17:14:07.000000000 +0000
++--- Makefile.in.orig
+ +++ Makefile.in
+-@@ -99,7 +99,9 @@ PKG_HEADERS	= @PKG_HEADERS@
++@@ -99,7 +99,9 @@
+  # configuration options) composed of the named objects.
+  #========================================================================
+  
+@@ -28,7 +28,7 @@
+  PKG_STUB_LIB_FILE = @PKG_STUB_LIB_FILE@
+  
+  lib_BINARIES	= $(PKG_LIB_FILE)
+-@@ -121,9 +123,9 @@ includedir	= @includedir@
++@@ -121,9 +123,9 @@
+  DESTDIR		=
+  
+  PKG_DIR		= $(PACKAGE_NAME)$(PACKAGE_VERSION)
+@@ -41,7 +41,7 @@
+  
+  top_builddir	= .
+  
+-@@ -149,7 +151,7 @@ RANLIB		= @RANLIB@
++@@ -149,7 +151,7 @@
+  RANLIB_STUB	= @RANLIB_STUB@
+  SHLIB_CFLAGS	= @SHLIB_CFLAGS@
+  SHLIB_LD	= @SHLIB_LD@
+@@ -50,7 +50,7 @@
+  STLIB_LD	= @STLIB_LD@
+  TCL_DEFS	= @TCL_DEFS@
+  TCL_BIN_DIR	= @TCL_BIN_DIR@
+-@@ -214,10 +216,15 @@ all: binaries libraries doc
++@@ -214,10 +216,15 @@
+  # of the Makefile, in the "BINARIES" variable.
+  #========================================================================
+  
+@@ -67,7 +67,7 @@
+  doc:
+  
+  install: all install-binaries install-libraries install-doc
+-@@ -547,6 +554,9 @@ install-lib-binaries:
++@@ -547,6 +554,9 @@
+  	    fi; \
+  	  fi; \
+  	done
+@@ -77,7 +77,7 @@
+  	@list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
+  	  if test -f $(srcdir)/$$p; then \
+  	    destp=`basename $$p`; \
+-@@ -554,9 +564,11 @@ install-lib-binaries:
++@@ -554,9 +564,11 @@
+  	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkglibdir)/$$destp; \
+  	  fi; \
+  	done
+diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/patch-configure
+--- a/lang/tcl-expect/patches/patch-configure	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/patches/patch-configure	2026-10-06 23:17:39.121315866 +0300
+@@ -16,9 +16,19 @@
+ 
+ \todo File changes upstream (but upstream is not functioning).
+ 
+---- configure.orig	2010-09-16 20:46:47.000000000 +0000
++--- configure.orig
+ +++ configure
+-@@ -8099,11 +8099,11 @@ fi
++@@ -620,7 +620,8 @@
++ #endif"
++ 
++ enable_option_checking=no
++-ac_subst_vars='LTLIBOBJS
+++ac_subst_vars='SHLIB_VERSION
+++LTLIBOBJS
++ LIBOBJS
++ TCLSH_PROG
++ VC_MANIFEST_EMBED_EXE
++@@ -6563,11 +6564,11 @@
+  		;;
+  	    esac
+  	    ;;
+@@ -31,8 +41,8 @@
+ +	    TCL_SHLIB_LD_EXTRAS="-Wl,-soname \$@"
+  	    SHLIB_SUFFIX=".so"
+  	    LDFLAGS=""
+- 	    if test $doRpath = yes; then
+-@@ -8899,7 +8899,7 @@ fi
++ 	    if test $doRpath = yes; then :
++@@ -7150,7 +7151,7 @@
+  	    BSD/OS*) ;;
+  	    CYGWIN_*) ;;
+  	    IRIX*) ;;
+@@ -41,7 +51,7 @@
+  	    Darwin-*) ;;
+  	    SCO_SV-3.2*) ;;
+  	    windows) ;;
+-@@ -15948,14 +15948,7 @@ fi
++@@ -9597,14 +9598,7 @@
+  
+  PACKAGE_VERSION_NODOTS="`echo $PACKAGE_VERSION | sed -e 's/\.//g'`"
+  
+@@ -56,8 +66,8 @@
+  
+  # also remove dots on systems that don't support filenames > 14
+  # (are there systems which support shared libs and restrict filename lengths!?)
+-@@ -16021,11 +16014,7 @@ if test "$FRAMEWORK_BUILD" = "1" ; then
+- _ACEOF
++@@ -9659,11 +9653,7 @@
++     $as_echo "#define EXP_FRAMEWORK 1" >>confdefs.h
+  
+  else
+ -    if test "${TCL_LIB_VERSIONS_OK}" = "ok"; then
+@@ -69,7 +79,7 @@
+      EXP_BUILD_LIB_SPEC="-L`pwd` ${EXP_LIB_FLAG}"
+      EXP_LIB_SPEC="-L${libdir} ${EXP_LIB_FLAG}"
+  fi
+-@@ -16341,6 +16330,9 @@ rm -f conftest*
++@@ -9965,6 +9955,9 @@
+      # substituted. (@@@ Might not be necessary anymore)
+      #--------------------------------------------------------------------
+  
+@@ -79,11 +89,3 @@
+      if test "${TEA_PLATFORM}" = "windows" ; then
+  	if test "${SHARED_BUILD}" = "1" ; then
+  	    # We force the unresolved linking of symbols that are really in
+-@@ -17176,6 +17168,7 @@ s,@VC_MANIFEST_EMBED_EXE@,$VC_MANIFEST_E
+- s,@TCLSH_PROG@,$TCLSH_PROG,;t t
+- s,@LIBOBJS@,$LIBOBJS,;t t
+- s,@LTLIBOBJS@,$LTLIBOBJS,;t t
+-+s,@SHLIB_VERSION@,$SHLIB_VERSION,;t t
+- CEOF
+- 
+- _ACEOF
+diff -ruN a/lang/tcl-expect/patches/patch-exp__chan.c b/lang/tcl-expect/patches/patch-exp__chan.c
+--- a/lang/tcl-expect/patches/patch-exp__chan.c	2026-10-02 21:24:59.000000000 +0300
++++ b/lang/tcl-expect/patches/patch-exp__chan.c	2026-10-06 23:17:39.124542305 +0300
+@@ -11,7 +11,7 @@
+ 
+ \todo File changes upstream (but upstream is not functioning).
+ 
+---- exp_chan.c.orig	2010-07-01 00:53:49.000000000 +0000
++--- exp_chan.c.orig
+ +++ exp_chan.c
+ @@ -7,6 +7,9 @@
+   */
+@@ -23,7 +23,7 @@
+  #include <stdio.h>
+  #include <signal.h>
+  #include <errno.h>
+-@@ -205,6 +208,10 @@ ExpInputProc(instanceData, buf, toRead, 
++@@ -205,6 +208,10 @@
+      ExpState *esPtr = (ExpState *) instanceData;
+      int bytesRead;			/* How many bytes were actually
+                                           * read from the input device? */
+@@ -34,7 +34,7 @@
+  
+      *errorCodePtr = 0;
+      
+-@@ -215,6 +222,20 @@ ExpInputProc(instanceData, buf, toRead, 
++@@ -215,6 +222,20 @@
+       * nonblocking, the read will never block.
+       */
+  
+@@ -54,4 +54,4 @@
+ +
+      bytesRead = read(esPtr->fdin, buf, (size_t) toRead);
+      /*printf("ExpInputProc: read(%d,,) = %d\r\n",esPtr->fdin,bytesRead);*/
+-     if (bytesRead > -1) {
++ 

@@ -9,9 +9,9 @@ trap 'exit 143' HUP TERM
 expected=$(git -C "$root" ls-files --stage -- upstream/pkgsrc | awk '$1 == "160000" { print $2 }')
 [ "$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)" = "$expected" ]
 git -C "$root/upstream/pkgsrc" archive -o "$work/base.tar" "$expected" \
-    lang/gcc16 lang/gcc16-libs lang/gcc16-libjit math/mpcomplex devel/gtexinfo
+    lang/gcc16 lang/gcc16-libs lang/gcc16-libjit math/mpcomplex devel/gtexinfo lang/tcl-expect
 tar -xf "$work/base.tar" -C "$work"
-for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch; do
+for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch; do
     patch -f -E -d "$work" -p1 -F 0 < "$root/profiles/development-toolchain/patches/$delta"
 done
 grep -q '16.2.0' "$work/lang/gcc16/version.mk"
@@ -27,7 +27,7 @@ shift
 shasum -a 1 "$@" | awk '{ print $1 }'
 EOF
 chmod +x "$work/digest"
-for recipe in lang/gcc16 math/mpcomplex devel/gtexinfo; do
+for recipe in lang/gcc16 math/mpcomplex devel/gtexinfo lang/tcl-expect; do
     DIGEST="$work/digest" awk -f "$root/upstream/pkgsrc/mk/checksum/checksum.awk" \
         -- -p "$work/$recipe/distinfo" "$work/$recipe"/patches/patch-*
 done
