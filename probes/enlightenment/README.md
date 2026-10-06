@@ -108,9 +108,10 @@ can escape the marker. See the helper documentation for further limits.
 Native builds, the Lua 5.4 regressions, three selected upstream EFL suites,
 private-profile policy checks and the full X11 window-management contract
 passed on 2026-10-06. The stock desktop, panel, menu and Everything window
-were displayed through VNC. Automated keyboard forwarding through that
-viewer was inconclusive; an end-to-end typed-and-saved document is not
-claimed by this probe.
+were displayed through VNC. On 2026-10-07, the [shared X11 test](../x11-desktops/README.md) also
+verified XTEST keyboard input in real xterm/vi applications, exact saved
+text, focus switching and normal session exit while retaining the real
+HOME. Physical keyboard/VNC forwarding remains unverified.
 
 The private profile disables privileged helpers, setid installation,
 authentication/locking, suspend, shutdown/reboot, hardware controls and

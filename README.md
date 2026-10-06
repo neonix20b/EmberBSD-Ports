@@ -46,11 +46,21 @@ runtime behavior are validated.
   application menu are checked. The complete mobile workflow still needs
   the common OpenGL stack and an enabled KWin shortcut backend.
 
-- [Enlightenment desktop](probes/enlightenment/README.md): EFL 1.28.1 and
-  Enlightenment 0.27.1 use system Lua 5.4 through compatibility patches.
-  Native software X11 rendering, window management and session exit pass.
+- [Openbox](probes/openbox/README.md) and
+  [Enlightenment](probes/enlightenment/README.md): Openbox 3.6.1 and
+  Enlightenment 0.27.1/EFL 1.28.1 pass native software X11 window management,
+  keyboard input through XTEST, text editing/saving and session exit.
+  The [shared launcher and runtime test](probes/x11-desktops/README.md)
+  retain the user's HOME and isolate session configuration and processes.
+- [awesomeWM](probes/awesome/README.md): the 4.3 source probe uses LGI 0.9.2
+  with the common system Lua. Native build, LGI/icon regressions and the
+  same X11 window/input/save/exit workflow pass. Patches correct startup
+  pthread linkage, Lua 5.4 version reporting and the WM selection name.
+- [Xfce](probes/xfce/README.md): pinned 4.20 components, libwnck 43.3 and
+  Mousepad 0.7.0 have a source recipe and isolated session profile.
+  Archive and profile checks pass; native build and runtime remain pending.
 
-The Wayland, Phosh, Plasma Mobile and Enlightenment entries remain experimental probes,
+The graphical entries remain experimental probes,
 not installable packages or phone images. Each recipe records its tested
 runtime and platform boundaries.
 Helpers stop on errors and keep output in private user directories.

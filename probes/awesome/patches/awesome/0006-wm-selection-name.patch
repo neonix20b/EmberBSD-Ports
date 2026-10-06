@@ -1,0 +1,16 @@
+EmberBSD local adaptation, AI-assisted, 2026-10-07; not submitted upstream.
+Apply the one-line correction documented by Uli Schlachter (psychon) in:
+https://github.com/awesomeWM/awesome/issues/3561
+xcb_atom_name_by_screen appends _S<screen>, so the base must be WM.
+
+--- a/awesome.c
++++ b/awesome.c
+@@ -244,7 +244,7 @@
+     xwindow_set_name_static(globalconf.selection_owner_window,
+             "Awesome WM_Sn selection owner window");
+ 
+-    atom_name = xcb_atom_name_by_screen("WM_S", globalconf.default_screen);
++    atom_name = xcb_atom_name_by_screen("WM", globalconf.default_screen);
+     if(!atom_name)
+         fatal("error getting WM_Sn atom name");
+ 
