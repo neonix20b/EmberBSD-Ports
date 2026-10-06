@@ -5,6 +5,15 @@ It is the compiler foundation for a reproducible distribution development
 environment. It has not yet been built, installed, or selected as default.
 The source checks below do not establish native compiler support.
 
+On the AArch64 NetBSD 11 VM, the native prerequisites are now validated:
+MPC 1.4.1 (75 tests), Texinfo 7.3 (required XS plus Info/HTML output),
+Expect 5.45.4nb1 (29 tests and a PTY roundtrip), and DejaGNU 1.6.3
+(604 expected passes). Perl 5.44.0 and its two ABI-bound JSON/Parse::Yapp
+modules passed their tests and affected consumer checks after a coordinated
+replacement. These results do not establish GCC or common C++ ABI acceptance.
+The [bounded native build helper](tools/README.md) preserves build exit status
+and checks guest scratch reserves for the long package build.
+
 ## Source and preparation
 
 The base is pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`
