@@ -15,6 +15,11 @@ probe or recipe documentation before making changes.
   Do not conceal AI assistance.
 - Prefer pkgsrc conventions for installable package recipes. Do not
   introduce a new package manager merely to apply patches.
+- Select a current stable upstream release or a supported LTS branch with a
+  documented reason. The age of packages in pkgsrc does not define EmberBSD's
+  target version. Port missing current components here; do not adopt an obsolete
+  release merely because it builds. Success means a verified user workflow on
+  the selected stack, not compilation alone.
 - Avoid parallel versions of libraries, interpreters and tools for individual
   applications. Choose one current supported dependency version and adapt its
   consumers through these ports. Check upstream updates and compatibility
