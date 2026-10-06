@@ -1,0 +1,40 @@
+NetBSD 11 memfd mmap rejects a page-rounded mapping beyond the exact backing
+file size. Reserve the final full page while retaining the logical keymap and
+buffer sizes and all seals. The native memfd-mmap-probe.c covers both lengths.
+Reassess this workaround after the OS fixes partial-page memfd mappings.
+Origin: AI-assisted EmberBSD portability work; not submitted upstream.
+
+--- src/utils/ramfile.cpp.orig
++++ src/utils/ramfile.cpp
+@@ -37,7 +37,13 @@
+         return;
+     }
+ 
+-    if (ftruncate(m_fd.get(), size) < 0) {
++    off_t allocationSize = size;
++#if defined(Q_OS_NETBSD)
++    // NetBSD memfd rejects mappings into a final partial page.
++    const off_t pageSize = getpagesize();
++    allocationSize = (allocationSize + pageSize - 1) / pageSize * pageSize;
++#endif
++    if (ftruncate(m_fd.get(), allocationSize) < 0) {
+         qCWarning(KWIN_CORE).nospace() << name << ": Failed to ftruncate memfd: " << strerror(errno);
+         return;
+     }
+--- src/core/shmgraphicsbufferallocator.cpp.orig
++++ src/core/shmgraphicsbufferallocator.cpp
+@@ -103,7 +103,13 @@
+         return nullptr;
+     }
+ 
+-    if (ftruncate(fd.get(), bufferSize) < 0) {
++    off_t allocationSize = bufferSize;
++#if defined(Q_OS_NETBSD)
++    // NetBSD memfd rejects mappings into a final partial page.
++    const off_t pageSize = getpagesize();
++    allocationSize = (allocationSize + pageSize - 1) / pageSize * pageSize;
++#endif
++    if (ftruncate(fd.get(), allocationSize) < 0) {
+         return nullptr;
+     }
+ 

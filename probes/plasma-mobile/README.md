@@ -17,7 +17,8 @@ checked against KDE's official `.sha256` responses before recording them.
 Keep archives, extracted sources, build products and logs outside Git.
 The current component recipes and their order are described in
 [BUILDING.md](BUILDING.md), [Workspace](workspace/README.md), and
-[D-Bus clients](clients/README.md). They remain diagnostic build probes.
+[D-Bus clients](clients/README.md), plus [KWin](kwin/README.md).
+They remain diagnostic build probes.
 
 ## Local changes
 
@@ -25,6 +26,16 @@ The current component recipes and their order are described in
   explicit build option for the PipeWire screen-recording quick setting.
   Default upstream behavior is preserved. A build with this option off
   does not provide screen recording.
+- `patches/plasma-mobile/0002-explicit-qml-module-helper.patch` imports
+  `ECMQmlModule` explicitly. Without screen recording, configuration reached
+  the Waydroid client module without a definition of `ecm_add_qml_module`.
+  The helper must not depend on an optional package's transitive imports.
+- `patches/plasma-mobile/0003-optional-privileged-helpers.patch` allows the
+  private diagnostic profile to omit Waydroid and flashlight KAuth helpers.
+  Their UI and D-Bus clients remain genuine upstream components; privileged
+  operations are unavailable in this profile. The default remains enabled.
+  The installed KF6Auth exports system policy and helper paths, so enabling
+  them would escape the private installation or reference the wrong helper.
 - `patches/powerdevil/0001-battery-monitor-client-profile.patch` builds the
   original battery-monitor D-Bus QML client independently of the power
   management daemon. It does not simulate batteries or power management.
@@ -73,6 +84,13 @@ even though the QML process returned zero. Installing the complete Kirigami
 rejects those registration warnings explicitly. The regression passed on
 2026-10-06; offscreen platform, event-filter thread and mapped-cache fallback
 warnings remained visible. No claim about those warnings being fixed is made.
+
+KWin 6.7.5 built and ran a real nested Qt Wayland window with QPainter.
+The input test delivered `emberbsd` through XTest, KWin and Wayland; owned
+processes and sockets were cleaned up. Its NetBSD memfd workaround preserves
+logical buffer lengths and seals while reserving the last physical page.
+The [KWin recipe](kwin/README.md) records the OS regression, eight seal
+checks, source provenance and the condition for removing that workaround.
 
 ## Required runtime result
 

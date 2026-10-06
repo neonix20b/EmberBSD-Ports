@@ -1,0 +1,28 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -19,6 +19,7 @@
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+ option(BUILD_SCREEN_RECORDING "Build the PipeWire screen recording quick setting" ON)
++option(BUILD_PRIVILEGED_HELPERS "Build and install the Waydroid and flashlight KAuth helpers" ON)
+ 
+ option(INSTALL_SYSTEMD_SERVICE "Install a systemd service file to start the session" OFF)
+ 
+--- a/components/waydroidintegrationplugin/CMakeLists.txt
++++ b/components/waydroidintegrationplugin/CMakeLists.txt
+@@ -68,3 +68,5 @@
+ )
+ 
+-add_subdirectory(kauth)
++if(BUILD_PRIVILEGED_HELPERS)
++    add_subdirectory(kauth)
++endif()
+--- a/quicksettings/flashlight/CMakeLists.txt
++++ b/quicksettings/flashlight/CMakeLists.txt
+@@ -27,3 +27,5 @@
+ plasma_install_package(package org.kde.plasma.quicksetting.flashlight quicksettings)
+ 
+-add_subdirectory(kauth)
++if(BUILD_PRIVILEGED_HELPERS)
++    add_subdirectory(kauth)
++endif()

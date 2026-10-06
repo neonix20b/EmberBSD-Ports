@@ -1,0 +1,21 @@
+Base libutil exposes compatibility aliases with .gnu.warning messages.
+Transitive Qt Network references trigger them even when the consumer uses
+the current APIs. Keep the diagnostics and --no-undefined while allowing
+these known NetBSD warnings, as in the shared Plasma build profile.
+Origin: AI-assisted EmberBSD portability work; not submitted upstream.
+
+--- CMakeLists.txt.orig
++++ CMakeLists.txt
+@@ -31,6 +31,12 @@
+ include(KDEInstallDirs)
+ include(KDECMakeSettings)
+ include(KDECompilerSettings NO_POLICY_SCOPE)
++if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++    # Base libutil compatibility aliases warn through transitive Qt dependencies.
++    # Keep undefined symbols fatal, and retain the warning diagnostics.
++    string(REPLACE "-Wl,--fatal-warnings" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
++    string(REPLACE "-Wl,--fatal-warnings" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
++endif()
+ include(KDEClangFormat)
+ include(KDEGitCommitHooks)
+ 

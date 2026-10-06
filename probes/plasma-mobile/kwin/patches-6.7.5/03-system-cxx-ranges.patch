@@ -1,0 +1,449 @@
+Use portable sequence range materialization with the system C++ runtime.
+Local AI-assisted EmberBSD patch; not submitted upstream.
+
+diff -ruN src/backends/drm/drm_backend.cpp src/backends/drm/drm_backend.cpp
+--- src/backends/drm/drm_backend.cpp	2026-10-06 21:22:12.926650619 +0300
++++ src/backends/drm/drm_backend.cpp	2026-10-06 21:22:13.796288757 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "drm_backend.h"
++#include "utils/ranges.h"
+ 
+ #include "config-kwin.h"
+ 
+@@ -69,7 +70,7 @@
+ 
+ QList<BackendOutput *> DrmBackend::outputs() const
+ {
+-    return m_outputs | std::ranges::to<QList<BackendOutput *>>();
++    return m_outputs | KWin::toContainer<QList<BackendOutput *>>();
+ }
+ 
+ bool DrmBackend::initialize()
+diff -ruN src/backends/drm/drm_gpu.cpp src/backends/drm/drm_gpu.cpp
+--- src/backends/drm/drm_gpu.cpp	2026-10-06 21:22:12.941024389 +0300
++++ src/backends/drm/drm_gpu.cpp	2026-10-06 21:22:13.789869022 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "drm_gpu.h"
++#include "utils/ranges.h"
+ 
+ #include "config-kwin.h"
+ 
+@@ -898,7 +899,7 @@
+     if (m_atomicModeSetting) {
+         QList<DrmPlane *> freePlanes = m_planes | std::views::transform([](const auto &plane) {
+             return plane.get();
+-        }) | std::ranges::to<QList>();
++        }) | KWin::toContainer<QList>();
+         const size_t enabledPipelinesCount = std::ranges::count_if(m_pipelines, &DrmPipeline::enabled);
+         for (DrmPipeline *pipeline : std::as_const(m_pipelines)) {
+             if (!pipeline->enabled()) {
+@@ -1042,7 +1043,7 @@
+     }
+     // TODO once dynamic ownership of layers is defined somehow,
+     // additionally return planes that aren't currently in use
+-    return static_cast<DrmOutput *>(output)->pipeline()->layers() | std::ranges::to<QList<OutputLayer *>>();
++    return static_cast<DrmOutput *>(output)->pipeline()->layers() | KWin::toContainer<QList<OutputLayer *>>();
+ }
+ 
+ RenderDevice *DrmGpu::renderDevice() const
+diff -ruN src/backends/libinput/connection.cpp src/backends/libinput/connection.cpp
+--- src/backends/libinput/connection.cpp	2026-10-06 21:22:12.960613265 +0300
++++ src/backends/libinput/connection.cpp	2026-10-06 21:22:13.776818757 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "connection.h"
++#include "utils/ranges.h"
+ #include "context.h"
+ #include "core/backendoutput.h"
+ #include "device.h"
+@@ -746,7 +747,7 @@
+     return m_devices
+         | std::views::filter(&Device::isPointer)
+         | std::views::transform(&Device::sysName)
+-        | std::ranges::to<QStringList>();
++        | KWin::toContainer<QStringList>();
+ }
+ 
+ QStringList Connection::ListKeyboards() const
+@@ -754,7 +755,7 @@
+     return m_devices
+         | std::views::filter(&Device::isKeyboard)
+         | std::views::transform(&Device::sysName)
+-        | std::ranges::to<QStringList>();
++        | KWin::toContainer<QStringList>();
+ }
+ 
+ QStringList Connection::ListTouch() const
+@@ -762,7 +763,7 @@
+     return m_devices
+         | std::views::filter(&Device::isTouch)
+         | std::views::transform(&Device::sysName)
+-        | std::ranges::to<QStringList>();
++        | KWin::toContainer<QStringList>();
+ }
+ 
+ }
+diff -ruN src/backends/virtual/virtual_backend.cpp src/backends/virtual/virtual_backend.cpp
+--- src/backends/virtual/virtual_backend.cpp	2026-10-06 21:22:12.978389174 +0300
++++ src/backends/virtual/virtual_backend.cpp	2026-10-06 21:22:13.740625644 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "virtual_backend.h"
++#include "utils/ranges.h"
+ 
+ #include "core/drmdevice.h"
+ #include "core/gpumanager.h"
+@@ -135,7 +136,7 @@
+ 
+ QList<BackendOutput *> VirtualBackend::outputs() const
+ {
+-    return m_outputs | std::ranges::to<QList<BackendOutput *>>();
++    return m_outputs | KWin::toContainer<QList<BackendOutput *>>();
+ }
+ 
+ VirtualOutput *VirtualBackend::createOutput(const OutputInfo &info)
+diff -ruN src/backends/wayland/wayland_backend.cpp src/backends/wayland/wayland_backend.cpp
+--- src/backends/wayland/wayland_backend.cpp	2026-10-06 21:22:12.966294081 +0300
++++ src/backends/wayland/wayland_backend.cpp	2026-10-06 21:22:13.769286683 +0300
+@@ -8,6 +8,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "wayland_backend.h"
++#include "utils/ranges.h"
+ #include "compositor.h"
+ #include "core/drmdevice.h"
+ #include "core/gpumanager.h"
+@@ -596,7 +597,7 @@
+ 
+ QList<BackendOutput *> WaylandBackend::outputs() const
+ {
+-    return m_outputs | std::ranges::to<QList<BackendOutput *>>();
++    return m_outputs | KWin::toContainer<QList<BackendOutput *>>();
+ }
+ 
+ BackendOutput *WaylandBackend::createVirtualOutput(const QString &name, const QString &description, const QSize &size, double scale)
+diff -ruN src/backends/wayland/wayland_output.cpp src/backends/wayland/wayland_output.cpp
+--- src/backends/wayland/wayland_output.cpp	2026-10-06 21:22:12.967063959 +0300
++++ src/backends/wayland/wayland_output.cpp	2026-10-06 21:22:13.757337507 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "wayland_output.h"
++#include "utils/ranges.h"
+ #include "color_manager.h"
+ #include "compositor.h"
+ #include "core/outputconfiguration.h"
+@@ -556,7 +557,7 @@
+ 
+ QList<OutputLayer *> WaylandOutput::outputLayers() const
+ {
+-    return m_layers | std::views::transform(&std::unique_ptr<OutputLayer>::get) | std::ranges::to<QList>();
++    return m_layers | std::views::transform(&std::unique_ptr<OutputLayer>::get) | KWin::toContainer<QList>();
+ }
+ 
+ }
+diff -ruN src/backends/x11/x11_windowed_backend.cpp src/backends/x11/x11_windowed_backend.cpp
+--- src/backends/x11/x11_windowed_backend.cpp	2026-10-06 21:22:12.993862074 +0300
++++ src/backends/x11/x11_windowed_backend.cpp	2026-10-06 21:22:13.715715871 +0300
+@@ -8,6 +8,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "x11_windowed_backend.h"
++#include "utils/ranges.h"
+ 
+ #include "config-kwin.h"
+ 
+@@ -778,7 +779,7 @@
+ 
+ QList<BackendOutput *> X11WindowedBackend::outputs() const
+ {
+-    return m_outputs | std::ranges::to<QList<BackendOutput *>>();
++    return m_outputs | KWin::toContainer<QList<BackendOutput *>>();
+ }
+ 
+ void X11WindowedBackend::destroyOutputs()
+diff -ruN src/backends/x11/x11_windowed_output.cpp src/backends/x11/x11_windowed_output.cpp
+--- src/backends/x11/x11_windowed_output.cpp	2026-10-06 21:22:12.988299508 +0300
++++ src/backends/x11/x11_windowed_output.cpp	2026-10-06 21:22:13.733708365 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "x11_windowed_output.h"
++#include "utils/ranges.h"
+ #include "config-kwin.h"
+ 
+ #include "x11_windowed_backend.h"
+@@ -503,7 +504,7 @@
+ 
+ QList<OutputLayer *> X11WindowedOutput::outputLayers() const
+ {
+-    return m_layers | std::views::transform(&std::unique_ptr<OutputLayer>::get) | std::ranges::to<QList>();
++    return m_layers | std::views::transform(&std::unique_ptr<OutputLayer>::get) | KWin::toContainer<QList>();
+ }
+ 
+ } // namespace KWin
+diff -ruN src/compositor.cpp src/compositor.cpp
+--- src/compositor.cpp	2026-10-06 21:22:13.431705697 +0300
++++ src/compositor.cpp	2026-10-06 21:22:13.805105420 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "compositor.h"
++#include "utils/ranges.h"
+ 
+ #include "config-kwin.h"
+ 
+@@ -315,7 +316,7 @@
+ 
+     const auto loops = m_primaryViews | std::views::transform([](const auto &pair) {
+         return pair.first;
+-    }) | std::ranges::to<QList>();
++    }) | KWin::toContainer<QList>();
+     for (RenderLoop *loop : loops) {
+         removeOutput(findOutput(loop));
+     }
+@@ -504,7 +505,7 @@
+     // the primary plane *must* be used, so swap a different layer out for it
+     const auto primary = findLayer(layers, OutputLayerType::Primary);
+     Q_ASSERT(primary);
+-    auto sortedLayers = ret | std::views::keys | std::ranges::to<QList>();
++    auto sortedLayers = ret | std::views::keys | KWin::toContainer<QList>();
+     std::ranges::sort(sortedLayers, [](OutputLayer *left, OutputLayer *right) {
+         return left->zpos() < right->zpos();
+     });
+@@ -543,7 +544,7 @@
+     QList<OutputLayer *> unusedOutputLayers = outputLayers;
+     QList<LayerData> layers;
+ 
+-    auto sortedLayers = assignments | std::views::keys | std::ranges::to<QList>();
++    auto sortedLayers = assignments | std::views::keys | KWin::toContainer<QList>();
+     std::ranges::sort(sortedLayers, [](OutputLayer *left, OutputLayer *right) {
+         return left->zpos() < right->zpos();
+     });
+@@ -746,7 +747,7 @@
+     QList<OutputLayer *> allowedOutputLayers = unusedOutputLayers | std::views::filter([this, renderLoop, overlaysAllowed](OutputLayer *layer) {
+         return (!m_brokenCursors.contains(renderLoop) || layer->type() != OutputLayerType::CursorOnly)
+             && (overlaysAllowed || layer->type() != OutputLayerType::GenericLayer);
+-    }) | std::ranges::to<QList>();
++    }) | KWin::toContainer<QList>();
+     std::ranges::sort(allowedOutputLayers, [](OutputLayer *left, OutputLayer *right) {
+         return left->maxZpos() > right->maxZpos();
+     });
+@@ -756,7 +757,7 @@
+     // fallback 1
+     auto scenePlusCursor = layerCandidates | std::views::filter([](Item *item) {
+         return qobject_cast<CursorItem *>(item) != nullptr;
+-    }) | std::ranges::to<QList>();
++    }) | KWin::toContainer<QList>();
+     scenePlusCursor.push_back(scene->containerItem());
+     if (!idealLayerAssignments.has_value()) {
+         idealLayerAssignments = assignLayers(primaryView, scenePlusCursor, allowedOutputLayers);
+@@ -834,7 +835,7 @@
+     totalTimeQuery->end();
+     frame->addRenderTimeQuery(std::move(totalTimeQuery));
+     // TODO make Output::present take a set instead of a list
+-    if (result && !output->present(toUpdate | std::ranges::to<QList>(), frame)) {
++    if (result && !output->present(toUpdate | KWin::toContainer<QList>(), frame)) {
+         // legacy modesetting can't do (useful) presentation tests
+         // and even with atomic modesetting, drivers are buggy and atomic tests
+         // sometimes have false positives
+@@ -851,7 +852,7 @@
+                                                    frame, SetupType::Fallback, toUpdate);
+             if (result) {
+                 renderLayers();
+-                result = output->present(toUpdate | std::ranges::to<QList>(), frame);
++                result = output->present(toUpdate | KWin::toContainer<QList>(), frame);
+             }
+         }
+ 
+@@ -863,7 +864,7 @@
+                                                    frame, SetupType::Fallback, toUpdate);
+             if (result) {
+                 renderLayers();
+-                result = output->present(toUpdate | std::ranges::to<QList>(), frame);
++                result = output->present(toUpdate | KWin::toContainer<QList>(), frame);
+             }
+             if (result && !fallback1) {
+                 // Disabling the cursor layer helped... so disable it permanently,
+diff -ruN src/core/gpumanager.cpp src/core/gpumanager.cpp
+--- src/core/gpumanager.cpp	2026-10-06 21:22:12.167094369 +0300
++++ src/core/gpumanager.cpp	2026-10-06 21:22:33.783994829 +0300
+@@ -198,10 +198,10 @@
+ {
+     if (m_explicitRenderNodes.has_value()) {
+         for (const QString &path : *m_explicitRenderNodes) {
+-            const bool hasDevice = std::ranges::contains(m_renderDevices, path, [](const auto &device) {
++            const auto existingDevice = std::ranges::find(m_renderDevices, path, [](const auto &device) {
+                 return device->drmDevice()->path();
+             });
+-            if (hasDevice) {
++            if (existingDevice != m_renderDevices.end()) {
+                 continue;
+             }
+             auto device = RenderDevice::open(path);
+diff -ruN src/core/renderdevice.cpp src/core/renderdevice.cpp
+--- src/core/renderdevice.cpp	2026-10-06 21:22:12.243861489 +0300
++++ src/core/renderdevice.cpp	2026-10-06 21:22:13.725259203 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "renderdevice.h"
++#include "utils/ranges.h"
+ 
+ #include "drmdevice.h"
+ #include "graphicsbuffer.h"
+@@ -158,7 +159,7 @@
+         if (extensionPropResult != vk::Result::eSuccess) {
+             continue;
+         }
+-        std::vector usedExtensions = s_requiredVulkanExtensions | std::ranges::to<std::vector>();
++        std::vector usedExtensions = s_requiredVulkanExtensions | KWin::toContainer<std::vector>();
+         if (isSoftwareDevice) {
+             // software devices don't usually have a render node
+             std::erase(usedExtensions, VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME);
+@@ -244,7 +245,7 @@
+         auto ret = std::make_unique<VulkanDevice>(
+             physicalDevice,
+             std::move(logicalDevice),
+-            queueProperties | std::ranges::to<std::vector<VkQueueFamilyProperties>>(),
++            queueProperties | KWin::toContainer<std::vector<VkQueueFamilyProperties>>(),
+             basicProperties.properties.deviceType);
+         if (ret->supportedFormats().isEmpty()) {
+             continue;
+diff -ruN src/keyboard_input.cpp src/keyboard_input.cpp
+--- src/keyboard_input.cpp	2026-10-06 21:22:13.093064790 +0300
++++ src/keyboard_input.cpp	2026-10-06 21:22:33.816892262 +0300
+@@ -318,7 +318,7 @@
+         .timestamp = time,
+         .serial = waylandServer()->display()->nextSerial(),
+     };
+-    if (state == KeyboardKeyState::Pressed && !std::ranges::contains(s_modifierKeys, event.key)) {
++    if (state == KeyboardKeyState::Pressed && std::ranges::find(s_modifierKeys, event.key) == std::ranges::end(s_modifierKeys)) {
+         input()->setLastInteractionSerial(event.serial);
+         if (auto f = pickFocus()) {
+             f->setLastUsageSerial(event.serial);
+diff -ruN src/multigpuswapchain.cpp src/multigpuswapchain.cpp
+--- src/multigpuswapchain.cpp	2026-10-06 21:22:12.292439530 +0300
++++ src/multigpuswapchain.cpp	2026-10-06 21:22:13.696497955 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "multigpuswapchain.h"
++#include "utils/ranges.h"
+ #include "core/drmdevice.h"
+ #include "core/gpumanager.h"
+ #include "core/graphicsbuffer.h"
+@@ -252,7 +253,7 @@
+                 vk::Offset3D{rect.right(), completeRect.height() - rect.top(), 1},
+             },
+         };
+-    }) | std::ranges::to<std::vector>();
++    }) | KWin::toContainer<std::vector>();
+     commandBuffer.blitImage(srcTexture->handle(), vk::ImageLayout::eGeneral,
+                             m_currentVulkanSlot->texture()->handle(), vk::ImageLayout::eGeneral,
+                             regions, vk::Filter::eNearest);
+diff -ruN src/outputconfigurationstore.cpp src/outputconfigurationstore.cpp
+--- src/outputconfigurationstore.cpp	2026-10-06 21:22:12.278270053 +0300
++++ src/outputconfigurationstore.cpp	2026-10-06 21:22:13.706108871 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "outputconfigurationstore.h"
++#include "utils/ranges.h"
+ #include "core/iccprofile.h"
+ #include "core/inputdevice.h"
+ #include "core/outputbackend.h"
+@@ -134,7 +135,7 @@
+ {
+     const auto enabledOutputs = outputs | std::views::filter([&config](BackendOutput *output) {
+         return config.changeSet(output)->enabled.value_or(output->isEnabled());
+-    }) | std::ranges::to<QList>();
++    }) | KWin::toContainer<QList>();
+     for (BackendOutput *output : enabledOutputs) {
+         auto cfg = config.changeSet(output);
+         const auto srcIt = std::ranges::find_if(enabledOutputs, [&cfg, &config, output](BackendOutput *other) {
+diff -ruN src/utils/ranges.h src/utils/ranges.h
+--- src/utils/ranges.h	1970-01-01 03:00:00.000000000 +0300
++++ src/utils/ranges.h	2026-10-06 21:22:13.659864424 +0300
+@@ -0,0 +1,55 @@
++/*
++    SPDX-FileCopyrightText: 2026 EmberBSD contributors
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++#pragma once
++
++#include <ranges>
++#include <utility>
++
++namespace KWin
++{
++
++// Materialize the sequence containers used by KWin with C++20 range support.
++// This keeps builds on NetBSD's system C++ runtime, shared with packaged Qt.
++template<typename Container>
++struct ToContainer
++{
++    template<std::ranges::input_range Range>
++    friend Container operator|(Range &&range, ToContainer)
++    {
++        Container result;
++        if constexpr (std::ranges::sized_range<Range>) {
++            result.reserve(std::ranges::size(range));
++        }
++        for (auto &&value : range) {
++            result.push_back(std::forward<decltype(value)>(value));
++        }
++        return result;
++    }
++};
++
++template<template<typename...> typename Container>
++struct ToTemplateContainer
++{
++    template<std::ranges::input_range Range>
++    friend auto operator|(Range &&range, ToTemplateContainer)
++    {
++        return std::forward<Range>(range) | ToContainer<Container<std::ranges::range_value_t<Range>>>{};
++    }
++};
++
++template<typename Container>
++constexpr auto toContainer()
++{
++    return ToContainer<Container>{};
++}
++
++template<template<typename...> typename Container>
++constexpr auto toContainer()
++{
++    return ToTemplateContainer<Container>{};
++}
++
++} // namespace KWin
+diff -ruN src/vulkan/vulkan_texture.cpp src/vulkan/vulkan_texture.cpp
+--- src/vulkan/vulkan_texture.cpp	2026-10-06 21:22:13.308788963 +0300
++++ src/vulkan/vulkan_texture.cpp	2026-10-06 21:22:13.748515845 +0300
+@@ -7,6 +7,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "vulkan_texture.h"
++#include "utils/ranges.h"
+ #include "vulkan_device.h"
+ #include "vulkan_logging.h"
+ 
+@@ -207,7 +208,7 @@
+             vk::Offset3D(rect.x() + offset.x(), rect.y() + offset.y(), 0),
+             vk::Extent3D(rect.width(), rect.height(), 1),
+         };
+-    }) | std::ranges::to<std::vector>();
++    }) | KWin::toContainer<std::vector>();
+     commandBuffer.copyBufferToImage2(vk::CopyBufferToImageInfo2{
+         *stagingBuffer,
+         *m_image,

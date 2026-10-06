@@ -1,0 +1,14 @@
+Drop an unused header unavailable in the system GCC 12 standard library.
+No formatting API is used in this translation unit.
+Origin: AI-assisted EmberBSD portability work; not submitted upstream.
+
+--- src/xkb.cpp.orig
++++ src/xkb.cpp
+@@ -30,7 +30,6 @@
+ #include <sys/mman.h>
+ #include <unistd.h>
+ 
+-#include <format>
+ #include <string>
+ 
+ // TODO: drop these ifdefs when xkbcommon >= 1.8.0 is required

@@ -49,9 +49,16 @@ JOBS=1 sh scripts/build-component.sh plasma-activities-6.7.5
 JOBS=1 sh scripts/build-component.sh plasma-activities-stats-6.7.5
 ```
 
-Provide the matching Plasma Wayland Protocols, KDecoration, KNightTime
-and KWayland common libraries from the KWin recipe before assembling the
-remaining components. All current Plasma libraries share `PLASMA_PREFIX`;
+Build the matching Plasma Wayland Protocols, KDecoration, KNightTime
+and KWayland common libraries from the [KWin recipe](kwin/README.md):
+
+```sh
+export BUILD_ROOT="$HOME/.cache/emberbsd-plasma-kwin"
+export ARCHIVE_DIR="$PLASMA_BUILD_ROOT/archives"
+JOBS=1 sh kwin/scripts/build-kwin-dependencies.sh
+```
+
+All current Plasma libraries share `PLASMA_PREFIX`;
 do not add a second Qt or C++ runtime to satisfy an individual component.
 
 ```sh
@@ -89,11 +96,35 @@ the real ModemManager client built by the existing
 a replacement daemon. Keep the clients prefix in downstream
 `CMAKE_PREFIX_PATH` and its pkg-config directory in `PKG_CONFIG_PATH`.
 
-The final Mobile configuration additionally requires installed matching
-KWin and Workspace CMake exports. Build with `BUILD_SCREEN_RECORDING=OFF`
-until the real PipeWire screen-recording component is available. The
-default upstream build retains recording. This document does not claim
-that final configuration, build or runtime validation has completed.
+Build KWin with the validated input prefix, then run its separate native
+portability and window/input checks as described in its README:
+
+```sh
+export LIBINPUT_PREFIX=/absolute/path/to/validated/libopeninput/install
+JOBS=1 sh kwin/scripts/build-kwin-6.7.5.sh
+```
+
+The final Mobile configuration requires installed matching KWin and
+Workspace CMake exports. Set the actual component locations:
+
+```sh
+export KWIN_PREFIX="$BUILD_ROOT/install"
+export WORKSPACE_PREFIX="$HOME/.cache/emberbsd-plasma-workspace/prefix"
+export CLIENTS_PREFIX="$HOME/.cache/emberbsd-plasma-support/prefix"
+export MOBILE_BUILD_DIR=/absolute/path/to/plasma-mobile-build
+CONFIGURE_ONLY=1 sh scripts/build-mobile.sh
+# Start only when the machine has an available build budget:
+JOBS=1 sh scripts/build-mobile.sh
+```
+
+The helper disables screen recording until the real PipeWire component
+is available. It also omits privileged Waydroid/flashlight helpers and their
+system D-Bus/polkit registration. These functions require separate OS and
+device integration; their clients are not replaced by stubs. Both upstream
+options remain enabled by default outside this diagnostic profile. Native
+configuration passed with all required dependencies on 2026-10-06 after
+adding the explicit ECMQmlModule import. Compilation, installation and
+the Mobile runtime workflow remain unverified.
 
 ## Session boundary
 

@@ -1,0 +1,20 @@
+Qt's transitive base X11 include directory precedes the discovered ICCCM
+dependency on NetBSD. Give the two ICCCM consumers the matching include
+directory without changing all target compilation commands.
+Origin: AI-assisted EmberBSD portability work; not submitted upstream.
+
+--- src/CMakeLists.txt.orig
++++ src/CMakeLists.txt
+@@ -293,6 +293,12 @@
+ endif()
+ 
+ if (KWIN_BUILD_X11)
++    if (CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++        # Use the discovered ICCCM headers before the older copy in base X11.
++        set_property(SOURCE events.cpp x11window.cpp APPEND PROPERTY
++            INCLUDE_DIRECTORIES "$<TARGET_PROPERTY:XCB::ICCCM,INTERFACE_INCLUDE_DIRECTORIES>"
++        )
++    endif()
+     target_sources(kwin
+         PRIVATE
+             atoms.cpp

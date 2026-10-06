@@ -1,0 +1,20 @@
+Use the declared pair return type instead of a tuple-like conversion that
+requires a newer standard library. The returned values are unchanged.
+Origin: AI-assisted EmberBSD portability work; not submitted upstream.
+
+--- src/outputconfigurationstore.cpp.orig
++++ src/outputconfigurationstore.cpp
+@@ -61,11 +61,11 @@ std::optional<std::pair<OutputConfiguration, OutputConfigurationStore::ConfigType>> OutputConfigurationStore::queryConfig(const QList<BackendOutput *> &outputs, bool isLidClosed, AccelerometerOrientation orientation, bool isTabletMode)
+         auto config = setupToConfig(setup, outputStates);
+         applyOrientationReading(config, relevantOutputs, orientation, isTabletMode);
+         applyMirroring(config, relevantOutputs);
+-        return std::make_tuple(config, ConfigType::Preexisting);
++        return std::make_pair(config, ConfigType::Preexisting);
+     }
+     auto config = generateConfig(relevantOutputs, isLidClosed);
+     applyOrientationReading(config, relevantOutputs, orientation, isTabletMode);
+     applyMirroring(config, relevantOutputs);
+-    return std::make_tuple(config, ConfigType::Generated);
++    return std::make_pair(config, ConfigType::Generated);
+ }
+ 
