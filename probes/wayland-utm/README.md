@@ -47,6 +47,13 @@ Mesa uses softpipe as its optional software fallback. LLVM is disabled in this
 private build: the installed LLVM 21 is newer than this Mesa release's supported
 LLVM interfaces. The installed GNOME llvmpipe stack remains separate.
 
+## Native render identity prerequisite
+
+The [libdrm identity probe](native-identity.md) uses matched kernel metadata
+without primary master or global PCI access. Its standalone build preserves
+the active desktop and does not select or install a Mesa stack. Host contracts
+pass; native build and runtime acceptance are pending.
+
 ## Build
 
 Use an ordinary user, an absolute new build directory and a compiler/toolchain
