@@ -181,7 +181,21 @@ and runtime file hashes stayed unchanged; global defaults were not changed.
 The installed old Qt 6.11 closure correctly fails the same identity check:
 it loads both candidate libstdc++.7 and base libstdc++.9. Its Qt/ICU/LLVM
 consumer rebuild remains required; a working isolated C++ probe cannot accept
-that mixed process. Full strict upstream test results remain pending.
+that mixed process. The ongoing strict upstream suite reports real failures;
+the complete profile has not passed its acceptance gate.
+
+The current AArch64 VM kernel starts processes with flush-to-zero and default
+NaN modes. A separate native probe reproduces loss of subnormal results and
+NaN payloads with both base GCC 12.5 and this candidate. Process-local IEEE
+mode produces the expected values. The [EmberBSD kernel correction](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/aarch64-fp-state.md)
+passes production contracts and native object compilation; its boot/runtime
+acceptance remains required. Compiler flags must not conceal the failure. Nested-function stack
+trampolines also fail with both compilers on this platform. GCC16's current
+recipe does not build a NetBSD sanitizer runtime, and the ASan suite stops
+during runtime initialization. Other target/configuration and an isolated LTO
+failure still need focused diagnosis. These findings do not invalidate the
+completed package build or justify rebuilding the same sources unchanged.
+Preserve unmodified test results; default selection stays deferred.
 
 Source validation covers pinned archives, the upstream update, all 23 GCC
 source patches without fuzz, native prerequisite fixes, and negative checker

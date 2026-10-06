@@ -24,8 +24,9 @@ runtime behavior are validated.
   typed commands and telemetry with ROS 2 Jazzy, including reconnect checks.
 - [Common development toolchain](profiles/development-toolchain/README.md):
   GCC 16.2.0 builds and installs as an AArch64 VM candidate, passing native
-  C11/C++20 threads, TLS and shared-library runtime checks. Full upstream
-  tests, the common Qt/LLVM rebuild and image/default integration remain pending.
+  C11/C++20 threads, TLS and shared-library runtime checks. The full upstream
+  suite exposes platform compatibility failures; their repair, the common
+  Qt/LLVM rebuild and image/default integration remain pending.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -41,6 +42,10 @@ runtime behavior are validated.
   consumer checks on AArch64. They cover numerical inference, stream state,
   speech/silence and invalid inputs; explicit ORT worker affinity is checked
   separately. These are source probes, without microphone or accelerator validation.
+- [Compass NPU UMD lifetime probe](probes/compass-umd/README.md): pinned
+  upstream descriptor-zero and failure-cleanup fixes pass host software
+  contracts against actual production methods. Native kernel/DMA integration
+  and model execution remain unverified.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and
   process-crash/reopen checks. A C application retrieves local documents and
