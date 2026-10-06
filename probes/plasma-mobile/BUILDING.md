@@ -123,8 +123,11 @@ system D-Bus/polkit registration. These functions require separate OS and
 device integration; their clients are not replaced by stubs. Both upstream
 options remain enabled by default outside this diagnostic profile. Native
 configuration passed with all required dependencies on 2026-10-06 after
-adding the explicit ECMQmlModule import. Compilation, installation and
-the Mobile runtime workflow remain unverified.
+adding the explicit ECMQmlModule import. Compilation and private-prefix
+installation then passed after using the discovered libudev target.
+The build tree used 115 MiB. All 37 installed ELF modules/executables checked
+with immediate loader resolution used one base C++ runtime and had no missing
+libraries. The Mobile runtime workflow remains unverified.
 
 ## Session boundary
 

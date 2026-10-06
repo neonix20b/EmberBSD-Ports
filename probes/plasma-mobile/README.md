@@ -36,6 +36,10 @@ They remain diagnostic build probes.
   operations are unavailable in this profile. The default remains enabled.
   The installed KF6Auth exports system policy and helper paths, so enabling
   them would escape the private installation or reference the wrong helper.
+- `patches/plasma-mobile/0004-discovered-libudev-target.patch` links both
+  flashlight targets to the imported target supplied by `FindLibudev`.
+  A bare `udev` lost the discovered library directory and failed to link
+  on NetBSD; the real library and its include path are retained.
 - `patches/powerdevil/0001-battery-monitor-client-profile.patch` builds the
   original battery-monitor D-Bus QML client independently of the power
   management daemon. It does not simulate batteries or power management.
@@ -91,6 +95,12 @@ processes and sockets were cleaned up. Its NetBSD memfd workaround preserves
 logical buffer lengths and seals while reserving the last physical page.
 The [KWin recipe](kwin/README.md) records the OS regression, eight seal
 checks, source provenance and the condition for removing that workaround.
+
+Plasma Mobile 6.7.5 itself compiled and installed on 2026-10-06 with the
+diagnostic helper. The build tree used 115 MiB. Its actual installation
+manifest stayed inside the common prefix; 37 installed ELF files passed
+immediate loader checks with one base C++ runtime and no missing libraries.
+This does not establish the mobile runtime workflow below.
 
 ## Required runtime result
 

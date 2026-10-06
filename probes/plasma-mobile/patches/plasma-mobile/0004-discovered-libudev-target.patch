@@ -1,0 +1,22 @@
+--- a/quicksettings/flashlight/CMakeLists.txt
++++ b/quicksettings/flashlight/CMakeLists.txt
+@@ -19,7 +19,7 @@
+     KF6::ConfigGui
+     KF6::I18n
+     KF6::Notifications
+-    udev
++    PkgConfig::Libudev
+ )
+ 
+ ecm_finalize_qml_module(flashlightplugin)
+--- a/quicksettings/flashlight/kauth/CMakeLists.txt
++++ b/quicksettings/flashlight/kauth/CMakeLists.txt
+@@ -8,7 +8,7 @@
+     Qt6::Core
+     KF6::AuthCore
+     KF6::CoreAddons
+-    udev
++    PkgConfig::Libudev
+ )
+ 
+ install(TARGETS flashlighthelper DESTINATION ${KAUTH_HELPER_INSTALL_DIR})
