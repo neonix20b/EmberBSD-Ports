@@ -127,6 +127,56 @@ starts that path and drops privileges before launching the compositor.
 Keep the packaged libseat and launcher. Restore the saved daemon to undo
 this local package-file change; a package upgrade may overwrite it.
 
+## NetBSD absolute pointer input
+
+The packaged libopeninput 1.30.2 wscons backend ignores absolute X/Y events,
+and its four absolute coordinate accessors return -1. QEMU's USB Tablet
+therefore produces clicks while the Wayland cursor remains at its origin.
+The separate `build-libopeninput.sh` builds a private library with the same
+`libinput.so.10` ABI; it does not replace the packaged library.
+
+[`libopeninput-source.tsv`](libopeninput-source.tsv) pins the original
+sizeofvoid/libopeninput archive at `dcf8584ec3f5cde2a2098de25276242d2d815cc7`,
+including its URL and SHA256. Its bytes also match the pinned pkgsrc SHA512.
+The original MIT/Expat license and source notices are retained. The two
+`patch-src_wscons.*` patches are unchanged imports from the same pkgsrc
+revision as the graphics probe. `patch-wscons-absolute-pointer` is a local
+AI-assisted adaptation, not submitted upstream.
+
+```sh
+sh build-libopeninput.sh "$HOME/.cache/emberbsd-libopeninput-build"
+```
+
+Dependencies come from the existing pkgsrc environment: meson, ninja-build,
+libudev-bsd, input-headers and libepoll-shim. Meson and upstream generators
+require Python; the recipe and regression helper use shell and C. An optional
+second argument supplies the original archive locally, with the same hash
+check. Builds require a new absolute directory and an ordinary user.
+
+The patch obtains raw HID bounds through `WSMOUSEIO_GCALIBCOORDS`. It supports
+uncalibrated absolute devices with valid X/Y bounds and
+`WSMOUSE_CALIBCOORDS_RESET`; calibrated touchscreens are outside this probe.
+Adjacent axes are combined before a button event or at the end of each read.
+Transformed accessors scale the coordinates to the compositor's output.
+Wscons supplies no physical resolution: untransformed accessors use a
+one-unit fallback, so their values are not measured physical millimetres.
+Relative mouse events keep their existing acceleration path.
+
+On 2026-10-06 the complete native build and the production-code regression
+passed on NetBSD 11/aarch64. The regression failed against the pkgsrc-only
+source because no absolute motion was emitted. It links actual upstream
+objects, substitutes the calibration ioctl and feeds wscons events through
+the real dispatch function. It checks all four accessors, nonzero minima,
+axis retention, endpoints, motion before buttons, invalid or unsupported
+calibration and relative fallback. The upstream Linux input tests are
+disabled, as in pkgsrc; this is not a claim that their suite passed.
+
+For the native session, prepend this build's `install/lib` to the existing
+private graphics `LD_LIBRARY_PATH`. Confirm the compositor's loaded library
+path and test motion, clicking and input in a fresh session separately.
+The keyboard mapping is unchanged: a live trace showed correct press and
+release events for ordinary letters, Shift and Return.
+
 ## Validation boundary
 
 The helper runs the available upstream test suites. libdrm's `drmdevice`
