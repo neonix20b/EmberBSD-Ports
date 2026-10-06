@@ -23,8 +23,9 @@ runtime behavior are validated.
   native package and tests verified; the Examples C controller exchanges
   typed commands and telemetry with ROS 2 Jazzy, including reconnect checks.
 - [Common development toolchain](profiles/development-toolchain/README.md):
-  GCC 16.2.0 source profile and native acceptance probes; compiler build,
-  coordinated C++ consumer rebuilds, and image integration remain pending.
+  GCC 16.2.0 builds and installs as an AArch64 VM candidate, passing native
+  C11/C++20 threads, TLS and shared-library runtime checks. Full upstream
+  tests, the common Qt/LLVM rebuild and image/default integration remain pending.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
