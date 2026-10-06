@@ -192,8 +192,12 @@ passes production contracts and native object compilation; its boot/runtime
 acceptance remains required. Compiler flags must not conceal the failure. Nested-function stack
 trampolines also fail with both compilers on this platform. GCC16's current
 recipe does not build a NetBSD sanitizer runtime, and the ASan suite stops
-during runtime initialization. Other target/configuration and an isolated LTO
-failure still need focused diagnosis. These findings do not invalidate the
+during runtime initialization. An unchanged upstream atomic LTO test exposed
+a separate libc CAS1/CAS2 defect: the helper compares untrimmed expected
+register bits against a zero-extended narrow load. The failing executable
+uses the libc helper; the passing variant contains a normalizing libgcc
+helper. The active libc still needs repair and validation. Other LTO and
+target/configuration failures remain under investigation. These findings do not invalidate the
 completed package build or justify rebuilding the same sources unchanged.
 Preserve unmodified test results; default selection stays deferred.
 
