@@ -1,0 +1,6 @@
+.local/
+distfiles/
+packages/
+work/
+work.*/
+*.core
