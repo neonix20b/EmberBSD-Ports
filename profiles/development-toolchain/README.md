@@ -196,7 +196,10 @@ during runtime initialization. An unchanged upstream atomic LTO test exposed
 a separate libc CAS1/CAS2 defect: the helper compares untrimmed expected
 register bits against a zero-extended narrow load. The failing executable
 uses the libc helper; the passing variant contains a normalizing libgcc
-helper. The active libc still needs repair and validation. Other LTO and
+helper. The [OS CAS repair](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/aarch64-outlined-cas.md)
+passes 850 native production checks and that unchanged upstream test linked
+explicitly to the corrected objects. The installed libc remains unchanged;
+its replacement and acceptance are still required. Other LTO and
 target/configuration failures remain under investigation. These findings do not invalidate the
 completed package build or justify rebuilding the same sources unchanged.
 Preserve unmodified test results; default selection stays deferred.
