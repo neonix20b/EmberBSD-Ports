@@ -71,6 +71,12 @@ the [official site](https://core.tcl-lang.org/expect/home) publishes its
 archive SHA256. The three pkgsrc portability patches are retained with
 refreshed contexts, including the generated configure substitution for
 `SHLIB_VERSION`. Library names follow 5.45.4's undotted `5454` suffix.
+The NetBSD adaptation also pins stty to its actual stdin behavior. Without
+a controlling terminal, upstream's configure probe misidentifies it as
+reading stdout, reversing explicit slave-PTY redirections and failing both
+upstream stty tests. The test driver now returns failure for failed tests
+or sourced test-file errors; the original driver returned zero for 13/15
+passing tests. Package revision 1 includes these portability/test fixes.
 
 The official site points to the maintained
 [Tcl 9 port](https://github.com/tcltk-depot/expect). Its README identifies

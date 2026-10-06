@@ -5,12 +5,13 @@ a stable release. See ../prerequisites.md for the bounded Tcl 8.6 gate.
 
 diff -ruN a/lang/tcl-expect/Makefile b/lang/tcl-expect/Makefile
 --- a/lang/tcl-expect/Makefile	2026-10-02 21:24:59.000000000 +0300
-+++ b/lang/tcl-expect/Makefile	2026-10-06 23:17:39.124660945 +0300
-@@ -3,7 +3,6 @@
++++ b/lang/tcl-expect/Makefile	2026-10-06 23:47:55.988003900 +0300
+@@ -3,7 +3,7 @@
  .include "Makefile.common"
  
  PKGNAME=	tcl-expect-${EXPECT_VERSION}
 -PKGREVISION=	6
++PKGREVISION=	1
  CATEGORIES=	lang
  
  MAINTAINER=	pkgsrc-users@NetBSD.org
@@ -32,8 +33,8 @@ diff -ruN a/lang/tcl-expect/Makefile.common b/lang/tcl-expect/Makefile.common
  #   https://sourceforge.net/p/expect/bugs/107/
 diff -ruN a/lang/tcl-expect/distinfo b/lang/tcl-expect/distinfo
 --- a/lang/tcl-expect/distinfo	2026-10-02 21:24:59.000000000 +0300
-+++ b/lang/tcl-expect/distinfo	2026-10-06 23:18:09.403337701 +0300
-@@ -1,8 +1,8 @@
++++ b/lang/tcl-expect/distinfo	2026-10-06 23:47:55.989672368 +0300
+@@ -1,8 +1,10 @@
  $NetBSD: distinfo,v 1.27 2025/03/30 21:10:45 wiz Exp $
  
 -BLAKE2s (expect5.45.tar.gz) = 38c440ed0868322b6ec7438decaa036a636e7d700191b754c1e4a7dc0fdd0c46
@@ -46,8 +47,10 @@ diff -ruN a/lang/tcl-expect/distinfo b/lang/tcl-expect/distinfo
 +SHA512 (expect5.45.4.tar.gz) = a8dc25e8175f67e029e15cbcfca1705165c1c4cb2dd37eaaaebffb61e3ba132d9519cd73ca5add4c3358a2b0b7a91e878279e8d0b72143ff2c287fce07e4659a
 +Size (expect5.45.4.tar.gz) = 632363 bytes
 +SHA1 (patch-Makefile.in) = c0166b0cff9d3d9e610f61bd719be0d8a3e484c4
-+SHA1 (patch-configure) = ff3789dc4c61e7f666a04fc0dc30d6caeaac5de6
++SHA1 (patch-configure) = 4628044f0821064dc49014c52b64e8787a0801ac
++SHA1 (patch-configure.in) = 422ebdf5704e3bd1b5b8c8af59de875b8236af45
 +SHA1 (patch-exp__chan.c) = 79ef66d2d3e012572207af37b329b3be52c1c8f0
++SHA1 (patch-tests_all.tcl) = e8441f05a66cba78dcfe01afa57687b0fb587945
 diff -ruN a/lang/tcl-expect/patches/patch-Makefile.in b/lang/tcl-expect/patches/patch-Makefile.in
 --- a/lang/tcl-expect/patches/patch-Makefile.in	2026-10-02 21:24:59.000000000 +0300
 +++ b/lang/tcl-expect/patches/patch-Makefile.in	2026-10-06 23:17:39.116066823 +0300
@@ -110,12 +113,14 @@ diff -ruN a/lang/tcl-expect/patches/patch-Makefile.in b/lang/tcl-expect/patches/
   	done
 diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/patch-configure
 --- a/lang/tcl-expect/patches/patch-configure	2026-10-02 21:24:59.000000000 +0300
-+++ b/lang/tcl-expect/patches/patch-configure	2026-10-06 23:17:39.121315866 +0300
-@@ -16,9 +16,19 @@
++++ b/lang/tcl-expect/patches/patch-configure	2026-10-06 23:47:55.980449523 +0300
+@@ -16,9 +16,21 @@
  
  \todo File changes upstream (but upstream is not functioning).
  
 ---- configure.orig	2010-09-16 20:46:47.000000000 +0000
++NetBSD stty reads stdin, including noninteractive builds without /dev/tty.
++
 +--- configure.orig
  +++ configure
 -@@ -8099,11 +8099,11 @@ fi
@@ -133,7 +138,7 @@ diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/pa
   		;;
   	    esac
   	    ;;
-@@ -31,8 +41,8 @@
+@@ -31,8 +43,8 @@
  +	    TCL_SHLIB_LD_EXTRAS="-Wl,-soname \$@"
   	    SHLIB_SUFFIX=".so"
   	    LDFLAGS=""
@@ -144,16 +149,25 @@ diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/pa
   	    BSD/OS*) ;;
   	    CYGWIN_*) ;;
   	    IRIX*) ;;
-@@ -41,7 +51,7 @@
+@@ -41,7 +53,16 @@
   	    Darwin-*) ;;
   	    SCO_SV-3.2*) ;;
   	    windows) ;;
 -@@ -15948,14 +15948,7 @@ fi
++@@ -8656,7 +8657,7 @@
++ 
++ stty_reads_stdout=""
++ case "${host}" in
++-  *-*-solaris*)		stty_reads_stdout=0 ;;
+++  *-*-netbsd*|*-*-solaris*)		stty_reads_stdout=0 ;;
++   *-*-irix*)		stty_reads_stdout=0 ;;
++   *-*-sco3.2v[45]*)	stty_reads_stdout=1 ;;
++   i[3456]86-*-sysv4.2MP)	stty_reads_stdout=0 ;;
 +@@ -9597,14 +9598,7 @@
   
   PACKAGE_VERSION_NODOTS="`echo $PACKAGE_VERSION | sed -e 's/\.//g'`"
   
-@@ -56,8 +66,8 @@
+@@ -56,8 +77,8 @@
   
   # also remove dots on systems that don't support filenames > 14
   # (are there systems which support shared libs and restrict filename lengths!?)
@@ -164,7 +178,7 @@ diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/pa
   
   else
  -    if test "${TCL_LIB_VERSIONS_OK}" = "ok"; then
-@@ -69,7 +79,7 @@
+@@ -69,7 +90,7 @@
       EXP_BUILD_LIB_SPEC="-L`pwd` ${EXP_LIB_FLAG}"
       EXP_LIB_SPEC="-L${libdir} ${EXP_LIB_FLAG}"
   fi
@@ -173,7 +187,7 @@ diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/pa
       # substituted. (@@@ Might not be necessary anymore)
       #--------------------------------------------------------------------
   
-@@ -79,11 +89,3 @@
+@@ -79,11 +100,3 @@
       if test "${TEA_PLATFORM}" = "windows" ; then
   	if test "${SHARED_BUILD}" = "1" ; then
   	    # We force the unresolved linking of symbols that are really in
@@ -185,6 +199,24 @@ diff -ruN a/lang/tcl-expect/patches/patch-configure b/lang/tcl-expect/patches/pa
 - CEOF
 - 
 - _ACEOF
+diff -ruN a/lang/tcl-expect/patches/patch-configure.in b/lang/tcl-expect/patches/patch-configure.in
+--- a/lang/tcl-expect/patches/patch-configure.in	1970-01-01 03:00:00.000000000 +0300
++++ b/lang/tcl-expect/patches/patch-configure.in	2026-10-06 23:47:55.984739756 +0300
+@@ -0,0 +1,14 @@
++EmberBSD local, AI-assisted; not submitted upstream.
++NetBSD stty reads stdin. A noninteractive configure cannot probe /dev/tty.
++
++--- configure.in.orig
+++++ configure.in
++@@ -362,7 +362,7 @@
++ 
++ stty_reads_stdout=""
++ case "${host}" in
++-  *-*-solaris*)		stty_reads_stdout=0 ;;
+++  *-*-netbsd*|*-*-solaris*)		stty_reads_stdout=0 ;;
++   *-*-irix*)		stty_reads_stdout=0 ;;
++   *-*-sco3.2v[[45]]*)	stty_reads_stdout=1 ;;
++   i[[3456]]86-*-sysv4.2MP)	stty_reads_stdout=0 ;;
 diff -ruN a/lang/tcl-expect/patches/patch-exp__chan.c b/lang/tcl-expect/patches/patch-exp__chan.c
 --- a/lang/tcl-expect/patches/patch-exp__chan.c	2026-10-02 21:24:59.000000000 +0300
 +++ b/lang/tcl-expect/patches/patch-exp__chan.c	2026-10-06 23:17:39.124542305 +0300
@@ -221,3 +253,31 @@ diff -ruN a/lang/tcl-expect/patches/patch-exp__chan.c b/lang/tcl-expect/patches/
       /*printf("ExpInputProc: read(%d,,) = %d\r\n",esPtr->fdin,bytesRead);*/
 -     if (bytesRead > -1) {
 + 
+diff -ruN a/lang/tcl-expect/patches/patch-tests_all.tcl b/lang/tcl-expect/patches/patch-tests_all.tcl
+--- a/lang/tcl-expect/patches/patch-tests_all.tcl	1970-01-01 03:00:00.000000000 +0300
++++ b/lang/tcl-expect/patches/patch-tests_all.tcl	2026-10-06 23:47:55.987789815 +0300
+@@ -0,0 +1,24 @@
++EmberBSD local, AI-assisted; not submitted upstream.
++Propagate failed tests and test-file loading errors to the package driver.
++
++--- tests/all.tcl.orig
+++++ tests/all.tcl
++@@ -12,13 +12,16 @@
++ set ::tcltest::testSingleFile false
++ set ::tcltest::testsDirectory [file dirname [info script]]
++ 
+++set source_errors 0
++ foreach file [lsort [::tcltest::getMatchingFiles]] {
++     set tail [file tail $file]
++     puts stdout $tail
++     if {[catch {source $file} msg]} {
++ 	puts stdout $msg
+++        incr source_errors
++     }
++ }
++ 
++-::tcltest::cleanupTests 1 
++-return
+++set failed $::tcltest::numTests(Failed)
+++::tcltest::cleanupTests 1
+++exit [expr {$failed != 0 || $source_errors != 0}]
