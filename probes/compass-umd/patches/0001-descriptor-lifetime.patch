@@ -1,0 +1,47 @@
+Origin: EmberBSD, AI-assisted; local patch, not submitted upstream.
+Preserve fd zero and invalidate ownership after every close. The factory
+immediately deletes a failed Aipu; its destructor must not close a reused fd.
+--- a/Linux/driver/umd/src/device/aipu/aipu.cpp
++++ b/Linux/driver/umd/src/device/aipu/aipu.cpp
+@@ -38,8 +38,7 @@
+   std::vector<aipu_partition_cap> part_caps;
+ 
+   m_fd = open("/dev/aipu", O_RDWR | O_SYNC);
+-  if (m_fd <= 0) {
+-    m_fd = 0;
++  if (m_fd < 0) {
+     LOG(LOG_ERR, "open /dev/aipu [fail]");
+     dump_stack();
+     return AIPU_LL_STATUS_ERROR_OPEN_FAIL;
+@@ -111,6 +110,7 @@
+   return ret;
+ fail:
+   close(m_fd);
++  m_fd = -1;
+   return ret;
+ }
+ 
+@@ -118,10 +118,10 @@
+   if (m_dram != nullptr)
+     m_dram = nullptr;
+ 
+-  if (m_fd > 0) {
++  if (m_fd >= 0) {
+     ioctl_cmd(AIPU_IOCTL_DISABLE_TICKCOUNTER, nullptr);
+     close(m_fd);
+-    m_fd = 0;
++    m_fd = -1;
+   }
+ }
+ 
+--- a/Linux/driver/umd/src/device/aipu/aipu.h
++++ b/Linux/driver/umd/src/device/aipu/aipu.h
+@@ -19,7 +19,7 @@
+ namespace aipudrv {
+ class Aipu : public DeviceBase {
+ protected:
+-  int m_fd = 0;
++  int m_fd = -1;
+   std::atomic<bool> m_tick_counter = {false};
+ 
+ private:

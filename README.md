@@ -36,6 +36,10 @@ runtime behavior are validated.
 - [Local AI CPU packages](profiles/ai-cpu/README.md): pkgsrc recipes for
   llama.cpp 0.6.0 and whisper.cpp 1.9.4; native ARM64 package installation,
   text generation, WAV transcription, and loopback HTTP inference verified.
+- [Compass NPU UMD lifetime probe](probes/compass-umd/README.md): pinned
+  upstream descriptor-zero and failure-cleanup fixes pass host software
+  contracts against actual production methods. Native kernel/DMA integration
+  and model execution remain unverified.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and
   process-crash/reopen checks. A C application retrieves local documents and
