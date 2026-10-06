@@ -1,0 +1,42 @@
+--- a/src/setconfigoperation.cpp
++++ b/src/setconfigoperation.cpp
+@@ -170,10 +170,12 @@
+     // Here we make sure that among enabled outputs, each
+     // priority value is unique
+     const auto outputs = config->outputs();
+-    auto enabled = outputs | std::views::filter([](const auto &output) {
+-                       return output->isEnabled();
+-                   })
+-        | std::ranges::to<QList>();
++    QList<OutputPtr> enabled;
++    for (const auto &output : outputs) {
++        if (output->isEnabled()) {
++            enabled.push_back(output);
++        }
++    }
+     if (enabled.isEmpty()) {
+         return;
+     }
+--- a/src/doctor/doctor.cpp
++++ b/src/doctor/doctor.cpp
+@@ -23,7 +23,6 @@
+ #include <QScreen>
+ #include <QStandardPaths>
+ 
+-#include <print>
+ #include <ranges>
+ #include <utility>
+ 
+@@ -736,9 +735,10 @@
+             cout << " None" << endl;
+         } else {
+             cout << endl;
+-            for (const auto &[info, index] : std::views::zip(customModes, std::views::iota(0))) {
++            for (qsizetype index = 0; index < customModes.size(); ++index) {
++                const auto &info = customModes[index];
+                 cout << "\t\t" << index << ": ";
+-                cout << std::format("{}x{}@{:.2f}", info.size.width(), info.size.height(), info.refreshRate).c_str();
++                cout << QStringLiteral("%1x%2@%3").arg(info.size.width()).arg(info.size.height()).arg(info.refreshRate, 0, 'f', 2);
+                 if (info.flags & ModeInfo::Flag::ReducedBlanking) {
+                     cout << " (reduced blanking)";
+                 }

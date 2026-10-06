@@ -1,0 +1,92 @@
+diff -urN '--exclude=utils.cpp' networkmanager-qt-6.26.0.orig/CMakeLists.txt networkmanager-qt-6.26.0/CMakeLists.txt
+--- networkmanager-qt-6.26.0.orig/CMakeLists.txt	2026-10-06 21:05:51.072358524 +0300
++++ networkmanager-qt-6.26.0/CMakeLists.txt	2026-10-06 21:05:51.331565343 +0300
+@@ -12,7 +12,12 @@
+ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${ECM_MODULE_PATH})
+ 
+ find_package(PkgConfig)
+-pkg_search_module(NetworkManager REQUIRED IMPORTED_TARGET libnm>=1.4.0)
++option(NETWORKMANAGERQT_HEADERS_ONLY "Use the NetworkManager public API headers without libnm" OFF)
++if (NETWORKMANAGERQT_HEADERS_ONLY)
++    pkg_search_module(NetworkManagerAPI REQUIRED IMPORTED_TARGET networkmanager-headers>=1.4.0)
++else()
++    pkg_search_module(NetworkManagerAPI REQUIRED IMPORTED_TARGET libnm>=1.4.0)
++endif()
+ pkg_search_module(Gio REQUIRED IMPORTED_TARGET gio-2.0)
+ 
+ include(KDEInstallDirs)
+@@ -24,6 +29,7 @@
+ 
+ set(REQUIRED_QT_VERSION 6.9.0)
+ find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED Core DBus Network Qml)
++qt_standard_project_setup()
+ 
+ remove_definitions(-DQT_NO_CAST_FROM_ASCII -DQT_NO_CAST_FROM_BYTEARRAY)
+ 
+diff -urN '--exclude=utils.cpp' networkmanager-qt-6.26.0.orig/KF6NetworkManagerQtConfig.cmake.in networkmanager-qt-6.26.0/KF6NetworkManagerQtConfig.cmake.in
+--- networkmanager-qt-6.26.0.orig/KF6NetworkManagerQtConfig.cmake.in	2026-10-06 21:05:51.072723109 +0300
++++ networkmanager-qt-6.26.0/KF6NetworkManagerQtConfig.cmake.in	2026-10-06 21:05:51.331775886 +0300
+@@ -6,7 +6,11 @@
+ find_dependency(Qt6Network @REQUIRED_QT_VERSION@)
+ 
+ find_package(PkgConfig)
+-pkg_search_module(NetworkManager REQUIRED IMPORTED_TARGET libnm>=1.4.0)
++if (@NETWORKMANAGERQT_HEADERS_ONLY@)
++    pkg_search_module(NetworkManagerAPI REQUIRED IMPORTED_TARGET networkmanager-headers>=1.4.0)
++else()
++    pkg_search_module(NetworkManagerAPI REQUIRED IMPORTED_TARGET libnm>=1.4.0)
++endif()
+ pkg_search_module(Gio REQUIRED IMPORTED_TARGET gio-2.0)
+ 
+ include("${CMAKE_CURRENT_LIST_DIR}/KF6NetworkManagerQtTargets.cmake")
+diff -urN '--exclude=utils.cpp' networkmanager-qt-6.26.0.orig/autotests/CMakeLists.txt networkmanager-qt-6.26.0/autotests/CMakeLists.txt
+--- networkmanager-qt-6.26.0.orig/autotests/CMakeLists.txt	2026-10-06 21:05:51.068803096 +0300
++++ networkmanager-qt-6.26.0/autotests/CMakeLists.txt	2026-10-06 21:05:51.331263926 +0300
+@@ -7,8 +7,8 @@
+ find_package(Qt6 ${REQUIRED_QT_VERSION} NO_MODULE REQUIRED Test)
+ set_package_properties(Qt6Test PROPERTIES PURPOSE "Required for autotests")
+ 
+-ecm_add_test(managertest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManager fakeNetwork)
+-ecm_add_test(settingstest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManager fakeNetwork)
+-ecm_add_test(activeconnectiontest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManager fakeNetwork)
++ecm_add_test(managertest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManagerAPI fakeNetwork)
++ecm_add_test(settingstest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManagerAPI fakeNetwork)
++ecm_add_test(activeconnectiontest.cpp LINK_LIBRARIES Qt6::Test KF6NetworkManagerQt_static PkgConfig::NetworkManagerAPI fakeNetwork)
+ 
+ add_subdirectory(settings)
+diff -urN '--exclude=utils.cpp' networkmanager-qt-6.26.0.orig/src/CMakeLists.txt networkmanager-qt-6.26.0/src/CMakeLists.txt
+--- networkmanager-qt-6.26.0.orig/src/CMakeLists.txt	2026-10-06 21:05:51.133694520 +0300
++++ networkmanager-qt-6.26.0/src/CMakeLists.txt	2026-10-06 21:19:41.360196793 +0300
+@@ -171,7 +171,10 @@
+ # for examples to build
+ target_include_directories(KF6NetworkManagerQt PUBLIC "$<BUILD_INTERFACE:${NetworkManagerQt_BINARY_DIR};${CMAKE_CURRENT_SOURCE_DIR}/settings>")
+ 
+-target_link_libraries(KF6NetworkManagerQt PUBLIC Qt6::Core Qt6::Network Qt6::DBus PkgConfig::NetworkManager PkgConfig::Gio)
++target_link_libraries(KF6NetworkManagerQt PUBLIC Qt6::Core Qt6::Network Qt6::DBus PkgConfig::NetworkManagerAPI)
++if (NOT NETWORKMANAGERQT_HEADERS_ONLY)
++    target_link_libraries(KF6NetworkManagerQt PUBLIC PkgConfig::Gio)
++endif()
+ 
+ set_target_properties(KF6NetworkManagerQt PROPERTIES VERSION ${NETWORKMANAGERQT_VERSION}
+                                                    SOVERSION ${NETWORKMANAGERQT_SOVERSION}
+@@ -182,7 +185,10 @@
+ add_library(KF6NetworkManagerQt_static STATIC ${NetworkManagerQt_PART_SRCS} ${NetworkManagerQt_SETTINGS_SRCS} ${DBUS_INTERFACE_SRCS})
+ set_target_properties(KF6NetworkManagerQt_static PROPERTIES COMPILE_FLAGS -DNMQT_STATIC=1)
+ 
+-target_link_libraries(KF6NetworkManagerQt_static PUBLIC Qt6::Core Qt6::Network Qt6::DBus PkgConfig::NetworkManager PkgConfig::Gio)
++target_link_libraries(KF6NetworkManagerQt_static PUBLIC Qt6::Core Qt6::Network Qt6::DBus PkgConfig::NetworkManagerAPI)
++if (NOT NETWORKMANAGERQT_HEADERS_ONLY)
++    target_link_libraries(KF6NetworkManagerQt_static PUBLIC PkgConfig::Gio)
++endif()
+ target_include_directories(KF6NetworkManagerQt_static PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..;${CMAKE_CURRENT_BINARY_DIR}/..>")
+ 
+ ecm_generate_headers(NetworkManagerQt_CamelCase_HEADERS
+diff -urN '--exclude=utils.cpp' networkmanager-qt-6.26.0.orig/src/fakenetwork/CMakeLists.txt networkmanager-qt-6.26.0/src/fakenetwork/CMakeLists.txt
+--- networkmanager-qt-6.26.0.orig/src/fakenetwork/CMakeLists.txt	2026-10-06 21:05:51.139469705 +0300
++++ networkmanager-qt-6.26.0/src/fakenetwork/CMakeLists.txt	2026-10-06 21:05:51.333381266 +0300
+@@ -20,4 +20,4 @@
+     Qt6::Core
+     Qt6::Network
+     Qt6::DBus
+-    PkgConfig::NetworkManager)
++    PkgConfig::NetworkManagerAPI)

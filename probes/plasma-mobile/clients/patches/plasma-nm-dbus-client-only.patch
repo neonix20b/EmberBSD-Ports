@@ -1,0 +1,183 @@
+diff -urN plasma-nm-6.7.5.orig/CMakeLists.txt plasma-nm-6.7.5/CMakeLists.txt
+--- plasma-nm-6.7.5.orig/CMakeLists.txt	2026-10-06 21:17:31.805544618 +0300
++++ plasma-nm-6.7.5/CMakeLists.txt	2026-10-06 21:55:49.886178778 +0300
+@@ -18,6 +18,10 @@
+ set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+ 
+ option(BUILD_OPENCONNECT "Build OpenConnect VPN plugin" ON)
++option(PLASMANM_DBUS_CLIENT_ONLY "Build the Qt D-Bus QML client without desktop services or libnm importers" OFF)
++if(PLASMANM_DBUS_CLIENT_ONLY)
++    set(BUILD_OPENCONNECT OFF)
++endif()
+ 
+ include(KDEInstallDirs)
+ include(KDECMakeSettings)
+@@ -41,6 +45,9 @@
+     QuickWidgets
+     Widgets
+ )
++qt_standard_project_setup()
++# UI files are generated explicitly by ki18n_wrap_ui in libs/editor.
++set(CMAKE_AUTOUIC OFF)
+ find_package(Qt6Keychain 0.16.0 CONFIG REQUIRED)
+ 
+ find_package(PkgConfig REQUIRED)
+@@ -100,7 +107,11 @@
+ 
+ find_package(OpenSSL REQUIRED)
+ 
+-pkg_check_modules(NETWORKMANAGER IMPORTED_TARGET libnm>1.4.0 REQUIRED)
++if(PLASMANM_DBUS_CLIENT_ONLY)
++    pkg_check_modules(NETWORKMANAGER IMPORTED_TARGET networkmanager-headers>1.4.0 REQUIRED)
++else()
++    pkg_check_modules(NETWORKMANAGER IMPORTED_TARGET libnm>1.4.0 REQUIRED)
++endif()
+ pkg_check_modules(MOBILEBROADBANDPROVIDERINFO mobile-broadband-provider-info)
+ pkg_get_variable(BROADBANDPROVIDER_DATABASE mobile-broadband-provider-info database)
+ 
+@@ -116,18 +127,24 @@
+ 
+ remove_definitions(-DQT_NO_CAST_FROM_ASCII -DQT_NO_CAST_FROM_BYTEARRAY)
+ 
+-add_subdirectory(applet)
+-add_subdirectory(kded)
+-add_subdirectory(kcms)
++if(NOT PLASMANM_DBUS_CLIENT_ONLY)
++    add_subdirectory(applet)
++    add_subdirectory(kded)
++    add_subdirectory(kcms)
++endif()
+ add_subdirectory(libs)
+-add_subdirectory(vpn)
++if(NOT PLASMANM_DBUS_CLIENT_ONLY)
++    add_subdirectory(vpn)
++endif()
+ 
+ # Enable unit testing
+ if (BUILD_TESTING)
+     add_subdirectory(tests)
+ endif()
+ 
+-install(FILES org.kde.vpnimport.desktop DESTINATION ${KDE_INSTALL_APPDIR})
++if(NOT PLASMANM_DBUS_CLIENT_ONLY)
++    install(FILES org.kde.vpnimport.desktop DESTINATION ${KDE_INSTALL_APPDIR})
++endif()
+ 
+ # add clang-format target for all our real source files
+ file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h)
+diff -urN plasma-nm-6.7.5.orig/libs/CMakeLists.txt plasma-nm-6.7.5/libs/CMakeLists.txt
+--- plasma-nm-6.7.5.orig/libs/CMakeLists.txt	2026-10-06 21:17:31.926057509 +0300
++++ plasma-nm-6.7.5/libs/CMakeLists.txt	2026-10-06 21:17:32.931870230 +0300
+@@ -5,6 +5,9 @@
+ 
+ add_library(plasmanm_internal SHARED)
+ generate_export_header(plasmanm_internal)
++if(PLASMANM_DBUS_CLIENT_ONLY)
++    target_compile_definitions(plasmanm_internal PUBLIC PLASMANM_DBUS_CLIENT_ONLY=1)
++endif()
+ 
+ ecm_qt_declare_logging_category(plasmanm_internal HEADER plasma_nm_libs.h IDENTIFIER PLASMA_NM_LIBS_LOG CATEGORY_NAME org.kde.plasma.nm.libs DESCRIPTION "Plasma NM (libs)" EXPORT PLASMANM)
+ target_sources(plasmanm_internal PRIVATE
+diff -urN plasma-nm-6.7.5.orig/libs/handler.cpp plasma-nm-6.7.5/libs/handler.cpp
+--- plasma-nm-6.7.5.orig/libs/handler.cpp	2026-10-06 21:17:31.954833466 +0300
++++ plasma-nm-6.7.5/libs/handler.cpp	2026-10-06 21:17:32.934654867 +0300
+@@ -152,6 +152,7 @@
+                 co_return;
+             }
+ 
++#ifndef PLASMANM_DBUS_CLIENT_ONLY
+             // Check missing NetworkManager VPN plugin
+             GSList *networkManagerPlugins = nullptr;
+             networkManagerPlugins = nm_vpn_plugin_info_list_load();
+@@ -176,6 +177,7 @@
+                 notification->sendEvent();
+                 co_return;
+             }
++#endif
+         }
+     }
+ 
+@@ -401,6 +403,8 @@
+     }
+ }
+ 
++#ifndef PLASMANM_DBUS_CLIENT_ONLY
++// libnm object import is used only by the desktop KCM and VPN import plugins.
+ struct AddConnectionData {
+     QString id;
+     Handler *handler;
+@@ -452,6 +456,8 @@
+                               userData);
+ }
+ 
++#endif
++
+ QCoro::Task<> Handler::addAndActivateConnectionDBus(const NMVariantMapMap &map, const QString &device, const QString &specificObject)
+ {
+     const QString name = map.value(QStringLiteral("connection")).value(QStringLiteral("id")).toString();
+diff -urN plasma-nm-6.7.5.orig/libs/handler.h plasma-nm-6.7.5/libs/handler.h
+--- plasma-nm-6.7.5.orig/libs/handler.h	2026-10-06 21:17:31.953563877 +0300
++++ plasma-nm-6.7.5/libs/handler.h	2026-10-06 21:17:32.935776622 +0300
+@@ -55,7 +55,9 @@
+         return m_ongoingScansCount != 0;
+     }
+ 
++#ifndef PLASMANM_DBUS_CLIENT_ONLY
+     void addConnection(NMConnection *connection);
++#endif
+ 
+ public Q_SLOTS:
+     /**
+diff -urN plasma-nm-6.7.5.orig/tests/CMakeLists.txt plasma-nm-6.7.5/tests/CMakeLists.txt
+--- plasma-nm-6.7.5.orig/tests/CMakeLists.txt	2026-10-06 21:17:31.913184537 +0300
++++ plasma-nm-6.7.5/tests/CMakeLists.txt	2026-10-06 21:38:23.252065881 +0300
+@@ -23,27 +23,29 @@
+     LINK_LIBRARIES Qt::Test plasmanm_editor
+ )
+ 
+-add_test(NAME kcm_cellular_network_smoketest COMMAND kcmshell6 --smoke-test kcm_cellular_network)
+-set_tests_properties(kcm_cellular_network_smoketest PROPERTIES
+-    ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
+-)
++if(NOT PLASMANM_DBUS_CLIENT_ONLY)
++    add_test(NAME kcm_cellular_network_smoketest COMMAND kcmshell6 --smoke-test kcm_cellular_network)
++    set_tests_properties(kcm_cellular_network_smoketest PROPERTIES
++        ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
++    )
+ 
+-add_test(NAME kcm_networkmanagement_smoketest COMMAND kcmshell6 --smoke-test kcm_networkmanagement)
+-set_tests_properties(kcm_networkmanagement_smoketest PROPERTIES
+-    ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
+-)
++    add_test(NAME kcm_networkmanagement_smoketest COMMAND kcmshell6 --smoke-test kcm_networkmanagement)
++    set_tests_properties(kcm_networkmanagement_smoketest PROPERTIES
++        ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
++    )
+ 
+-add_test(NAME kcm_mobile_hotspot_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_hotspot)
+-set_tests_properties(kcm_mobile_hotspot_smoketest PROPERTIES
+-    ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
+-)
++    add_test(NAME kcm_mobile_hotspot_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_hotspot)
++    set_tests_properties(kcm_mobile_hotspot_smoketest PROPERTIES
++        ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
++    )
+ 
+-add_test(NAME kcm_mobile_wifi_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_wifi)
+-set_tests_properties(kcm_mobile_wifi_smoketest PROPERTIES
+-    ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
+-)
++    add_test(NAME kcm_mobile_wifi_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_wifi)
++    set_tests_properties(kcm_mobile_wifi_smoketest PROPERTIES
++        ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
++    )
+ 
+-add_test(NAME kcm_mobile_wired_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_wired)
+-set_tests_properties(kcm_mobile_wired_smoketest PROPERTIES
+-    ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
+-)
++    add_test(NAME kcm_mobile_wired_smoketest COMMAND kcmshell6 --smoke-test kcm_mobile_wired)
++    set_tests_properties(kcm_mobile_wired_smoketest PROPERTIES
++        ENVIRONMENT_MODIFICATION QT_PLUGIN_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/bin
++    )
++endif()

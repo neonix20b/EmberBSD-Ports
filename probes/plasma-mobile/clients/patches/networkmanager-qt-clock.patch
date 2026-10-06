@@ -1,0 +1,26 @@
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@ -599,7 +599,12 @@
+ 
+ QDateTime NetworkManager::clockBootTimeToDateTime(qlonglong clockBootime)
+ {
++#ifdef CLOCK_BOOTTIME
+     clockid_t clk_id = CLOCK_BOOTTIME;
++#else
++    // Match the existing runtime fallback when CLOCK_BOOTTIME is unavailable.
++    clockid_t clk_id = CLOCK_MONOTONIC;
++#endif
+     struct timespec tp;
+     int r;
+ 
+@@ -612,6 +617,10 @@
+         r = clock_gettime(clk_id, &tp);
+     }
+ 
++    if (r != 0) {
++        return {};
++    }
++
+     // convert to msecs
+     long now_msecs = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+ 

@@ -1,0 +1,45 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -17,6 +17,8 @@
+ set(CMAKE_CXX_STANDARD 20)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
++option(BUILD_SCREEN_RECORDING "Build the PipeWire screen recording quick setting" ON)
++
+ option(INSTALL_SYSTEMD_SERVICE "Install a systemd service file to start the session" OFF)
+ 
+ find_package(ECM ${KF6_MIN_VERSION} REQUIRED NO_MODULE)
+@@ -83,7 +85,9 @@
+ find_package(PlasmaActivities CONFIG REQUIRED)
+ find_package(KF6Screen CONFIG REQUIRED)
+ find_package(KWayland CONFIG REQUIRED)
+-find_package(KPipeWire ${PROJECT_DEP_VERSION} REQUIRED)
++if(BUILD_SCREEN_RECORDING)
++    find_package(KPipeWire ${PROJECT_DEP_VERSION} REQUIRED)
++endif()
+ 
+ find_package(PkgConfig REQUIRED)
+ 
+@@ -125,7 +129,9 @@
+ 
+ include(CheckIncludeFiles)
+ 
+-ecm_find_qmlmodule(org.kde.pipewire 0.1)
++if(BUILD_SCREEN_RECORDING)
++    ecm_find_qmlmodule(org.kde.pipewire 0.1)
++endif()
+ 
+ plasma_install_package(lookandfeel org.kde.breeze.mobile look-and-feel lookandfeel)
+ plasma_install_package(shell org.kde.plasma.mobileshell shells)
+--- a/quicksettings/CMakeLists.txt
++++ b/quicksettings/CMakeLists.txt
+@@ -21,6 +21,8 @@
+ add_subdirectory(nightcolor)
+ add_subdirectory(powermenu)
+ # TODO: Disable screen recording quick setting, as it does not work properly
+-add_subdirectory(record)
++if(BUILD_SCREEN_RECORDING)
++    add_subdirectory(record)
++endif()
+ add_subdirectory(screenshot)
+ add_subdirectory(screenrotation)

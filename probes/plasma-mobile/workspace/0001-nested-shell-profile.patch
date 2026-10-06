@@ -1,0 +1,100 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -41,6 +41,12 @@
+ include(ECMDeprecationSettings)
+ include(ECMQmlModule)
+ 
++option(BUILD_NESTED_SHELL_ONLY "Build the shell and runtime modules for a private nested session" OFF)
++if(BUILD_NESTED_SHELL_ONLY)
++    include(cmake/NestedShell.cmake)
++    return()
++endif()
++
+ find_package(PkgConfig REQUIRED)
+ pkg_check_modules(Flatpak IMPORTED_TARGET flatpak>=0.11.8)
+ pkg_check_modules(PipeWire QUIET IMPORTED_TARGET libpipewire-0.3)
+--- /dev/null
++++ b/cmake/NestedShell.cmake
+@@ -0,0 +1,82 @@
++# SPDX-License-Identifier: BSD-3-Clause
++# Local EmberBSD experimental profile, prepared with AI assistance.
++# Build real upstream shell targets without installing login/session services.
++
++# Keep NetBSD libutil compatibility-alias warnings visible without rejecting
++# their exported symbols. KDE's --no-undefined check remains enabled.
++if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++    string(REPLACE "-Wl,--fatal-warnings" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
++    string(REPLACE "-Wl,--fatal-warnings" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
++endif()
++
++if(WITH_X11 OR BUILD_TESTING)
++    message(FATAL_ERROR "The nested shell profile requires WITH_X11=OFF and BUILD_TESTING=OFF")
++endif()
++
++find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
++    Concurrent DBus Network Quick QuickWidgets Sql Svg Widgets WaylandClient)
++qt_standard_project_setup()
++find_package(Qt6GuiPrivate ${QT_MIN_VERSION} REQUIRED NO_MODULE)
++find_package(Qt6WaylandClientPrivate ${QT_MIN_VERSION} REQUIRED NO_MODULE)
++find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
++    Archive Auth ColorScheme Config CoreAddons Crash DBusAddons Declarative
++    GlobalAccel GuiAddons I18n IconThemes ItemModels KCMUtils KIO NewStuff
++    Notifications Package Parts Service Solid StatusNotifierItem Svg
++    TextEditor TextWidgets WidgetsAddons WindowSystem XmlGui)
++find_package(Plasma ${PROJECT_DEP_VERSION} REQUIRED)
++find_package(PlasmaQuick ${PROJECT_DEP_VERSION} REQUIRED)
++find_package(KWayland ${PROJECT_DEP_VERSION} REQUIRED)
++find_package(PlasmaActivities ${PROJECT_DEP_VERSION} REQUIRED)
++find_package(KF6Screen ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
++find_package(LayerShellQt ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
++find_package(ScreenSaverDBusInterface CONFIG REQUIRED)
++find_package(KNightTime ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
++find_package(PlasmaWaylandProtocols 1.21.0 REQUIRED)
++find_package(Wayland REQUIRED COMPONENTS Client)
++find_package(Canberra REQUIRED)
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(DBus dbus-1 REQUIRED IMPORTED_TARGET)
++
++# A KWin build need not have completed when configuring Workspace. Its pinned
++# upstream XML is sufficient to generate this real D-Bus client interface.
++set(KWIN_VIRTUALKEYBOARD_INTERFACE "" CACHE FILEPATH "KWin org.kde.kwin.VirtualKeyboard.xml from the matching release")
++if(NOT EXISTS "${KWIN_VIRTUALKEYBOARD_INTERFACE}")
++    message(FATAL_ERROR "Provide the matching KWin VirtualKeyboard D-Bus XML")
++endif()
++
++set(HAVE_X11 0)
++set(HAVE_XCURSOR 0)
++set(HAVE_XFIXES 0)
++include(ConfigureChecks.cmake)
++include_directories("${CMAKE_CURRENT_BINARY_DIR}")
++ecm_set_disabled_deprecation_versions(QT 5.15.2 KF 5.98.0)
++configure_file(config-workspace.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-workspace.h)
++configure_file(config-X11.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-X11.h)
++configure_file(config-KDECI_BUILD.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-KDECI_BUILD.h)
++add_definitions(-DQT_NO_URL_CAST_FROM_STRING)
++ecm_query_qt(QtBinariesDir QT_INSTALL_BINS)
++
++add_subdirectory(libkworkspace)
++add_subdirectory(libtaskmanager)
++add_subdirectory(libnotificationmanager)
++add_subdirectory(libkmpris)
++add_subdirectory(libdbusmenuqt)
++add_subdirectory(shell)
++add_subdirectory(components/containmentlayoutmanager)
++add_subdirectory(components/dbus)
++add_subdirectory(components/shellprivate)
++add_subdirectory(components/keyboardlayout)
++add_subdirectory(components/sessionsprivate)
++add_subdirectory(components/batterycontrol)
++add_subdirectory(components/workspace)
++add_subdirectory(components/trianglemousefilter)
++add_subdirectory(applets/systemtray)
++add_subdirectory(statusnotifierwatcher)
++add_subdirectory(libclock)
++add_subdirectory(wallpapers)
++
++ecm_qt_install_logging_categories(
++    EXPORT PLASMAWORKSPACE
++    FILE plasma-workspace.categories
++    DESTINATION ${KDE_INSTALL_LOGGINGCATEGORIESDIR})
++feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

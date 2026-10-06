@@ -1,0 +1,19 @@
+--- a/cmake/FindModemManager.cmake
++++ b/cmake/FindModemManager.cmake
+@@ -25,6 +25,16 @@
+ ENDIF (NOT WIN32)
+ 
+ IF (MODEMMANAGER_FOUND)
++   # Public ModemManagerQt headers use <ModemManager/ModemManager.h>,
++   # while ModemManager.pc exports the directory containing ModemManager.h.
++   # Propagate its parent as well, including for non-system prefixes.
++   FOREACH(include_dir IN LISTS MODEMMANAGER_INCLUDE_DIRS)
++      GET_FILENAME_COMPONENT(include_parent "${include_dir}" DIRECTORY)
++      IF(EXISTS "${include_parent}/ModemManager/ModemManager.h")
++         LIST(APPEND MODEMMANAGER_INCLUDE_DIRS "${include_parent}")
++      ENDIF()
++   ENDFOREACH()
++   LIST(REMOVE_DUPLICATES MODEMMANAGER_INCLUDE_DIRS)
+    IF (ModemManager_FIND_VERSION AND ("${MODEMMANAGER_VERSION}" VERSION_LESS "${ModemManager_FIND_VERSION}"))
+       MESSAGE(FATAL_ERROR "ModemManager ${MODEMMANAGER_VERSION} is too old, need at least ${ModemManager_FIND_VERSION}")
+    ELSEIF (NOT ModemManager_FIND_QUIETLY)
