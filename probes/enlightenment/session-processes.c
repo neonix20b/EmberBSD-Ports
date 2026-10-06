@@ -14,7 +14,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef MARKER
 #define MARKER "EMBERBSD_ENLIGHTENMENT_SESSION"
+#endif
 #define MAX_ENV_BYTES (16U * 1024U * 1024U)
 #define MAX_PROC_BYTES (64U * 1024U * 1024U)
 #define SCAN_ATTEMPTS 4

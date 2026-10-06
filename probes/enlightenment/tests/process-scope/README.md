@@ -1,11 +1,25 @@
 # Scoped Enlightenment process cleanup for NetBSD
 
 `session-processes` finds cooperative session processes even after `setsid()` or
-reparenting. It matches the complete NUL-delimited environment token
+reparenting. By default, it matches the complete NUL-delimited environment token
 `EMBERBSD_ENLIGHTENMENT_SESSION=<absolute session directory>` from its own environment.
 It never matches command text, a process name, a process group or every process of a UID.
 This is new, AI-assisted EmberBSD code under BSD-2-Clause; see
 `../../LICENSES/EMBERBSD-HELPERS`.
+
+Another desktop launcher can set the marker at compile time, for example
+`'-DMARKER="EMBERBSD_PLASMA_SESSION"'`. The default Enlightenment marker and
+all process-identity checks stay unchanged. The shared
+[marker regression](../../../plasma-mobile/scripts/test-process-marker.sh)
+runs the existing native scope and cancellation checks for both names:
+
+```sh
+sh /absolute/path/to/probes/plasma-mobile/scripts/test-process-marker.sh \
+    "$HOME/.cache/plasma-marker-regression"
+```
+
+Use a new directory and an ordinary NetBSD user. Both marker variants passed
+on NetBSD 11/aarch64; evidence directories are retained by the test.
 
 Build on NetBSD in a new disposable directory:
 
