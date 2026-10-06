@@ -187,8 +187,9 @@ the complete profile has not passed its acceptance gate.
 The current AArch64 VM kernel starts processes with flush-to-zero and default
 NaN modes. A separate native probe reproduces loss of subnormal results and
 NaN payloads with both base GCC 12.5 and this candidate. Process-local IEEE
-mode produces the expected values; a kernel correction and a new boot are
-required, not compiler flags that conceal the failure. Nested-function stack
+mode produces the expected values. The [EmberBSD kernel correction](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/aarch64-fp-state.md)
+passes production contracts and native object compilation; its boot/runtime
+acceptance remains required. Compiler flags must not conceal the failure. Nested-function stack
 trampolines also fail with both compilers on this platform. GCC16's current
 recipe does not build a NetBSD sanitizer runtime, and the ASan suite stops
 during runtime initialization. Other target/configuration and an isolated LTO
