@@ -32,7 +32,9 @@ done
 sh "$recipe/tests/native-identity.sh" "$source" > "$work/log/identity-contract.txt" 2>&1
 sed 's/@ATOMIC_OPS_CHECK@/1/g' "$source/xf86drm.h" > "$work/xf86drm.h"
 mv "$work/xf86drm.h" "$source/xf86drm.h"
-CFLAGS='-O2 -Werror -I/usr/pkg/include'
+# Upstream explicitly warns about unsupported non-PCI buses on NetBSD.
+# Keep those diagnostics visible; actual compiler warnings remain fatal.
+CFLAGS='-O2 -Werror -Wno-error=cpp -I/usr/pkg/include'
 LDFLAGS="-L/usr/pkg/lib -Wl,-rpath,/usr/pkg/lib -lpci"
 export CFLAGS LDFLAGS
 meson setup "$work/build" "$source" --prefix="$work/install" --libdir=lib \

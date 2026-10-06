@@ -33,9 +33,15 @@ The optional archive is hash checked before extraction. Without it the
 helper downloads the pinned original. Build in a new private directory as
 an ordinary user; no installed system libraries or desktop are replaced.
 The helper applies the full ordered patch set, records hashes, compiles
-with `-Werror`, runs the production-code contract and upstream tests, and
+with `-Werror -Wno-error=cpp`, runs the production-code contract and upstream tests, and
 stages libdrm in `install/`. Meson and upstream tests still need Python;
 project-owned build and contract helpers use shell and C.
+
+The sole `-Wno-error=cpp` exception preserves upstream explicit `#warning`
+diagnostics for unsupported USB/OF/faux buses on NetBSD. Compiler diagnostics
+remain fatal. The local patch resolves the NetBSD ALIGN macro collision,
+places declarations before statements, checks signed snprintf results safely
+and compiles a name helper only on the two platforms that use it.
 
 The fixture compiles actual functions from patched `xf86drm.c`, including
 `drmGetDevices2`, `drmGetDevice2`, node-name lookup, node-type lookup and

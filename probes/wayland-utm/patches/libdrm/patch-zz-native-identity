@@ -10,7 +10,18 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
  /*
   * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
   * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
-@@ -87,6 +88,8 @@
+@@ -79,6 +80,10 @@
+ #include "libdrm_macros.h"
+ #include "drm_fourcc.h"
+ 
++#ifdef __NetBSD__
++/* NetBSD sys/param.h has a one-argument ALIGN. Use libdrm's version. */
++#undef ALIGN
++#endif
+ #include "util_math.h"
+ 
+ #ifdef __DragonFly__
+@@ -87,6 +92,8 @@
  
  #ifdef __NetBSD__
  #define DRM_MAJOR 180
@@ -19,7 +30,7 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
  #include <sys/param.h>
  #include <dev/pci/pcireg.h>
  #include <pci.h>
-@@ -1031,8 +1034,81 @@
+@@ -1031,8 +1038,84 @@
      };
  }
  
@@ -91,6 +102,9 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
 +
  static int drmGetMinorType(int major, int minor)
  {
++    char path[DRM_NODE_NAME_MAX];
++    const char *dev_name;
++    int i;
 +#ifdef __NetBSD__
 +    struct drm_native_pci_record record;
 +    int native_type = drmNativeIdentity(major, minor, &record);
@@ -101,7 +115,33 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
  #ifdef __FreeBSD__
      char name[SPECNAMELEN];
      int id;
-@@ -3326,6 +3402,13 @@
+@@ -1051,9 +1134,6 @@
+ 
+     minor = id;
+ #endif
+-    char path[DRM_NODE_NAME_MAX];
+-    const char *dev_name;
+-    int i;
+ 
+     for (i = DRM_NODE_PRIMARY; i < DRM_NODE_MAX; i++) {
+         dev_name = drmGetDeviceName(i);
+@@ -1067,6 +1147,7 @@
+     return -1;
+ }
+ 
++#if defined(__linux__) || defined(__FreeBSD__)
+ static const char *drmGetMinorName(int type)
+ {
+     switch (type) {
+@@ -1078,6 +1159,7 @@
+         return NULL;
+     }
+ }
++#endif
+ 
+ /**
+  * Open the device by bus ID.
+@@ -3326,6 +3408,13 @@
  
  static bool drmNodeIsDRM(int maj, int min)
  {
@@ -115,10 +155,10 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
  #ifdef __linux__
      char path[64];
      struct stat sbuf;
-@@ -3414,6 +3497,26 @@
+@@ -3506,6 +3595,27 @@
+     unsigned int maj, min;
+     int n;
  
- static char *drmGetMinorNameForFD(int fd, int type)
- {
 +#ifdef __NetBSD__
 +    struct drm_native_pci_record record;
 +    struct stat native_stat;
@@ -139,18 +179,26 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
 +        return NULL;
 +    }
 +#endif
- #ifdef __linux__
-     DIR *sysdir;
-     struct dirent *ent;
-@@ -3643,11 +3746,14 @@
++
+     if (fstat(fd, &sbuf))
+         return NULL;
+ 
+@@ -3519,7 +3629,7 @@
+         return NULL;
+ 
+     n = snprintf(buf, sizeof(buf), dev_name, DRM_DIR_NAME, min);
+-    if (n == -1 || n >= sizeof(buf))
++    if (n < 0 || (size_t)n >= sizeof(buf))
+         return NULL;
+ 
+     return strdup(buf);
+@@ -3643,13 +3753,17 @@
       }
      return subsystem_type;
  #elif defined(__NetBSD__)
 +    struct drm_native_pci_record record;
 +    int native_ret = drmNativeIdentity(maj, min, &record);
 +
-+    if (native_ret != -ENOENT)
-+        return native_ret >= 0 ? DRM_BUS_PCI : native_ret;
      int type, fd;
      drmSetVersion sv;
      char *buf;
@@ -158,14 +206,36 @@ Origin: EmberBSD; AI-assisted native metadata discovery, not submitted upstream.
 -    int func;
      int ret;
  
++    if (native_ret != -ENOENT)
++        return native_ret >= 0 ? DRM_BUS_PCI : native_ret;
++
      /* Get the type of device we're looking for to pick the right pathname.  */
-@@ -4282,6 +4388,46 @@
+     type = drmGetMinorType(maj, min);
+     if (type == -1)
+@@ -4061,7 +4175,7 @@
+ 
+     /* Open the pciN device node to get at its config registers.  */
+     if (snprintf(fname, sizeof fname, "/dev/pci%u", businfo.domain)
+-	>= sizeof fname)
++	>= (int)sizeof fname)
+ 	return -ENODEV;
+     if ((pcifd = open(fname, O_RDONLY)) == -1)
+ 	return -errno;
+@@ -4272,6 +4386,9 @@
+     drmDevicePtr dev;
+     char *addr;
+     int ret;
++#ifdef __NetBSD__
++    struct drm_native_pci_record record;
++#endif
+ 
+     dev = drmDeviceAlloc(node_type, node, sizeof(drmPciBusInfo),
+                          sizeof(drmPciDeviceInfo), &addr);
+@@ -4282,6 +4399,44 @@
  
      dev->businfo.pci = (drmPciBusInfoPtr)addr;
  
 +#ifdef __NetBSD__
-+    struct drm_native_pci_record record;
-+
 +    if (flags & ~DRM_DEVICE_GET_PCI_REVISION) {
 +        ret = -EINVAL;
 +        goto free_device;
