@@ -168,7 +168,9 @@ source because no absolute motion was emitted. It links actual upstream
 objects, substitutes the calibration ioctl and feeds wscons events through
 the real dispatch function. It checks all four accessors, nonzero minima,
 axis retention, endpoints, motion before buttons, invalid or unsupported
-calibration and relative fallback. The upstream Linux input tests are
+calibration and relative fallback. Wide positive and INT_MIN..INT_MAX bounds
+verify that coordinate arithmetic occurs in double before subtraction and
+output scaling. The upstream Linux input tests are
 disabled, as in pkgsrc; this is not a claim that their suite passed.
 
 For the native session, prepend this build's `install/lib` to the existing

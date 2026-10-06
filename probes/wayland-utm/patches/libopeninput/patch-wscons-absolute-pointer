@@ -107,7 +107,7 @@ the same one-unit fallback convention as libinput for missing resolution.
 -	fprintf(stderr, "%s: stub\n", __func__);
 -	return (double)(-1);
 +	/* wscons has no physical resolution; use one logical unit per mm. */
-+	return event->absolute.x - device->absolute.bounds.minx;
++	return (double)event->absolute.x - device->absolute.bounds.minx;
  }
  
  LIBINPUT_EXPORT double
@@ -121,7 +121,7 @@ the same one-unit fallback convention as libinput for missing resolution.
  
 -	fprintf(stderr, "%s: stub\n", __func__);
 -	return (double)(-1);
-+	return event->absolute.y - device->absolute.bounds.miny;
++	return (double)event->absolute.y - device->absolute.bounds.miny;
  }
  
  LIBINPUT_EXPORT double
@@ -137,7 +137,7 @@ the same one-unit fallback convention as libinput for missing resolution.
  
 -	fprintf(stderr, "%s: stub\n", __func__);
 -	return (double)(-1);
-+	return (event->absolute.x - bounds->minx) * width /
++	return ((double)event->absolute.x - bounds->minx) * width /
 +	    ((double)bounds->maxx - bounds->minx);
  }
  
@@ -154,7 +154,7 @@ the same one-unit fallback convention as libinput for missing resolution.
  
 -	fprintf(stderr, "%s: stub\n", __func__);
 -	return (double)(-1);
-+	return (event->absolute.y - bounds->miny) * height /
++	return ((double)event->absolute.y - bounds->miny) * height /
 +	    ((double)bounds->maxy - bounds->miny);
  }
  

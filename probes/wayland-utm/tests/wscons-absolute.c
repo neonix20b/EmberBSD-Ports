@@ -7,6 +7,7 @@
 #include <dev/wscons/wsconsio.h>
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -37,6 +38,13 @@ wscons_test_ioctl(int fd, unsigned long request, ...)
 	};
 	if (calibration == 2)
 		bounds->maxx = bounds->minx;
+	else if (calibration == 3) {
+		bounds->minx = bounds->miny = 0;
+		bounds->maxx = bounds->maxy = 16777216;
+	} else if (calibration == 4) {
+		bounds->minx = bounds->miny = INT_MIN;
+		bounds->maxx = bounds->maxy = INT_MAX;
+	}
 	va_end(ap);
 	return 0;
 }
@@ -80,6 +88,25 @@ check_point(struct libinput *input, double x, double y)
 	assert(libinput_event_pointer_get_absolute_y(pointer) == y);
 	assert(libinput_event_pointer_get_absolute_x_transformed(pointer, 1000) == x);
 	assert(libinput_event_pointer_get_absolute_y_transformed(pointer, 1000) == y / 2);
+	libinput_event_destroy(event);
+	assert(libinput_get_event(input) == NULL);
+}
+
+static void
+check_wide_point(struct libinput *input, double x, double y, double range)
+{
+	struct libinput_event *event = libinput_get_event(input);
+	struct libinput_event_pointer *pointer;
+
+	assert(event && libinput_event_get_type(event) ==
+	    LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE);
+	pointer = libinput_event_get_pointer_event(event);
+	assert(libinput_event_pointer_get_absolute_x(pointer) == x);
+	assert(libinput_event_pointer_get_absolute_y(pointer) == y);
+	assert(libinput_event_pointer_get_absolute_x_transformed(pointer, 1920) ==
+	    x * 1920 / range);
+	assert(libinput_event_pointer_get_absolute_y_transformed(pointer, 1080) ==
+	    y * 1080 / range);
 	libinput_event_destroy(event);
 	assert(libinput_get_event(input) == NULL);
 }
@@ -143,10 +170,28 @@ main(void)
 		libinput_event_destroy(event);
 		libinput_path_remove_device(device);
 	}
+	/* Large unsigned products and full signed differences must not wrap. */
+	for (calibration = 3; calibration <= 4; calibration++) {
+		int minimum = calibration == 3 ? 0 : INT_MIN;
+		int maximum = calibration == 3 ? 16777216 : INT_MAX;
+		double range = (double)maximum - minimum;
+
+		device = libinput_path_add_device(input, "/dev/wsmouse0");
+		assert(device);
+		dispatch(device, fds[1], WSCONS_EVENT_MOUSE_ABSOLUTE_X, minimum);
+		check_wide_point(input, 0, 0, range);
+		dispatch(device, fds[1], WSCONS_EVENT_MOUSE_ABSOLUTE_Y, minimum);
+		check_wide_point(input, 0, 0, range);
+		dispatch(device, fds[1], WSCONS_EVENT_MOUSE_ABSOLUTE_X, maximum);
+		check_wide_point(input, range, 0, range);
+		dispatch(device, fds[1], WSCONS_EVENT_MOUSE_ABSOLUTE_Y, maximum);
+		check_wide_point(input, range, range, range);
+		libinput_path_remove_device(device);
+	}
 	libinput_unref(input);
 	udev_unref(udev);
 	close(fds[0]);
 	close(fds[1]);
-	puts("PASS: absolute dispatch, button ordering, getters, endpoints and relative fallback");
+	puts("PASS: absolute dispatch, button ordering, getters, wide/signed endpoints and relative fallback");
 	return 0;
 }
