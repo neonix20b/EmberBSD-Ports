@@ -1,0 +1,57 @@
+--- a/gdk/wayland/gdkshm.c
++++ b/gdk/wayland/gdkshm.c
+@@ -95,8 +95,8 @@
+   while (ret < 0 && errno == EINTR);
+ 
+   if (ret < 0)
+-    g_critical (G_STRLOC ": creating shared memory file (using %s) failed: %m",
+-                force_shm_open? "shm_open" : "memfd_create");
++    g_critical (G_STRLOC ": creating shared memory file (using %s) failed: %s",
++                force_shm_open? "shm_open" : "memfd_create", g_strerror (errno));
+ 
+   return ret;
+ }
+@@ -110,15 +110,32 @@
+   struct wl_shm_pool *pool;
+   int fd;
+   void *data;
++  off_t file_size = size;
++
++#ifdef __NetBSD__
++  /* NetBSD memfd mmap checks the page-rounded mapping against the file
++   * length (kern/57622). Keep the Wayland pool size in bytes, but back it
++   * with complete pages. off_t avoids overflowing the signed pool size.
++   */
++  long page_size = sysconf (_SC_PAGESIZE);
++
++  if (page_size <= 0)
++    {
++      g_critical (G_STRLOC ": Unable to determine the memory page size");
++      goto fail;
++    }
++
++  file_size = ((off_t) size + page_size - 1) / page_size * page_size;
++#endif
+ 
+   fd = open_shared_memory ();
+ 
+   if (fd < 0)
+     goto fail;
+ 
+-  if (ftruncate (fd, size) < 0)
++  if (ftruncate (fd, file_size) < 0)
+     {
+-      g_critical (G_STRLOC ": Truncating shared memory file failed: %m");
++      g_critical (G_STRLOC ": Truncating shared memory file failed: %s", g_strerror (errno));
+       close (fd);
+       goto fail;
+     }
+@@ -127,7 +144,7 @@
+ 
+   if (data == MAP_FAILED)
+     {
+-      g_critical (G_STRLOC ": mmap'ping shared memory file failed: %m");
++      g_critical (G_STRLOC ": mmap'ping shared memory file failed: %s", g_strerror (errno));
+       close (fd);
+       goto fail;
+     }

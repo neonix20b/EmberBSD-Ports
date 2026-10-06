@@ -1,3 +1,5 @@
 # Unified diff context includes a space marker on otherwise empty lines.
 *.patch -whitespace
 patch-* -whitespace
+# Keep the upstream license copy byte-for-byte, including its blank lines.
+probes/phosh/gtk4/LICENSES/COPYING -whitespace

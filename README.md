@@ -15,7 +15,8 @@ archives or store generated binaries.
   software EGL readback pass. Native KMS and GPU runtime remain unverified.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
-  The app list, keyboard input and a launched text editor were verified.
+  Stevia screen-keyboard input in English/Russian, a saved text document
+  and the patched GTK4 Demo were verified.
 
 These entries are experimental probes, not installable packages or phone
 images. Each recipe records its tested runtime and platform boundaries.

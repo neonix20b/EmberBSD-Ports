@@ -7,10 +7,13 @@ list and keyboard search are visible. Launching gedit from Phosh, typing
 and saving text through its Wayland window were verified.
 GTK3 Demo was launched as a second application; the overview displayed
 both thumbnails and selecting the editor returned it to the foreground.
+The extended profile adds Stevia 0.58.0 and GTK 4.22.4. Screen-keyboard
+clicks entered English and Russian text in gedit and saved the document.
+GTK4 Demo was launched from Phosh and displayed its search keyboard.
 
 This is an experimental nested session. It does not establish a working
 phone image, direct display/input drivers, GPU acceleration, modem,
-Wi-Fi controls, suspend, screen locking or on-screen keyboard support.
+Wi-Fi controls, suspend, screen locking or physical touchscreen support.
 Missing platform services are reported or their controls are excluded.
 No success-returning replacement libraries are used.
 
@@ -26,9 +29,18 @@ Paths must contain only letters, digits, `_`, `.`, `/` and `-`.
 sh build-support.sh "$HOME/.cache/phosh-support"
 sh phoc/build.sh "$HOME/.cache/phoc-native"
 sh phoc/test.sh "$HOME/.cache/phoc-native"
+sh osk/build.sh "$HOME/.cache/phosh-osk" \
+  "$HOME/.cache/phosh-support/install" "$HOME/.cache/phoc-native/prefix"
+sh gtk4/build.sh "$HOME/.cache/phosh-gtk4"
 sh build-shell.sh "$HOME/.cache/phosh-shell" \
   "$HOME/.cache/phosh-support/install" "$HOME/.cache/phoc-native/prefix"
 ```
+
+The optional [Stevia keyboard](osk/README.md) needs Hunspell and JSON-GLib.
+The [GTK4 recipe](gtk4/README.md) fixes NetBSD memfd mapping and installs
+only in its private prefix. Existing support builds need their GTK3 input
+cache once: `sh gtk3/update-im-cache.sh /absolute/support/install`.
+New support builds perform this step automatically.
 
 See [support libraries](support.md) and [Phoc](phoc/README.md) for their
 required development dependencies. The shell additionally needs
@@ -57,14 +69,19 @@ From a terminal in the existing X11 desktop, with its normal `DISPLAY`
 and X authority, run:
 
 ```sh
-sh run-nested.sh "$HOME/.cache/phosh-shell"
+sh run-nested.sh "$HOME/.cache/phosh-shell" \
+  "$HOME/.cache/phosh-osk/install" "$HOME/.cache/phosh-gtk4/install"
 ```
 
-The launcher reads the prefixes recorded by the successful shell build.
+The launcher reads the support/Phoc prefixes recorded by the shell build.
+The optional second and third arguments select Stevia and private GTK4.
+Without them, the earlier GTK3-only profile remains available.
 It creates a fresh private session directory, settings backend and D-Bus
 session. Only Phoc sees the host X11 display; Phosh and D-Bus-activated
 applications receive the nested Wayland display. GTK4 clients select the
-Cairo renderer. The requested output is 360x540; GNOME on the tested
+Cairo renderer; both toolkits use their Wayland input method. Stevia offers
+English and Russian layouts, including automatic display on text focus.
+The requested output is 360x540; GNOME on the tested
 800x600 desktop constrained its usable height to 531 pixels.
 
 Phosh starts unlocked for this visual experiment. Idle locking is disabled
@@ -81,7 +98,8 @@ wallpaper files. This is not a secure login session.
 The launcher does not alter `.xsession`, XDM or the active GNOME settings.
 It keeps session files for inspection; their path is printed and recorded
 in `last-session.txt`. A path exceeding NetBSD's Unix-socket limit is
-rejected before launch. Xwayland is disabled; X11-only applications cannot
+rejected before launch. The supervisor reports an OSK failure and bounds
+child cleanup even if a keyboard process is stopped. Xwayland is disabled; X11-only applications cannot
 run inside this profile.
 
 ## Verified boundaries
@@ -100,11 +118,27 @@ Fresh builds and runtime checks used EmberBSD `EMBER64` from OS revision
 | Phosh local regressions | HKS 1, keybindings 3, backlight 2 and shared memory 2 passed; network UI/resource validation passed |
 | Phosh desktop | Home screen, app list, keyboard search, gedit launch and text save verified |
 | Repeated launch | Own shell terminated and relaunched; host GNOME remained running |
+| Stevia | Native build; all 73 test entries passed, with optional fzf/Varnam subcases skipped |
+| GTK4 | Native build; 12 shared-memory cases, rendered frames, Demo and Widget Factory passed |
+| Input cache | Missing-cache fallback reproduced; installed GTK3 selects the real Wayland module |
+| Extended session | Screen clicks, English/Russian OSK text saved in gedit; GTK4 Demo and its keyboard displayed |
+| Process lifetime | Normal exit, OSK crash and stopped OSK cleanup passed; helper signal cancellation passed |
 
 The complete upstream Phosh test suite was not run. GTK's full test suite
 and physical-device functionality remain unverified. Mouse automation in
 the UTM client did not reliably move the guest pointer; recorded input
-checks used keyboard navigation. An on-screen keyboard is not included.
+checks initially used keyboard navigation. The extended session was then
+checked on a separate Xvfb display through a localhost-only SSH/VNC viewer,
+while the main UTM display was occupied by kernel development. This proved
+pointer navigation and OSK clicks through X11, not UTM USB or touch input.
+The extended checks used the experimental EMBERGPU kernel; no GPU result
+is inferred from these software-rendered sessions.
+
+Run `sh test-nested.sh SHELL_WORK OSK_PREFIX [GTK4_PREFIX]` for the real
+isolated session and GTK3 input-cache regression. Repeat with
+`PHOSH_TEST_TERMINATION=osk` or `stopped-osk` for failure cleanup.
+The OSK and GTK4 directories also provide component/runtime and cancellation
+checks. These tests own their displays; they do not use the visible desktop.
 
 [Platform patches](platform/README.md) omit Linux logind and rfkill.
 [Network profile](platform/networkmanager.md) omits NetworkManager-dependent
@@ -115,10 +149,12 @@ warnings remain for session management, Polkit/ConsoleKit, sensors and
 calls. PulseAudio's GVC emits port assertions; audio behavior is unverified.
 The red battery indicator does not establish actual battery integration.
 
-Installed GTK4 Demo and Widget Factory crash in Wayland shared-memory
-buffer creation. Selecting Cairo does not fix that GTK4 incompatibility.
-The private profile includes a **GTK3 Demo** launcher for the tested toolkit;
-the similarly named system **GTK Demo** uses GTK4 and remains unsupported.
+The installed system GTK4 still has the memfd issue. Selecting Cairo alone
+does not fix it; the third launcher argument supplies the patched library.
+GTK4 Vulkan and GStreamer media are disabled in this build. The private
+profile includes **GTK3 Demo**; **GTK Demo** uses the selected GTK4 prefix.
+Desktop GTK dialogs can exceed the narrow output; mobile adaptation of
+every desktop application is outside this port.
 
 The independent [client-library probe](client-libs/README.md) built genuine
 libmm-glib 1.24.2 with two passing tests. libnm 1.54.3 did not compile.

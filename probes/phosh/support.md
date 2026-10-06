@@ -48,6 +48,13 @@ libfeedback in this build profile. The separate
 [ModemManager client builder](client-libs/README.md) supplies libmm-glib;
 it is not one of these four support builds.
 
+The support builder explicitly generates GTK3's `immodules.cache`. GTK's
+Meson post-install updates GIO caches but does not create this GTK3 cache.
+Without it, text fields fall back to the simple input context and do not
+activate the Wayland keyboard. For an older private prefix, run
+`sh gtk3/update-im-cache.sh PREFIX`; the nested-session regression checks
+the missing-cache fallback and the real Wayland context.
+
 ## Components and evidence
 
 The fresh helper run used NetBSD 11/aarch64 with the EmberBSD `EMBER64`

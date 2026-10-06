@@ -71,6 +71,7 @@ run gtk3-setup meson setup "$work/gtk3-build" "$work/src/gtk-3.24.52" \
     -Ddemos=true -Dprint_backends=file,lpr,test
 run gtk3-build meson compile -C "$work/gtk3-build" -j "$jobs"
 run gtk3-install meson install -C "$work/gtk3-build" --no-rebuild
+run gtk3-input-cache sh "$recipe/gtk3/update-im-cache.sh" "$prefix"
 
 run bluetooth-setup meson setup "$work/bluetooth-build" "$work/src/gnome-bluetooth-46.2" \
     --prefix="$prefix" --libdir=lib --buildtype=release --wrap-mode=nodownload \

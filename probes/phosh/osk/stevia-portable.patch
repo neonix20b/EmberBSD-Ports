@@ -1,0 +1,414 @@
+--- a/meson.build
++++ b/meson.build
+@@ -104,7 +104,7 @@
+ gnome = import('gnome')
+ i18n = import('i18n')
+ 
+-dconf_dep = dependency('dconf', version: '>= 0.49')
++dconf_dep = dependency('dconf', version: '>= 0.49', required: get_option('dconf_migration'))
+ glib_dep = dependency('glib-2.0', version: glib_ver_cmp)
+ gio_dep = dependency('gio-2.0', version: glib_ver_cmp)
+ gobject_dep = dependency('gobject-2.0', version: glib_ver_cmp)
+@@ -127,7 +127,7 @@
+   fallback: ['libhandy', 'libhandy_dep'],
+   default_options: ['introspection=disabled'],
+ )
+-libsystemd_dep = dependency('libsystemd', 'libelogind', version: '>= 241')
++libsystemd_dep = dependency('libsystemd', 'libelogind', version: '>= 241', required: get_option('logind'))
+ wayland_client_dep = dependency('wayland-client', version: '>=1.14')
+ wayland_protos_dep = dependency('wayland-protocols', version: '>=1.12')
+ xkbcommon_dep = dependency('xkbcommon')
+@@ -159,12 +159,14 @@
+   error('No usable completer found')
+ endif
+ 
+-have_memfd_create = cc.has_function(
++have_memfd_create = host_machine.system() == 'linux' and cc.has_function(
+   'memfd_create',
+   prefix: ['#define _GNU_SOURCE', '#include <sys/mman.h>'],
+ )
+ 
+ config_h = configuration_data()
++config_h.set10('POS_HAVE_LOGIND', libsystemd_dep.found())
++config_h.set10('POS_HAVE_DCONF_MIGRATION', get_option('dconf_migration'))
+ config_h.set_quoted('GETTEXT_PACKAGE', 'phosh-osk-stevia')
+ config_h.set_quoted('LOCALEDIR', localedir)
+ config_h.set_quoted('WORD_LIST', get_option('wordlist'))
+--- a/meson.options
++++ b/meson.options
+@@ -22,3 +22,11 @@
+ option('wordlist',
+        type: 'string', value : '/usr/share/dict/words',
+        description : 'Filename of the word list used by the fzf completer')
++
++option('logind', type: 'feature', value: 'enabled',
++       description: 'Track the logind session lock state')
++option('dconf_migration', type: 'boolean', value: true,
++       description: 'Migrate existing dconf keyboard settings')
++
++option('hunspell_dict_path', type: 'string', value: '',
++       description: 'Colon-separated Hunspell dictionary directories (empty uses datadir)')
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -64,8 +64,6 @@
+   'pos-keypad-button.h',
+   'pos-keypad.c',
+   'pos-keypad.h',
+-  'pos-logind-session.c',
+-  'pos-logind-session.h',
+   'pos-main.c',
+   'pos-main.h',
+   'pos-osk-key.c',
+@@ -91,6 +89,10 @@
+   'pos.h',
+ )
+ 
++if libsystemd_dep.found()
++  libpos_sources += files('pos-logind-session.c', 'pos-logind-session.h')
++endif
++
+ libpos_generated_sources = [
+   generated_dbus_sources,
+   libpos_enum_sources,
+@@ -129,9 +131,14 @@
+   dependencies: [libpos_deps, libpos_completers_dep],
+ )
+ 
++migration_sources = []
++if get_option('dconf_migration')
++  migration_sources += files('dh-dconf-migration.c')
++endif
++
+ executable(
+   'phosh-osk-stevia',
+-  'dh-dconf-migration.c',
++  migration_sources,
+   'phosh-osk-stevia.c',
+   'pos-osk-dbus.c',
+   include_directories: pos_includes,
+--- a/src/phosh-osk-stevia.c
++++ b/src/phosh-osk-stevia.c
+@@ -13,7 +13,9 @@
+ #include "pos-config.h"
+ #include "pos.h"
+ 
++#if POS_HAVE_DCONF_MIGRATION
+ #include "dh-dconf-migration.h"
++#endif
+ 
+ #include <gio/gio.h>
+ #include <glib-unix.h>
+@@ -572,6 +574,7 @@
+ }
+ 
+ 
++#if POS_HAVE_DCONF_MIGRATION
+ static void
+ migrate_gsettings (void)
+ {
+@@ -615,6 +618,7 @@
+   g_settings_set_uint (settings, "schema-migration", 1);
+ }
+ 
++#endif
+ 
+ int
+ main (int argc, char *argv[])
+@@ -647,7 +651,11 @@
+   if (version)
+     print_version ();
+ 
++#if POS_HAVE_DCONF_MIGRATION
+   migrate_gsettings ();
++#else
++  g_message ("Migration of existing dconf keyboard settings is disabled");
++#endif
+ 
+   gdk_set_allowed_backends ("wayland");
+   pos_init ();
+--- a/src/pos-input-surface.c
++++ b/src/pos-input-surface.c
+@@ -21,7 +21,9 @@
+ #include "pos-completion-bar.h"
+ #include "pos-input-surface.h"
+ #include "pos-keypad.h"
++#if POS_HAVE_LOGIND
+ #include "pos-logind-session.h"
++#endif
+ #include "pos-main.h"
+ #include "pos-osk-widget.h"
+ #include "pos-settings-panel.h"
+@@ -117,7 +119,9 @@
+   GSettings                  *osk_settings;
+   GnomeXkbInfo               *xkbinfo;
+ 
++#if POS_HAVE_LOGIND
+   PosLogindSession           *logind_session;
++#endif
+ 
+   /* Wayland input-method */
+   PosInputMethod             *input_method;
+@@ -1648,7 +1652,9 @@
+   g_clear_handle_id (&self->animation.id, g_source_remove);
+   g_clear_handle_id (&self->bs_repeat_id, g_source_remove);
+ 
++#if POS_HAVE_LOGIND
+   g_clear_object (&self->logind_session);
++#endif
+   g_clear_object (&self->keyboard_driver);
+   g_clear_object (&self->input_method);
+   g_clear_object (&self->a11y_settings);
+@@ -2339,11 +2345,18 @@
+                                    NULL);
+   g_signal_connect (self->swipe_down, "swipe", G_CALLBACK (on_swipe), self);
+ 
++#if POS_HAVE_LOGIND
+   self->logind_session = pos_logind_session_new ();
+   action = g_action_map_lookup_action (G_ACTION_MAP (self->action_map), "settings");
+   g_object_bind_property (self->logind_session, "locked",
+                           action, "enabled",
+                           G_BINDING_SYNC_CREATE | G_BINDING_INVERT_BOOLEAN);
++#else
++  /* Without lock-state tracking, never allow settings to escape a lock screen. */
++  action = g_action_map_lookup_action (G_ACTION_MAP (self->action_map), "settings");
++  g_simple_action_set_enabled (G_SIMPLE_ACTION (action), FALSE);
++  g_message ("Logind lock-state tracking is unavailable; settings action disabled");
++#endif
+ 
+   g_object_bind_property_full (self,
+                                "height",
+--- a/src/contrib/util.c
++++ b/src/contrib/util.c
+@@ -13,7 +13,9 @@
+ #include "util.h"
+ #include <gtk/gtk.h>
+ 
++#if POS_HAVE_LOGIND
+ #include <systemd/sd-login.h>
++#endif
+ 
+ #ifdef PHOSH_HAVE_MEMFD_CREATE
+ #include <linux/memfd.h>
+@@ -22,6 +24,8 @@
+ 
+ #include <sys/mman.h>
+ #include <fcntl.h>
++#include <errno.h>
++#include <unistd.h>
+ 
+ 
+ /* Just wraps gtk_widget_destroy so we can use it with g_clear_pointer */
+@@ -151,6 +155,7 @@
+ }
+ 
+ 
++#if POS_HAVE_LOGIND
+ gboolean
+ phosh_find_systemd_session (char **session_id)
+ {
+@@ -202,6 +207,7 @@
+ 
+   return session != NULL;
+ }
++#endif
+ 
+ /**
+  * phosh_async_error_warn:
+@@ -308,7 +314,13 @@
+     /* shm_open guarantees that O_CLOEXEC is set */
+     fd = shm_open (name, O_RDWR | O_CREAT | O_EXCL, 0600);
+     if (fd >= 0) {
+-      shm_unlink (name);
++      if (shm_unlink (name) < 0) {
++        int saved_errno = errno;
++
++        close (fd);
++        errno = saved_errno;
++        return -1;
++      }
+       return fd;
+     }
+   } while (retries > 0 && errno == EEXIST);
+@@ -334,7 +346,10 @@
+   }
+ 
+   if (ftruncate (fd, size) < 0) {
++    int saved_errno = errno;
++
+     close (fd);
++    errno = saved_errno;
+     return -1;
+   }
+ 
+--- a/src/contrib/util.h
++++ b/src/contrib/util.h
+@@ -7,6 +7,8 @@
+  */
+ #pragma once
+ 
++#include "pos-config.h"
++
+ #include <gtk/gtk.h>
+ #include <gio/gdesktopappinfo.h>
+ 
+@@ -20,7 +22,9 @@
+ GDesktopAppInfo *phosh_get_desktop_app_info_for_app_id (const char *app_id);
+ gchar           *phosh_munge_app_id (const gchar *app_id);
+ char            *phosh_strip_suffix_from_app_id (const char *app_id);
++#if POS_HAVE_LOGIND
+ gboolean         phosh_find_systemd_session (char **session_id);
++#endif
+ gboolean         phosh_error_warnv (const char  *log_domain,
+                                     GError      *err,
+                                     GQuark       domain,
+--- a/src/pos-wayland.c
++++ b/src/pos-wayland.c
+@@ -9,6 +9,7 @@
+ #define G_LOG_DOMAIN "pos-wayland"
+ 
+ #include "pos-config.h"
++#include <errno.h>
+ #include "pos-wayland.h"
+ 
+ #include <gdk/gdkwayland.h>
+@@ -186,7 +187,7 @@
+   self->display = gdk_wayland_display_get_wl_display (gdk_display);
+ 
+   if (self->display == NULL)
+-    g_error ("Failed to get display: %m\n");
++    g_error ("Failed to get display: %s\n", g_strerror (errno));
+ 
+   g_idle_add_once (register_globals, self);
+ }
+--- a/src/completers/meson.build
++++ b/src/completers/meson.build
+@@ -69,6 +69,11 @@
+   libpos_completer_fzf_dep = declare_dependency()
+ endif
+ 
++hunspell_dict_path = get_option('hunspell_dict_path')
++if hunspell_dict_path == ''
++  hunspell_dict_path = datadir / 'hunspell' + ':' + datadir / 'myspell'
++endif
++
+ if hunspell_dep.found()
+   #  hunspell based completer
+   libpos_completer_hunspell_sources = files('pos-completer-hunspell.c', 'pos-completer-hunspell.h')
+@@ -79,7 +84,7 @@
+     'pos-completer-hunspell',
+     libpos_completer_hunspell_sources,
+     include_directories: pos_includes,
+-    c_args: ['-DPOS_HUNSPELL_DICT_PATH="@0@:@1@"'.format(datadir / 'hunspell', datadir / 'myspell')],
++    c_args: ['-DPOS_HUNSPELL_DICT_PATH="@0@"'.format(hunspell_dict_path)],
+     install: false,
+     dependencies: libpos_completer_hunspell_deps,
+   )
+--- a/src/layouts/meson.build
++++ b/src/layouts/meson.build
+@@ -76,18 +76,19 @@
+   endforeach
+ endif
+ 
+-info_builder = find_program(meson.project_source_root() / 'tools' / 'write-layout-info.py')
++python = import('python').find_installation('python3')
++info_builder = meson.project_source_root() / 'tools' / 'write-layout-info.py'
+ build_info = custom_target(
+   'build-info',
+   output: 'layouts.json',
+   command: [
+-    info_builder,
++    python, info_builder,
+     '--layouts=@0@'.format(meson.current_source_dir()),
+     '--out=@OUTPUT@',
+     varnam_dep.found() ? '--varnam' : '--no-varnam',
+     uim_dep.found() ? '--uim' : '--no-uim',
+   ],
+-  depend_files: [layouts, info_builder.full_path()],
++  depend_files: [layouts, info_builder],
+   env: {'LC_ALL': 'C'},
+   install: true,
+   install_dir: pkgdatadir,
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -29,6 +29,7 @@
+   'completers',
+   'emoji-db',
+   'size-manager',
++  'shm',
+ ]
+ foreach name : tests
+   name = 'test-@0@'.format(name)
+--- a/tests/test-shm.c
++++ b/tests/test-shm.c
+@@ -0,0 +1,71 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * Shared-memory descriptor contract for Wayland buffers.
++ */
++
++#include "util.h"
++
++#include <errno.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++
++static void
++test_phosh_shm_file (void)
++{
++  const size_t size = 4093; /* Exercise unaligned keymap lengths. */
++  struct stat statbuf;
++  unsigned char *first, *second;
++  int flags;
++  int fd = phosh_create_shm_file (size);
++
++  g_assert_cmpint (fd, >=, 0);
++  flags = fcntl (fd, F_GETFD);
++  g_assert_cmpint (flags, >=, 0);
++  g_assert_true (flags & FD_CLOEXEC);
++  g_assert_cmpint (fstat (fd, &statbuf), ==, 0);
++  /* Some shm implementations round the allocation up to a page. */
++  g_assert_cmpint (statbuf.st_size, >=, size);
++
++  first = mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++  second = mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++  g_assert_true (first != MAP_FAILED);
++  g_assert_true (second != MAP_FAILED);
++  g_assert_cmpint (first[0], ==, 0);
++  g_assert_cmpint (second[size - 1], ==, 0);
++
++  first[0] = 23;
++  second[size - 1] = 42;
++  g_assert_cmpint (second[0], ==, 23);
++  g_assert_cmpint (first[size - 1], ==, 42);
++
++  g_assert_cmpint (close (fd), ==, 0);
++  g_assert_cmpint (first[size - 1], ==, 42);
++  g_assert_cmpint (munmap (first, size), ==, 0);
++  g_assert_cmpint (munmap (second, size), ==, 0);
++}
++
++
++static void
++test_phosh_shm_invalid_size (void)
++{
++  int fd;
++
++  errno = 0;
++  fd = phosh_create_shm_file (-1);
++  g_assert_cmpint (fd, ==, -1);
++  g_assert_cmpint (errno, ==, EINVAL);
++}
++
++
++int
++main (int argc, char *argv[])
++{
++  g_test_init (&argc, &argv, NULL);
++  g_test_add_func ("/phosh/shm/file", test_phosh_shm_file);
++  g_test_add_func ("/phosh/shm/invalid-size", test_phosh_shm_invalid_size);
++  return g_test_run ();
++}
