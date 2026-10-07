@@ -204,7 +204,7 @@ if [ "$desktop" = xfce ]; then
     XDG_CONFIG_DIRS=$prefix/etc/xdg
     DBUS_SYSTEM_BUS_ADDRESS=unix:path=$session/runtime/no-system-bus
     export XDG_CURRENT_DESKTOP XDG_CONFIG_DIRS DBUS_SYSTEM_BUS_ADDRESS
-    unset XDG_SEAT_PATH
+    unset XDG_SEAT_PATH XDG_SESSION_PATH
     sh "$recipe/../xfce/prepare-session.sh" "$prefix" "$XDG_CONFIG_HOME"
 fi
 unset GTK_IM_MODULE GSK_RENDERER GDK_GL
