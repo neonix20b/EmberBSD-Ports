@@ -51,6 +51,15 @@ imports of the first examined native modules exited normally; the cause is
 not established. Do not hide this failure with `os._exit`, disabled cleanup,
 an older interpreter or a claim of successful service operation.
 
+A fresh diagnostic run with `PYTHONMALLOC=debug` reproduces the crash as
+SIGBUS while finalizing modules, with a `0xdddddddddddddddd` target address.
+Python's [debug allocator](https://docs.python.org/3/c-api/memory.html#debug-hooks-on-the-python-memory-allocators)
+fills freed memory with `0xDD`; this supports a use-after-free hypothesis,
+but does not identify the responsible package. A separate fresh configuration
+still crashes when upstream pure-Python runtime modes for aiohttp, propcache,
+multidict, yarl and SQLAlchemy are selected together. These are diagnostic
+comparisons, not an accepted fallback configuration or a NetBSD result.
+
 Native acceptance still requires the common interpreter, all required native
 extensions and Rust dependencies, an explicit reviewed NetBSD OS adaptation,
 real onboarding, MQTT automation, database persistence and clean restart.
