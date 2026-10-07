@@ -71,6 +71,12 @@ runtime behavior are validated.
   regressions, paired libdrm, wlroots and labwc recipes. Earlier Mesa 21
   software EGL/native KMS-input checks pass; the common Mesa 26 build and
   VirGL hardware runtime remain pending.
+- [UTM VirGL host IOV bounds backport](probes/utm-virgl-host/README.md): the
+  accepted upstream size-truncation fix is prepared for UTM's pinned 1.3.0
+  renderer. Actual-source macOS/arm64 checks show compiled BASE RED and
+  patched GREEN across 23 cases, including ASan/UBSan. This is an experimental
+  host source contract; complete host builds, installation and VirGL runtime
+  remain unverified, with separate arithmetic limits recorded.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
