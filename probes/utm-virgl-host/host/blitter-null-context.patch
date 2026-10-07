@@ -1,0 +1,14 @@
+# EmberBSD local, AI-assisted fix: an unused blitter has no context to destroy.
+# Not submitted or accepted upstream. Original renderer MIT license applies.
+--- a/src/vrend/vrend_blitter.c
++++ b/src/vrend/vrend_blitter.c
+@@ -916,7 +916,8 @@
+    vrend_blit_ctx.initialised = false;
+    if (vrend_blit_ctx.blit_programs)
+       _mesa_hash_table_u64_destroy(vrend_blit_ctx.blit_programs, delete_program_cb);
+-   vrend_clicbs->destroy_gl_context(vrend_blit_ctx.gl_context);
++   if (vrend_blit_ctx.gl_context)
++      vrend_clicbs->destroy_gl_context(vrend_blit_ctx.gl_context);
+    memset(&vrend_blit_ctx, 0, sizeof(vrend_blit_ctx));
+ }
+ 

@@ -1,0 +1,3 @@
+# kind	path	sha256
+input	src/vrend/vrend_blitter.c	06521a4bc1320a2e6e02d553fb8d02361c18c22a6b348247999810e7aa31dfb3
+output	src/vrend/vrend_blitter.c	80b3735582aeb4c8900831e99099c83fe03ef6f49a370be6be5e3ce763891c54

@@ -8,7 +8,7 @@ not submitted or accepted upstream. It does not enable or install VirGL.
 
 ## Source preparation
 
-The original UTM/QEMU/renderer pins and version exception in [CREATE.md](CREATE.md)
+The original UTM/QEMU/renderer pins and recovery host boundary in [CREATE.md](CREATE.md)
 remain unchanged. Preparation invokes the accepted lifecycle stage unchanged,
 then copies its QEMU tree and applies one additional delta. The complete original
 UTM overlay inventory and all earlier stage receipts remain in the work directory.

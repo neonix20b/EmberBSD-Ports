@@ -45,7 +45,7 @@ than retrying within the call. Ordinary signaled and timeout behavior is retaine
 
 ## Reproduction and provenance
 
-The original archive, UTM/QEMU/renderer revisions and version exception remain
+The original archive, UTM/QEMU/renderer revisions and recovery host boundary remain
 those in [CREATE.md](CREATE.md). Each work directory must be absolute and new:
 
 ```sh
@@ -106,9 +106,10 @@ thread shutdown, GL object lifetime or absence of guest-memory touches after
 revoke. EGL and GL branches are compiled on macOS; Windows and real graphics
 backends are not qualified. Threaded/proxy/video profiles remain excluded.
 
-Full QEMU objects/linking/generated headers, paired renderer build and symbols,
-native current-context/reset/BH/display/reinitialization and no-touch evidence
-remain mandatory. Decoder arithmetic/sticky context errors, SUBMIT validation,
+The later [full renderer recipe](host/README.md) verifies complete renderer
+build/link/symbols and direct Metal texture, fence, cleanup and reinitialization.
+Full QEMU objects/linking/generated headers, reset/BH/display integration and
+no-touch evidence remain mandatory. Decoder arithmetic/sticky context errors, SUBMIT validation,
 query output errors, transfer bounds and other silent backend failures remain
 open. Mesa query/draw/readback, staging, MSAA and an installed accelerated session
 are still unverified. Parent integration owns independent review, publication

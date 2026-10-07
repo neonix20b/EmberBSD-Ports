@@ -12,6 +12,21 @@ The selected target remains UTM v5.0.6 Beta
 accepted Yiwei Zhang IOV backport retain their existing `sources.tsv`,
 `prepare.sh`, hash and test contracts. The installed recovery host is unchanged.
 
+## Version selection and recovery boundary
+
+The selected renderer is the 1.3.0 fork pinned by
+[UTM v5.0.6's build inputs](https://github.com/utmapp/UTM/blob/968fef31ee3299224feaf4de1e40e1e5f46369c1/patches/sources).
+Its ANGLE/Metal adaptations must be qualified with the paired QEMU overlay;
+this is not a fallback to the older renderer because it happens to compile.
+The earlier installed UTM 4.7.5/renderer 0.10.4 remains only a recovery host.
+Remove that temporary recovery dependency after the paired current host,
+guest Mesa and display/input/recovery scenarios pass. Do not distribute two
+renderer versions as permanent EmberBSD dependencies.
+
+The later [full renderer recipe](host/README.md) builds this selected fork with
+current libepoxy 1.5.10 and tests direct Metal texture/fence/cleanup operations.
+Its borrowed ANGLE frameworks do not establish a complete UTM 5.0.6 host.
+
 ## Source preparation
 
 Supply the original renderer archive and a directory containing all six

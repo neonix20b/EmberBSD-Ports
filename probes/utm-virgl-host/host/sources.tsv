@@ -1,0 +1,7 @@
+# file	sha256	original-url
+libepoxy-1.5.10.tar.gz	a7ced37f4102b745ac86d6a70a9da399cc139ff168ba6b8002b4d8d43c900c15	https://github.com/anholt/libepoxy/archive/refs/tags/1.5.10.tar.gz
+mesa-26.2.4.tar.xz	bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9	https://archive.mesa3d.org/mesa-26.2.4.tar.xz
+utm-virglrenderer-5d26f605.tar.gz	6834f45a0b6e904bc8836426657ffcbf13cbc2c2632fb63e6eec57e23670055f	https://api.github.com/repos/utmapp/virglrenderer/tarball/5d26f605f50f8e22002ec6db5fb775e1992d4e96
+# Provenance inputs; only the three archives above are build inputs.
+utm-libepoxy-bf985874.tar.gz	0f99f3f4313b8e74efe18cea61874b07c8a9f9e504d1aa496ca4d7825e70c39d	https://api.github.com/repos/utmapp/libepoxy/tarball/bf98587477fe68d07b93319ece7b40a7d0e2eabe
+ANGLE-LICENSE	bf4da21bd20bcfb5b60b7ecc67fa864a79be049e21d6178076887f178dd6c71a	https://raw.githubusercontent.com/utmapp/WebKit/ed78ab6e1a37f4f11583a0bd038f22ec91f3ff10/Source/ThirdParty/ANGLE/LICENSE

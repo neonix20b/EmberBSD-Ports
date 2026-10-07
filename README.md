@@ -143,9 +143,12 @@ runtime behavior are validated.
   [Checked GL/EGL waits](probes/utm-virgl-host/wait-errors.md) distinguish
   pending, signaled and failed fences. Paired renderer/QEMU source checks
   preserve ownership through a failed poll and reject the old host ABI.
-  These are experimental source contracts. Complete host builds, installation,
-  native reset/display lifetimes, remaining error paths and VirGL runtime
-  remain unverified; the profile stays disabled.
+  The [full renderer recipe](probes/utm-virgl-host/host/README.md) builds and
+  links with current libepoxy 1.5.10 on macOS. Direct Apple M3 acceptance
+  passes texture readback, real fences and three cleanup/reinit cycles; a
+  reproduced null-context cleanup failure is fixed. Full QEMU integration,
+  native reset/display lifetimes and the accelerated guest session remain
+  unverified; the profile stays disabled.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document

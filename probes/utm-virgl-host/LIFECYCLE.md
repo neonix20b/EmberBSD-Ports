@@ -30,7 +30,7 @@ ANGLE, Metal, EGL or the native graphics driver have no internal workers.
 
 Existing mixed UTM routes retain their separate owners, including deferred
 MR/UNREF completion. They are outside this profile's lifecycle qualification.
-The pins and temporary renderer-version exception in [CREATE.md](CREATE.md)
+The pins and recovery host boundary in [CREATE.md](CREATE.md)
 remain unchanged; this does not introduce another supported renderer release.
 
 ## Ownership and ordering
