@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(Eigen3 5.0.1 EXACT CONFIG)
+find_dependency(OpenCV 5.0.0 EXACT CONFIG COMPONENTS @opencv_components@)
+if(NOT @ORB_SLAM3_HEADLESS@)
+  find_dependency(Pangolin 0.9.6 CONFIG)
+endif()
+find_dependency(Boost 1.91.0 EXACT CONFIG COMPONENTS serialization)
+find_dependency(Threads)
+include("${CMAKE_CURRENT_LIST_DIR}/ORB_SLAM3Targets.cmake")
+check_required_components(ORB_SLAM3)
