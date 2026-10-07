@@ -1,0 +1,140 @@
+# LLVM 23 source family
+
+This source stage prepares matching LLVM 23.1.2, Clang, LLD and upstream
+Python314 lit for the common Mesa26/TinyGo dependency closure. It extends
+[the common profile](README.md), based on pkgsrc
+`fff4deb639a1a640476203c80f752fb77b6cb14b`. Host source contracts pass;
+native packages, staging/check-files, LLVM23 driver behavior, JIT and
+application consumers remain pending. No installed toolchain is activated.
+
+## One family and development payload
+
+All four recipes use the official monorepo archive and matching distinfo.
+[sources.tsv](sources.tsv) records its URL and SHA256. Shared version selection
+rejects unprepared recipes: compiler-rt, libc++, libc++abi, libunwind, MLIR,
+Flang, OpenMP, extra tools and wasi runtimes cannot silently combine an LLVM21
+recipe with this archive. Repair consumers through Ports; do not install a
+second LLVM. Legacy independent pkgsrc recipes are not migrated here.
+
+Core keeps shared libLLVM, RTTI and static development components together:
+LLVM_BUILD_LLVM_DYLIB/LLVM_LINK_LLVM_DYLIB on, RTTI on, BUILD_SHARED_LIBS off,
+libc++ off and LLVM_INSTALL_TOOLCHAIN_ONLY off. Clang requests static libclang
+alongside shared libraries. LLD retains COFF/Common/ELF/MachO/MinGW/Wasm archives.
+All upstream normal/experimental backend options remain available and selected
+by default. SPIRV is now normal. The stack is not restricted to AArch64.
+
+PLIST candidates refresh actual source headers and Clang resource headers,
+preserve generated entries and add llvm_gtest support, libclang.a,
+clangAnalysisLifetimeSafety and LLVMDTLTO. They are informed by upstream install
+rules; native staging/check-files must identify generated/tool/archive changes.
+Missing or unexpected files remain failures; package checks are not weakened.
+
+Standalone Clang/LLD use matching installed LLVM CMake exports and check
+llvm-config's exact version before configure. Their tests require core tests
+with LLVM_INSTALL_GTEST on: upstream needs the llvm_gtest target, not an unrelated
+googletest package. LLD's second LLVM test archive and unused libunwind buildlink
+are removed. C/C++ builds use pkgsrc wrappers with GCC_REQD16.2 and common Python.
+Native cache, RTTI, dependency and ELF evidence remains required.
+
+## Inherited patch decisions
+
+NetBSD RCS identifiers, authorship and licenses are preserved. These recipes,
+adaptations and shell contracts are AI-assisted EmberBSD work, not submitted
+or accepted upstream. Removed patches remain in the pinned pkgsrc history.
+
+| Core patch | Decision |
+| --- | --- |
+| CMakeLists.txt (RCSv1.2) | Adapt Solaris workaround disabling; source DataTypes supplies the fix. |
+| cmake/config-ix.cmake (v1.8) | Adapt pthread override before upstream CMAKE_REQUIRED_LIBRARIES append. |
+| cmake/modules/AddLLVM.cmake (v1.9) | Drop upstream-covered Darwin SONAME hunk; retain absolute install-name policy. |
+| include/llvm-c/DataTypes.h | Preserve conditional Solaris regset inclusion and macro cleanup. |
+| tools/llvm-shlib/CMakeLists.txt | Preserve Solaris extraction/Bsymbolic handling. |
+| RDFGraph.h, RDFRegisters.h, RDFLiveness.cpp | Drop comparator fixes already upstream. |
+| MachOLayoutBuilder.cpp, MachOWriter.cpp | Drop alignment/raw-size fixes already upstream. |
+| Hexagon RDFCopy.cpp/RDFCopy.h | Drop comparator fixes, including their RDFCopyBase.h location. |
+| utils/llvm-lit/CMakeLists.txt | Drop installed build-launcher hunk; package upstream lit separately. |
+
+Clang Gnu.cpp RCSv1.5 retains Solaris's configured GCC prefix substitution in
+GCCInstallationDetector::AddDefaultGCCPrefixes. It does not select GCC16 on
+NetBSD, which uses a different toolchain class.
+Five Clang shebang-replacement entries for upstream-deleted scripts are removed;
+the remaining replacement paths were checked against the pristine release.
+Both LLD 835769 patches are removed: Config.h v1.10 added an unused field;
+Options.td v1.5 accepted a dummy flag with misleading mitigation help text.
+There is no upstream 835769 implementation. The flag now fails instead of
+silently promising a hardware fix. GCC can emit it for an explicit erratum
+scenario; that scenario remains unsupported. Real upstream 843419 stays intact.
+
+## Native Clang defaults
+
+NetBSD's normal libstdc++ search uses base headers/CRT paths; selecting only
+the stdlib name is insufficient. The package generates a supported effective
+native-triple config from actual common GCC16 metadata. No generic Driver patch
+or per-application wrapper is introduced. Generation rejects wrong GCC version,
+missing compilers/CRT/runtime, escaped real paths, ambiguous CRT/runtime
+locations, duplicate headers, failed preprocessing and target ABI mismatch.
+NetBSD version suffix differences are allowed; architecture/vendor/ABI must agree.
+
+The config supplies C++-only -stdlib++-isystem paths and libstdc++ selection,
+-B for exact GCC16 CRT, ordinary linker-only -L before NetBSD's /usr/lib and
+$-Wl runtime RPATH in the linking tail. Available Clang21 command traces show
+that $-L tail options are not rendered by NetBSD's early argument path;
+$-Wl,-L in the tail would put the base directory first. LLVM23 NetBSD source
+also renders regular -L before AddFilePathLibArgs. Only RPATH uses the tail.
+No C++ library is unconditionally added to C or no-default-library modes.
+
+Driver::GetFilePath searches -B before base file paths: -L/RPATH cannot select
+crtbegin/end. Generation checks actual GCC16 files; OS crt0/crti/crtn retain
+normal ownership/search. NetBSD's architecture switch controls explicit libgcc
+insertion; --rtlib=libgcc alone does not establish AArch64 runtime selection.
+Native linking must prove GCC16 CRT and one actual stdc++7/libgcc_s1.
+Config generation is not runtime evidence or protection against later manual
+removal of package files. No fake SONAME or static C++ runtime workaround is used.
+
+The config names only the effective native triple, never generic clang.cfg or
+clang++.cfg. Different target triples must not inherit these paths. A same-triple
+SDK must use standard --no-default-config with --sysroot; sysroot alone does not
+disable native defaults. Projects retain -nostdinc++, -nostdlib, -nodefaultlibs,
+-nostdlib++ and static modes. This is not arbitrary cross SDK acceptance.
+
+## Upstream lit and focused checks
+
+The new py-llvm-lit recipe uses upstream lit's module/setup.py and lit.py launcher,
+common Python314 and ordinary wheel machinery. LLVM no longer installs a
+source/build-tree-dependent stub. Build-tree lit remains for upstream tests.
+Upstream reports 23.1.2dev; expected wheel metadata is 23.1.2.dev0, not silently
+relabeled. No project Python helper is added. Wheel payload/shebang/PLIST checks
+await native staging.
+
+```sh
+sh profiles/common-build-tools/tests/source-profile.sh \
+    /absolute/verified-distfiles /absolute/new-work llvm-source
+```
+
+The named gate verifies all four distinfo records and six patches through actual
+pkgsrc checksum.awk, full zero-fuzz forward series, corrupt/raw-RCS/missing/
+reversed/repeated failures, exact exports and refused existing/unknown/missing-patch
+exports. Accepted Python/Meson/GCC recipe bytes are compared without rerunning
+unrelated suites. Target/PLIST declarations are source contracts, not builds.
+The default source gate includes LLVM; python-source preserves its narrow scope.
+
+llvm-selection.sh parses the real exported version block with BSD make:
+four allowed paths and thirteen rejected consumers. Missing BSD make prints SKIP;
+full native recipe parsing is separate. clang-config.sh uses fixture metadata and
+a real available Clang driver's traces, including causal no-config RED, C/C++, CRT
+search order, cross/SDK optout, static and no-default-library modes. Dummy CRT
+files are never linked. AppleClang21 is comparative evidence, not native LLVM23.
+llvm-lit.sh stages actual upstream modules in a private Python314 environment,
+renames the source tree away and runs upstream shell-format PASS/FAIL without
+PYTHONPATH. FAIL must return 1. This does not establish wheel acceptance.
+
+## Remaining native gates
+
+Use normal package/check-files, WRKREF, RPATH, dependency and upstream checks.
+Verify exact CMake/compiler provenance, shared/static consumers, RTTI, installed
+lit and native C/C++ CRT traces for PIE/non-PIE/shared/static. Check foreign triples,
+same-triple SDK optout, incomplete dependencies and actual ELF/load bindings.
+Prove startup pthread, dlopen/threads/TLS, JIT RW-to-RX and unload without weakening
+PaX/global settings or hiding existing libc helper failures. TinyGo's LLVM22-tagged
+binding/fork needs its own LLVM23 API/target/static-component gates, without an
+LLVM22 fallback. Mesa26 and GPU acceleration retain separate unaccepted gates.

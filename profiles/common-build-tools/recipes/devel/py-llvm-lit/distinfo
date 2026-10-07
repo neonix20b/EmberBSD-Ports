@@ -1,0 +1,5 @@
+# Origin: upstream LLVM23 release, EmberBSD common lit recipe.
+
+BLAKE2s (llvm-project-23.1.2.src.tar.xz) = 4f6386ad1c05df66173e3013a73153765d87542aa2738605d2381b8915780c6e
+SHA512 (llvm-project-23.1.2.src.tar.xz) = 91174e69ea787034f8a6b17120aae5f139204e13292119d1b066b4930dcea586c76b82228d3db281d8d4211384c7cb74c6b61fdef41b39d310908a8c7cf080cc
+Size (llvm-project-23.1.2.src.tar.xz) = 179200068 bytes

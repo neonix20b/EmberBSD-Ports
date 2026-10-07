@@ -1,0 +1,83 @@
+# $NetBSD: options.mk,v 1.21 2025/01/20 14:30:05 riastradh Exp $
+
+PKG_OPTIONS_VAR=	PKG_OPTIONS.llvm
+
+LLVM_TARGETS=	AArch64 AMDGPU ARM AVR BPF Hexagon Lanai LoongArch Mips MSP430 NVPTX PowerPC RISCV Sparc SPIRV SystemZ VE WebAssembly X86 XCore
+LLVM_EXPERIMENTAL_TARGETS=	ARC CSKY DirectX M68k Xtensa
+
+.for tgt in ${LLVM_TARGETS} ${LLVM_EXPERIMENTAL_TARGETS}
+PLIST_VARS+=			${tgt}
+PKG_SUPPORTED_OPTIONS+=		llvm-target-${tgt:tl}
+PRINT_PLIST_AWK+=		{if ($$0 ~ /libLLVM${tgt}/) {$$0 = "$${PLIST.${tgt}}" $$0;}}
+PRINT_PLIST_AWK+=		{if ($$0 ~ /libLLVMExegesis${tgt}/) {$$0 = "$${PLIST.${tgt}}" $$0;}}
+.endfor
+
+PKG_SUPPORTED_OPTIONS+=		terminfo z3 tests debug
+
+# Terminfo is used for colour output, only enable it by default if terminfo
+# is builtin to avoid unnecessary dependencies which could cause bootstrap
+# issues.
+CHECK_BUILTIN.terminfo:=	yes
+.include "../../mk/terminfo.builtin.mk"
+CHECK_BUILTIN.terminfo:=	no
+.if ${USE_BUILTIN.terminfo:tl} == yes
+PKG_SUGGESTED_OPTIONS+=		terminfo
+.endif
+
+# Do not narrow the common development stack to the host architecture.
+.for tgt in ${LLVM_TARGETS} ${LLVM_EXPERIMENTAL_TARGETS}
+PKG_SUGGESTED_OPTIONS+=	llvm-target-${tgt:tl}
+.endfor
+PKG_SUGGESTED_OPTIONS+=	tests
+
+.include "../../mk/bsd.options.mk"
+
+.for tgt in ${LLVM_TARGETS}
+.  if !empty(PKG_OPTIONS:Mllvm-target-${tgt:tl})
+PLIST.${tgt}=		yes
+LLVM_TARGETS_TO_BUILD+=	${tgt}
+.  endif
+.endfor
+
+.for tgt in ${LLVM_EXPERIMENTAL_TARGETS}
+.  if !empty(PKG_OPTIONS:Mllvm-target-${tgt:tl})
+PLIST.${tgt}=		yes
+LLVM_EXPERIMENTAL_TARGETS_TO_BUILD+=	${tgt}
+.  endif
+.endfor
+.if !empty(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD)
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD:ts;}"
+.endif
+
+.if !empty(PKG_OPTIONS:Mterminfo)
+.include "../../mk/terminfo.buildlink3.mk"
+.else
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_ENABLE_TERMINFO=OFF
+.endif
+
+.if !empty(PKG_OPTIONS:Mz3)
+.include "../../math/z3/buildlink3.mk"
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_ENABLE_Z3_SOLVER=ON
+.endif
+
+.if !empty(PKG_OPTIONS:Mdebug)
+RELEASE_TYPE?=		debug
+CMAKE_CONFIGURE_ARGS+=	-DCMAKE_BUILD_TYPE=Debug
+.else
+CMAKE_CONFIGURE_ARGS+=	-DCMAKE_BUILD_TYPE=Release
+RELEASE_TYPE?=		release
+.endif
+
+.if !empty(PKG_OPTIONS:Mtests)
+# Export matching unit-test support for standalone Clang and LLD.
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_INCLUDE_TESTS=ON
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_INSTALL_GTEST=ON
+PLIST.gtest=		yes
+.else
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_INCLUDE_TESTS=OFF
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_INSTALL_GTEST=OFF
+.endif
+
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_TARGETS_TO_BUILD="${LLVM_TARGETS_TO_BUILD:ts;}"
+
+PLIST_VARS+=	gtest

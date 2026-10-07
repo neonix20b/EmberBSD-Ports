@@ -1,0 +1,173 @@
+# $NetBSD: Makefile.common,v 1.66 2026/03/25 22:56:25 wiz Exp $
+# used by lang/clang/Makefile
+# used by lang/clang-tools-extra/Makefile
+
+.include "../../lang/llvm/version.mk"
+
+CATEGORIES=	lang devel
+
+MAINTAINER=	pkgsrc-users@NetBSD.org
+HOMEPAGE=	https://clang.llvm.org/
+LICENSE=	apache-2.0
+
+USE_CXX_FEATURES=	c++17
+USE_LANGUAGES=		c c++
+GCC_REQD+=		16.2
+
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_DIR=${BUILDLINK_PREFIX.llvm:Q}/lib/cmake/llvm
+CMAKE_CONFIGURE_ARGS+=	-DCMAKE_BUILD_TYPE=Release
+CMAKE_CONFIGURE_ARGS+=	-DCMAKE_C_COMPILER=${CC:Q}
+CMAKE_CONFIGURE_ARGS+=	-DCMAKE_CXX_COMPILER=${CXX:Q}
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_CMAKE_DIR=${BUILDLINK_PREFIX.llvm:Q}/lib/cmake/llvm
+CMAKE_CONFIGURE_ARGS+=	-DPython3_EXECUTABLE=${PYTHONBIN:Q}
+CMAKE_CONFIGURE_ARGS+=	-DLIBCLANG_BUILD_STATIC=ON
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF
+
+.include "../../mk/compiler.mk"
+
+CMAKE_CONFIGURE_ARGS.Darwin+=	-DCMAKE_LIBTOOL=/usr/bin/libtool
+.if defined(OSX_SDK_PATH)
+CMAKE_CONFIGURE_ARGS.Darwin+=	-DDEFAULT_SYSROOT=${OSX_SDK_PATH:Q}
+.endif
+
+# NetBSD < 10 did not provide ENOTRECOVERABLE
+# https://bugs.llvm.org/show_bug.cgi?id=52587
+.if ${OPSYS} == "NetBSD" && ${OPSYS_VERSION} < 099949
+CXXFLAGS+=	-D_GLIBCXX_HAVE_ENOTRECOVERABLE=1
+CXXFLAGS+=	-DENOTRECOVERABLE=98
+.endif
+
+REPLACE_PERL+=		tools/scan-build/bin/scan-build
+REPLACE_PERL+=		tools/scan-build/libexec/c++-analyzer
+REPLACE_PERL+=		tools/scan-build/libexec/ccc-analyzer
+REPLACE_PERL+=		utils/TestUtils/pch-test.pl
+REPLACE_PERL+=		utils/analyzer/reducer.pl
+REPLACE_PERL+=		utils/analyzer/update_plist_test.pl
+
+REPLACE_PYTHON+=	bindings/python/examples/cindex/cindex-dump.py
+REPLACE_PYTHON+=	bindings/python/examples/cindex/cindex-includes.py
+REPLACE_PYTHON+=	docs/tools/dump_ast_matchers.py
+REPLACE_PYTHON+=	docs/tools/dump_format_style.py
+REPLACE_PYTHON+=	docs/tools/generate_formatted_state.py
+REPLACE_PYTHON+=	test/AST/gen_ast_dump_json_test.py
+REPLACE_PYTHON+=	test/Analysis/check-analyzer-fixit.py
+REPLACE_PYTHON+=	tools/clang-format/clang-format-diff.py
+REPLACE_PYTHON+=	tools/clang-format/git-clang-format
+REPLACE_PYTHON+=	tools/scan-build-py/bin/analyze-build
+REPLACE_PYTHON+=	tools/scan-build-py/bin/intercept-build
+REPLACE_PYTHON+=	tools/scan-build-py/bin/scan-build
+REPLACE_PYTHON+=	tools/scan-build-py/libexec/analyze-c++
+REPLACE_PYTHON+=	tools/scan-build-py/libexec/analyze-cc
+REPLACE_PYTHON+=	tools/scan-build-py/libexec/intercept-c++
+REPLACE_PYTHON+=	tools/scan-build-py/libexec/intercept-cc
+REPLACE_PYTHON+=	tools/scan-build/bin/set-xcode-analyzer
+REPLACE_PYTHON+=	tools/scan-view/bin/scan-view
+REPLACE_PYTHON+=	tools/scan-view/share/Reporter.py
+REPLACE_PYTHON+=	tools/scan-view/share/startfile.py
+REPLACE_PYTHON+=	utils/ABITest/ABITestGen.py
+REPLACE_PYTHON+=	utils/CIndex/completion_logger_server.py
+REPLACE_PYTHON+=	utils/CaptureCmd
+REPLACE_PYTHON+=	utils/CmpDriver
+REPLACE_PYTHON+=	utils/FindSpecRefs
+REPLACE_PYTHON+=	utils/FuzzTest
+REPLACE_PYTHON+=	utils/TestUtils/deep-stack.py
+REPLACE_PYTHON+=	utils/analyzer/CmpRuns.py
+REPLACE_PYTHON+=	utils/analyzer/SATest.py
+REPLACE_PYTHON+=	utils/analyzer/SATestAdd.py
+REPLACE_PYTHON+=	utils/analyzer/SATestBuild.py
+REPLACE_PYTHON+=	utils/analyzer/SATestUpdateDiffs.py
+REPLACE_PYTHON+=	utils/analyzer/SumTimerInfo.py
+REPLACE_PYTHON+=	utils/analyzer/exploded-graph-rewriter.py
+REPLACE_PYTHON+=	utils/check_cfc/check_cfc.py
+REPLACE_PYTHON+=	utils/check_cfc/obj_diff.py
+REPLACE_PYTHON+=	utils/check_cfc/test_check_cfc.py
+REPLACE_PYTHON+=	utils/clangdiag.py
+REPLACE_PYTHON+=	utils/convert_arm_neon.py
+REPLACE_PYTHON+=	utils/hmaptool/hmaptool
+REPLACE_PYTHON+=	utils/modfuzz.py
+REPLACE_PYTHON+=	utils/module-deps-to-rsp.py
+REPLACE_PYTHON+=	utils/token-delta.py
+REPLACE_PYTHON+=	www/builtins.py
+REPLACE_PYTHON+=	www/make_cxx_dr_status
+
+# Native NetBSD defaults are supplied by the target-specific installed config.
+# Do not impose the host C++ runtime on other target triples.
+
+# On SunOS use the libraries from the GCC used to build clang rather than
+# aimlessly searching the file system for ones that might be incompatible.
+#
+SUBST_CLASSES.SunOS+=	sunos-gcc
+SUBST_STAGE.sunos-gcc=	pre-configure
+SUBST_FILES.sunos-gcc=	lib/Driver/ToolChains/Gnu.cpp
+SUBST_SED.sunos-gcc=	-e 's,@GCCBASEDIR@,${CCPATH:H:H},'
+
+# Not perfect, but should catch most common cases.  We can't simply use
+# gcc-libs as that doesn't ship the headers.
+#
+.if ${OPSYS} == "SunOS" && ${PKGSRC_COMPILER:Mgcc}
+BUILDLINK_DEPMETHOD.${_GCC_PKGBASE}=	full
+.endif
+
+PLIST_VARS+=	notdylib
+.if ${SHLIB_TYPE} != "dylib"
+PLIST.notdylib=	yes
+.endif
+
+PKG_OPTIONS_VAR=	PKG_OPTIONS.clang
+PKG_SUPPORTED_OPTIONS=	tests z3
+PKG_SUGGESTED_OPTIONS+=	tests
+
+.include "../../mk/bsd.options.mk"
+
+.if !empty(PKG_OPTIONS:Mtests)
+CMAKE_CONFIGURE_ARGS+=		-DLLVM_INCLUDE_TESTS=ON
+CMAKE_CONFIGURE_ARGS+=		-DCLANG_INCLUDE_TESTS=ON
+EXTRACT_ELEMENTS+=	${DISTNAME}/llvm
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_MAIN_SRC_DIR=${WRKDIR}/${DISTNAME}/llvm
+TEST_TARGET=		check-clang
+TEST_ENV+=		LD_LIBRARY_PATH=${WRKDIR}/build/lib
+.else
+CMAKE_CONFIGURE_ARGS+=		-DLLVM_INCLUDE_TESTS=OFF
+CMAKE_CONFIGURE_ARGS+=		-DCLANG_INCLUDE_TESTS=OFF
+.endif
+
+.include "../../lang/llvm/buildlink3.mk"
+.include "../../devel/py-llvm-lit/buildlink3.mk"
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_LIT=${BUILDLINK_PREFIX.py-llvm-lit:Q}/bin/llvm-lit
+CMAKE_CONFIGURE_ARGS+=	-DLLVM_EXTERNAL_LIT=${BUILDLINK_PREFIX.py-llvm-lit:Q}/bin/llvm-lit
+.if !empty(PKG_OPTIONS:Mtests) && empty(PKG_BUILD_OPTIONS.llvm:Mtests)
+PKG_FAIL_REASON+= "Clang tests require matching LLVM llvm_gtest exports (tests option)"
+.endif
+
+.if !empty(PKG_OPTIONS:Mz3)
+.  if empty(PKG_BUILD_OPTIONS.llvm:Mz3)
+PKG_FAIL_REASON+=	"z3 PKG_OPTION must be enabled in lang/llvm"
+.  endif
+.  include "../../math/z3/buildlink3.mk"
+CMAKE_CONFIGURE_ARGS+=		-DLLVM_ENABLE_Z3_SOLVER=ON
+.endif
+
+.include "../../devel/cmake/build.mk"
+.include "../../devel/zlib/buildlink3.mk"
+.include "../../lang/python/application.mk"
+.include "../../lang/python/tool.mk"
+DEPENDS+=	llvm-${PKGVERSION_NOREV}{,nb*}:../../lang/llvm
+.include "../../textproc/libxml2/buildlink3.mk"
+
+pre-configure:
+	${TEST} "`${LLVM_CONFIG_PATH} --version`" = "${LLVM_VERSION}"
+
+.if ${OPSYS} == "NetBSD"
+DEPENDS+= gcc16>=16.2.0:../../lang/gcc16
+USE_TOOLS+= realpath
+CMAKE_CONFIGURE_ARGS+= -DCLANG_CONFIG_FILE_SYSTEM_DIR=${PREFIX:Q}/etc/clang
+PLIST_SRC= ${PKGDIR}/PLIST ${WRKDIR}/native-config/PLIST
+INSTALLATION_DIRS+= etc/clang
+
+post-build:
+	${SH} ${FILESDIR}/native-gcc-config.sh ${LOCALBASE}/gcc16/bin/gcc \
+	    ${CMAKE_BUILD_DIR}/bin/clang ${LOCALBASE}/gcc16 ${WRKDIR}/native-config
+
+post-install:
+	${INSTALL_DATA} ${WRKDIR}/native-config/*.cfg ${DESTDIR}${PREFIX}/etc/clang/
+.endif

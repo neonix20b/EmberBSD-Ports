@@ -29,14 +29,17 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     exit 2
 }
 if [ "$profile" = common-build-tools ]; then
-    for recipe in lang/python314 devel/meson; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
-            [ -f "$source/distinfo" ] && [ -d "$source/patches" ] || {
+            [ -f "$source/distinfo" ] || {
             echo "Incomplete common-tools recipe: $recipe" >&2; exit 2;
         }
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
-        [ -n "$required" ] || { echo "No patch checksums: $recipe" >&2; exit 2; }
+        case "$recipe" in
+            devel/lld|devel/py-llvm-lit) ;;
+            *) [ -n "$required" ] || { echo "No patch checksums: $recipe" >&2; exit 2; } ;;
+        esac
         for name in $required; do
             [ -f "$source/patches/$name" ] || {
                 echo "Missing required patch: $recipe/$name" >&2; exit 2;
@@ -69,7 +72,7 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi
 if [ "$profile" = common-build-tools ]; then
-    for recipe in lang/python314 devel/meson; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         # Replace only recipe paths inside this newly created export.
         rm -rf "$destination/$recipe"

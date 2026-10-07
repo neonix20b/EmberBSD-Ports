@@ -1,15 +1,18 @@
 # Current common build tools
 
-This profile prepares one common Python 3.14.8 and Meson 1.12.1 for the
+This profile prepares one common Python 3.14.8, Meson 1.12.1 and matching
+LLVM/Clang/LLD 23.1.2 with upstream lit for the
 GCC 16 / LLVM 23 / Mesa 26 dependency closure. Source preparation and host
 contracts and focused native macro/selection checks pass. Native packages,
 package-file checks, installed
 extensions and consumers remain pending. This is not an installed Mesa stack.
 
-The profile owns the full `lang/python314` and `devel/meson` recipes, based on
+The profile owns full Python, Meson and
+[LLVM family recipes](llvm-family.md), based on
 pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`. It composes the established
 [development toolchain](../development-toolchain/README.md) export without
-changing GCC recipes, compiler selection or bootstrap options. The default
+changing GCC recipes or bootstrap options. LLVM family builds request
+GCC16 and prepare scoped native Clang defaults. The default
 export and `development-toolchain` mode retain their previous behavior.
 
 ## Prepare and select
@@ -96,13 +99,17 @@ sh profiles/common-build-tools/tests/source-profile.sh \
     /absolute/verified-distfiles /absolute/new-source-check
 ```
 
-The test verifies archives and all 13 patches through actual pkgsrc
+The test verifies archives and all 19 patches through actual pkgsrc
 `checksum.awk`, rejects corrupted archives, unfiltered patch hashes,
 missing patches and repeated application, and applies the full series
 forward with zero fuzz. It checks PLIST additions and restored upstream
 ELF fixup, exports exact recipes, compares unchanged GCC recipe composition,
 and rejects existing destinations and unknown profiles. Logs and extracted
 sources remain in the private output directory.
+
+The named `llvm-source` third argument checks the LLVM family, metadata,
+Clang command traces and upstream lit, while comparing unchanged common
+recipes. Its source/native boundaries are documented in [llvm-family.md](llvm-family.md).
 
 The named `python-source` third argument limits a follow-up to Python archive,
 eight-patch series, negative checksum/application cases, source invariants and

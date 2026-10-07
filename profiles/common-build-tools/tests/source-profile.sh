@@ -2,10 +2,13 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Origin: EmberBSD, AI-assisted source and profile integration regression.
 set -eu
-[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { echo "Usage: $0 VERIFIED_DISTFILES NEW_WORK [python-source]" >&2; exit 2; }
+[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { echo "Usage: $0 VERIFIED_DISTFILES NEW_WORK [python-source|llvm-source]" >&2; exit 2; }
 scope=${3:-all}
-case "$scope" in all|python-source) ;; *) echo 'Unknown source gate.' >&2; exit 2 ;; esac
+case "$scope" in all|python-source|llvm-source) ;; *) echo 'Unknown source gate.' >&2; exit 2 ;; esac
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
+if [ "$scope" = llvm-source ]; then
+    exec sh "$root/profiles/common-build-tools/tests/llvm-source.sh" "$1" "$2"
+fi
 distfiles=$(CDPATH= cd -- "$1" && pwd)
 mkdir "$2"
 work=$(CDPATH= cd -- "$2" && pwd)
@@ -150,4 +153,5 @@ if command -v "${BMAKE:-bmake}" >/dev/null 2>&1; then
 else
     echo 'SKIP: actual BSD make selection parsing; bmake unavailable, native gate required'
 fi
+sh "$profile/tests/llvm-source.sh" "$distfiles" "$work/llvm"
 echo 'PASS: source checks; native packaging, ELF fixup and consumer runtime remain pending'
