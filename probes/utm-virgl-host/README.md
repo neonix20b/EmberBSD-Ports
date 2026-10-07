@@ -123,6 +123,13 @@ boundary. Pending renderer error propagation and native no-touch/display/host
 qualification still prevent enabling it. Existing mixed UTM paths remain outside
 this profile's qualification.
 
+The final [reported completion stage](COMPLETION.md) routes returned SUBMIT,
+three transfer and global/context fence-create errors into the lifecycle barrier.
+The command stays queued until all backing is detached and released; it then
+receives its error once. Actual-body macOS/arm64 checks show compiled baseline
+RED and patched GREEN in plain, ASan/UBSan and NDEBUG. Silent renderer errors,
+full host/native qualification and the accelerated session remain unverified.
+
 The former 0.10.4 recovery host and the UTM beta installation are unchanged.
 There is no installed host, enabled VirGL, pixel, Mesa runtime, GPU/NPU,
 VM or board validation claim. Parent integration owns publication and the

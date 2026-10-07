@@ -100,3 +100,15 @@ SHA256 receipts. No full host build or upstream acceptance is implied.
 | Post-overlay plus C8b GPU VirGL baseline | `c381fd9bdf0c6fb3e58dcb01c263b1cc77d510f0b39fa31e654933c7de1f5544` |
 | Final GPU VirGL ledger | `a7bb36d50c0ff30a88a2313554fbf3c73a3f9bf24298a10035ac6351ecf26e5f` |
 | `patches/backing-qemu-local.patch` | `d5e6a264f3902843f0225723aaa6cdface622bdd1c5516338a08a38e2c2d72de` |
+
+## Reported completion status stage
+
+[COMPLETION.md](COMPLETION.md) describes the local AI-assisted QEMU-only delta
+in `patches/completion-qemu-local.patch`. It is not submitted or accepted
+upstream. The complete accepted lifecycle outputs remain separate inputs;
+`completion-sources.tsv` pins their hashes, the delta and complete resulting
+GPU VirGL source. All original source and overlay authorship remains intact.
+The renderer is unchanged by this stage. New shell/Ruby/C helpers use
+BSD-2-Clause under `LICENSE.tests`; source-derived bodies retain their original
+licenses and are extracted into private test work only. Full host builds,
+native graphics behavior and an installed accelerated session are unverified.

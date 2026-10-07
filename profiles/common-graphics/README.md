@@ -9,6 +9,12 @@ The default, development-toolchain and common-build-tools exports keep their
 original Mesa/libdrm recipes. This is source preparation, not an installed
 common graphics stack, native package acceptance or a Mobile demonstration.
 
+The [graphics cross-build](cross/README.md) now builds the complete selected
+libdrm payload on macOS with GCC16. All 26 staged entries match PLIST, and
+hash, drmsl and symbol checks pass in AArch64 UTM. Device enumeration is
+skipped on the current framebuffer-only kernel. Package registration and
+the Mesa/LLVM consumer transition are still separate gates.
+
 The selected APIs are X11/Wayland, EGL, GBM, OpenGL and GLES; renderers are
 classic VirGL, softpipe and llvmpipe with ORC JIT. The recipe requires shared
 LLVM23, upstream tests and portable TLS. It never substitutes Mesa21,
@@ -70,7 +76,9 @@ another disabled client module is a migration blocker. Adapted revision
 identity requirement. The canonical recipe omits pkgsrc's native-X11
 avoid-duplicate skip, so actual dependency selection still builds libdrm.
 
-Both PLISTs are **source-derived and unvalidated natively**. Mesa's GL/EGL/
+Mesa's PLIST is **source-derived and unvalidated natively**. The libdrm list
+matches the complete cross-staged payload; normal package checks remain.
+Mesa's GL/EGL/
 GLES/GBM/DRM SONAME closure is GL1/EGL1/GLESv1_CM1/GLESv2 2/GBM1/DRM2,
 plus `libgallium-26.2.4.so`, the GBM backend and upstream dril driver links.
 `glx.pc`, `eglext_angle.h`, `gbm_backend_abi.h` and both upstream drirc

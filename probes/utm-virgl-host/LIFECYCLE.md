@@ -167,10 +167,13 @@ host IOV non-aliasing. Accepted C8c1 helpers and tests remain unchanged.
 ## Remaining gates
 
 Do not enable this profile or describe it as a safe accelerated host yet.
-SUBMIT/transfer/fence-create status, decoder arithmetic/sticky errors, GL/EGL
-wait tri-state and query output failures remain open. Existing context-fence
-creation failure can still answer OK; WAIT_FAILED can still become completion.
-These failures must enter the verified barrier in a later error-handling slice.
+The separate [reported completion stage](COMPLETION.md) now routes nonzero
+SUBMIT/transfer/global and context-fence-create returns into this barrier.
+Use its final `qemu/completion` tree for that delta; this stage's original
+`qemu/lifecycle` bytes retain their prior status handling. Decoder arithmetic,
+sticky context errors, GL/EGL wait tri-state and query output failures remain
+open. WAIT_FAILED can still become completion. Silent failures still need
+truthful renderer reporting before this barrier can handle them.
 
 Full QEMU objects/linking with generated headers, paired renderer ABI and actual
 video-disabled configuration remain required. Native work must establish the

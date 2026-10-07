@@ -46,8 +46,11 @@ runtime behavior are validated.
   canonical MesaLib 26.2.4 and adapted libdrm 2.4.134nb1 compose the common
   GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.
   Source, export and dependency-selection checks cover X11/Wayland,
-  EGL/GBM and classic VirGL/softpipe/llvmpipe. Native package contents,
-  consumer migration and renderer runtime remain unverified.
+  EGL/GBM and classic VirGL/softpipe/llvmpipe. The complete core-only libdrm
+  payload cross-builds on macOS/GCC16, matches all 26 PLIST entries and passes
+  upstream hash, skip-list and exported-symbol checks in AArch64 UTM.
+  Package registration, Mesa/LLVM builds, consumer migration and renderer
+  runtime remain unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -134,6 +137,9 @@ runtime behavior are validated.
   stops CPU producers before reset/fault revocation and detaches every backing
   before releasing any mapping. Source tests cover display-blocked command
   handoff, query polling and deferred native cleanup.
+  [Reported command and fence errors](probes/utm-virgl-host/COMPLETION.md)
+  enter that barrier before any failed command can receive success; 683
+  source assertions pass in plain, sanitizer and NDEBUG runs.
   These are experimental source contracts. Complete host builds, installation,
   native reset/display lifetimes, remaining error paths and VirGL runtime
   remain unverified; the profile stays disabled.

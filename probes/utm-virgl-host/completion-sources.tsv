@@ -1,0 +1,7 @@
+# Reported completion status delta after accepted lifecycle stage.
+# Original URLs/revisions/hashes remain create-sources.tsv and lifecycle-sources.tsv.
+# kind	path	sha256
+input	qemu/lifecycle/hw/display/virtio-gpu-virgl.c	7cdcd5ec10546aa18760c544ef59c411e3220b749f67026d68da5199145fe608
+input	renderer-lifecycle/src/virglrenderer.c	4d673d5e8f89e2244b1e5275a123095b69ccbb2fae4e9509d6620c4ae098272e
+patch	patches/completion-qemu-local.patch	22ab1940e524a054c352ab118f51fb60e41aaae7bef6bd392e6733b42d663232
+output	qemu/completion/hw/display/virtio-gpu-virgl.c	c1213b40bd805392b65776ddadae6a95981dcca0cb85efa28f2fa005e029e5e5

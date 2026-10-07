@@ -1,0 +1,120 @@
+--- a/hw/display/virtio-gpu-virgl.c
++++ b/hw/display/virtio-gpu-virgl.c
+@@ -1084,6 +1084,23 @@
+     g->parent_obj.scanout[ss.scanout_id].resource_id = ss.resource_id;
+ }
+ 
++/* A reported failure may follow partial guest-backing access.  Preserve it
++ * until the classic lifecycle barrier has stopped every CPU producer and
++ * detached all renderer IOVs; an error response alone is not a revoke. */
++static bool virgl_report_completion_error(VirtIOGPU *g,
++    struct virtio_gpu_ctrl_command *cmd, int ret)
++{
++    if (!ret || !VIRTIO_GPU_GL(g)->ember_classic_lifecycle) {
++        return false;
++    }
++
++    /* Do not negate ret: some backends return negative errno or INT_MIN. */
++    cmd->error = (ret == ENOMEM || ret == -ENOMEM) ?
++        VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY : VIRTIO_GPU_RESP_ERR_UNSPEC;
++    virtio_gpu_virgl_request_fault(g, cmd, cmd->error);
++    return true;
++}
++
+ static void virgl_cmd_submit_3d(VirtIOGPU *g,
+                                 struct virtio_gpu_ctrl_command *cmd)
+ {
+@@ -1117,7 +1134,8 @@
+         g->stats.bytes_3d += cs.size;
+     }
+ 
+-    virgl_renderer_submit_cmd(buf, cs.hdr.ctx_id, cs.size / 4);
++    virgl_report_completion_error(g, cmd,
++        virgl_renderer_submit_cmd(buf, cs.hdr.ctx_id, cs.size / 4));
+ 
+ out:
+     g_free(buf);
+@@ -1139,13 +1157,14 @@
+     box.h = t2d.r.height;
+     box.d = 1;
+ 
+-    virgl_renderer_transfer_write_iov(t2d.resource_id,
++    virgl_report_completion_error(g, cmd,
++        virgl_renderer_transfer_write_iov(t2d.resource_id,
+                                       0,
+                                       0,
+                                       0,
+                                       0,
+                                       (struct virgl_box *)&box,
+-                                      t2d.offset, NULL, 0);
++                                      t2d.offset, NULL, 0));
+ }
+ 
+ static void virgl_cmd_transfer_to_host_3d(VirtIOGPU *g,
+@@ -1156,13 +1175,14 @@
+     VIRTIO_GPU_FILL_CMD(t3d);
+     trace_virtio_gpu_cmd_res_xfer_toh_3d(t3d.resource_id);
+ 
+-    virgl_renderer_transfer_write_iov(t3d.resource_id,
++    virgl_report_completion_error(g, cmd,
++        virgl_renderer_transfer_write_iov(t3d.resource_id,
+                                       t3d.hdr.ctx_id,
+                                       t3d.level,
+                                       t3d.stride,
+                                       t3d.layer_stride,
+                                       (struct virgl_box *)&t3d.box,
+-                                      t3d.offset, NULL, 0);
++                                      t3d.offset, NULL, 0));
+ }
+ 
+ static void
+@@ -1174,13 +1194,14 @@
+     VIRTIO_GPU_FILL_CMD(tf3d);
+     trace_virtio_gpu_cmd_res_xfer_fromh_3d(tf3d.resource_id);
+ 
+-    virgl_renderer_transfer_read_iov(tf3d.resource_id,
++    virgl_report_completion_error(g, cmd,
++        virgl_renderer_transfer_read_iov(tf3d.resource_id,
+                                      tf3d.hdr.ctx_id,
+                                      tf3d.level,
+                                      tf3d.stride,
+                                      tf3d.layer_stride,
+                                      (struct virgl_box *)&tf3d.box,
+-                                     tf3d.offset, NULL, 0);
++                                     tf3d.offset, NULL, 0));
+ }
+ 
+ 
+@@ -1685,6 +1706,7 @@
+                                       struct virtio_gpu_ctrl_command *cmd)
+ {
+     bool cmd_suspended = false;
++    int ret;
+ 
+     VIRTIO_GPU_FILL_CMD(cmd->cmd_hdr);
+     cmd->header_valid = true;
+@@ -1801,10 +1823,13 @@
+     trace_virtio_gpu_fence_ctrl(cmd->cmd_hdr.fence_id, cmd->cmd_hdr.type);
+ #if VIRGL_VERSION_MAJOR >= 1
+     if (cmd->cmd_hdr.flags & VIRTIO_GPU_FLAG_INFO_RING_IDX) {
+-        int ret = virgl_renderer_context_create_fence(cmd->cmd_hdr.ctx_id,
++        ret = virgl_renderer_context_create_fence(cmd->cmd_hdr.ctx_id,
+                                             VIRGL_RENDERER_FENCE_FLAG_MERGEABLE,
+                                             cmd->cmd_hdr.ring_idx,
+                                             cmd->cmd_hdr.fence_id);
++        if (virgl_report_completion_error(g, cmd, ret)) {
++            return;
++        }
+         if (VIRTIO_GPU_GL(g)->ember_classic_lifecycle &&
+             (VIRTIO_GPU_GL(g)->fault_latched || VIRTIO_GPU_GL(g)->reset_requested)) {
+             return;
+@@ -1829,7 +1854,8 @@
+         return;
+     }
+ #endif
+-    virgl_renderer_create_fence(cmd->cmd_hdr.fence_id, cmd->cmd_hdr.type);
++    ret = virgl_renderer_create_fence(cmd->cmd_hdr.fence_id, cmd->cmd_hdr.type);
++    virgl_report_completion_error(g, cmd, ret);
+ }
+ 
+ void virtio_gpu_virgl_process_cmd(VirtIOGPU *g,
