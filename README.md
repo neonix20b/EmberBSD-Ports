@@ -149,7 +149,8 @@ runtime behavior are validated.
   preserve ownership through a failed poll and reject the old host ABI.
   The [full renderer recipe](probes/utm-virgl-host/host/README.md) builds and
   links with current libepoxy 1.5.10 on macOS. Direct Apple M3 acceptance
-  passes texture readback, decoded framebuffer clears, real fences and three
+  passes texture readback, decoded framebuffer clears, shader triangle pixels,
+  real fences and three
   cleanup/reinit cycles; a
   reproduced null-context cleanup failure is fixed. Truncated command payloads
   also return EINVAL instead of false success, verified through the full native

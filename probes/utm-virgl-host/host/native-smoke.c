@@ -89,6 +89,7 @@ static void *get_display(void *opaque)
 }
 #include "native-decoder.h"
 #include "native-clear.h"
+#include "native-draw.h"
 #include "native-context-errors.h"
 /* Check resolved images, not just the linker's intended install names. */
 static void check_image(const char *symbol, const char *directory, const char *file)
@@ -203,6 +204,7 @@ int main(int argc, char **argv)
         if (glGetError() != GL_NO_ERROR) die("VirGL transfer GL error");
         if (memcmp(source, backing, sizeof(source))) die("VirGL RGBA mismatch");
         check_virgl_clear(backing, sizeof(backing), cycle);
+        check_virgl_draw(&s, cycle);
         struct iovec *detached = NULL;
         int detached_count = 0;
         virgl_renderer_resource_detach_iov(1, &detached, &detached_count);

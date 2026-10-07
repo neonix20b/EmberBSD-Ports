@@ -54,7 +54,9 @@ Requirements: macOS/arm64, Apple Clang, shell, Ruby, ripgrep, AWK, tar, patch,
 shasum, current Python with PyYAML, Meson, Ninja and pkgconf. The measured build
 used Apple Clang 21.0.0, Python 3.14.8, PyYAML 6.0.3, Meson 1.12.1,
 Ninja 1.13.2 and pkgconf 3.0.7. Upstream Python generators remain dependencies;
-new project helpers are shell and C under [BSD-2-Clause](../LICENSE.tests). Reuse common host tools rather than building
+new project helpers are shell and C under [BSD-2-Clause](../LICENSE.tests), except
+`native-draw.h`, which preserves the MIT license of its Red Hat upstream test
+adaptation. Reuse common host tools rather than building
 another LLVM or target toolchain for this recipe.
 
 Download the three original build archives listed in `sources.tsv` and the raw
@@ -126,7 +128,22 @@ CLEAR commands for that texture. Red and green alternate between cycles. CPU
 backing is replaced with `0xa5` before readback; all 256 RGBA pixels must match
 the selected clear color exactly. The context then detaches the resource and is
 destroyed before the caller releases its IOV/texture. This checks decoded GPU
-commands through Metal, not shader drawing or guest Mesa rendering.
+commands through Metal; guest Mesa rendering is separate.
+
+The native draw check creates a separate RGBA target and vertex buffer, submits
+TGSI vertex/fragment shaders, state and DRAW_VBO commands, and waits for a real
+fence before readback. A green pre-draw control checks all 256 pixels. Each of
+three drawn frames checks 50 magenta interior and 158 green background pixels
+exactly; 48 pixels near edges are excluded, so rasterization edge rules and MSAA
+are not qualified. CPU backing is overwritten before each readback. Resources,
+context and the exact IOVs are detached and freed after the fence.
+
+On 2026-10-08 this shader/draw/readback test passes through the full renderer on
+Apple M3/ANGLE Metal. A privately compiled control with DRAW_VBO count changed
+from three to zero fails the interior-pixel oracle while the background remains
+green and GL reports no error. The setup derives from the pinned renderer's
+`tests/testvirgl_encode.c` and `tests/test_virgl_cmd.c`, with their MIT notices
+preserved. This does not establish a guest Mesa driver, compositor or 3D reset.
 
 Each cycle also submits six command buffers through the complete decoder with
 real EGL contexts. Before the decoder fix, missing payload, truncation after a
@@ -158,7 +175,7 @@ drift, and changed source/header/DSO files before native execution.
 
 The native renderer warns that ARB/KHR robustness is absent. The short successful
 run does not qualify recovery from GPU faults. Further backend failures, delayed query writes,
-draw, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
+further draw paths, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
 qualification remain open. The full QEMU build and bounded 2D boot are checked
 separately; live QEMU decoder-error delivery, reset/BH/display integration, guest
 3D DMA and Mesa consumers are unverified. No accelerated EmberBSD session,
