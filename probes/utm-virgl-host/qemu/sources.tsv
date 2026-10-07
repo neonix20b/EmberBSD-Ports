@@ -1,0 +1,4 @@
+# file	sha256	original-url
+qemu-10.0.12-utm.tar.xz	7c9605290b34152debb842e965a55d2e4fbba4793e536ab677b4027e5dc0ba1a	https://github.com/utmapp/qemu/releases/download/v10.0.12-utm/qemu-10.0.12-utm.tar.xz
+# SHA256 also appears as the asset digest in https://api.github.com/repos/utmapp/qemu/releases/tags/v10.0.12-utm
+# UTM overlay and original source files remain pinned in ../create-sources.tsv.

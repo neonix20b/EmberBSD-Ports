@@ -3,7 +3,9 @@
 For complete renderer build and direct Metal acceptance, follow the
 [private macOS host recipe](host/README.md). It builds on
 [classic wait errors](wait-errors.md) and the earlier source stages below.
-The QEMU profile and guest acceleration remain disabled.
+The [full paired QEMU recipe](qemu/README.md) also passes an isolated 2D guest
+boot on Apple M3/ANGLE Metal. The QEMU profile stays OFF by default; it is selected
+explicitly for this check. Guest acceleration remains disabled.
 
 This probe prepares the accepted upstream IOV-size fix for the current
 UTM virglrenderer 1.3.0 dependency, at
@@ -137,6 +139,7 @@ full host/native qualification and the accelerated session remain unverified.
 
 The former 0.10.4 recovery host and the UTM beta installation are unchanged.
 The private full renderer has direct Apple M3 texture/fence/cleanup acceptance;
-there is no installed new QEMU host, enabled guest VirGL, Mesa runtime, GPU/NPU,
+the full paired QEMU builds and boots the isolated 2D guest. There is no installed
+new QEMU host, enabled guest VirGL, Mesa runtime, GPU/NPU,
 VM or board acceleration claim. Parent integration owns publication and the
 central EmberBSD overview update.

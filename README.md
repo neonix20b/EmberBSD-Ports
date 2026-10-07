@@ -146,9 +146,11 @@ runtime behavior are validated.
   The [full renderer recipe](probes/utm-virgl-host/host/README.md) builds and
   links with current libepoxy 1.5.10 on macOS. Direct Apple M3 acceptance
   passes texture readback, real fences and three cleanup/reinit cycles; a
-  reproduced null-context cleanup failure is fixed. Full QEMU integration,
-  native reset/display lifetimes and the accelerated guest session remain
-  unverified; the profile stays disabled.
+  reproduced null-context cleanup failure is fixed. The [full paired QEMU
+  recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
+  2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
+  Native reset/display lifetimes and the accelerated guest session remain
+  unverified. The host profile defaults to OFF; guest VirGL stays disabled.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
