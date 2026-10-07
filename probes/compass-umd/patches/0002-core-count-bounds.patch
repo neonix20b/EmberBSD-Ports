@@ -1,0 +1,30 @@
+Origin: EmberBSD, AI-assisted; local patch, not submitted upstream.
+Reject count-equal indices before capability access. Keep the (0,0) core
+count fastpath: initialized v1/v2 intentionally have zero topology counts.
+Their other cluster indices remain INVALID_CLUSTER_ID, without vector access.
+--- a/Linux/driver/umd/src/common/device_base.h
++++ b/Linux/driver/umd/src/common/device_base.h
+@@ -298,17 +298,19 @@
+       return AIPU_LL_STATUS_ERROR_NULL_PTR;
+ 
+     *cnt = 0;
+-    if (partition_id > m_partition_cnt)
+-      return AIPU_LL_STATUS_ERROR_INVALID_PARTITION_ID;
+ 
+     if ((partition_id == 0) && (cluster_id == 0)) {
+       *cnt = m_core_cnt;
+     } else {
++      if ((m_partition_cnt == 0) && (partition_id == 0))
++        return AIPU_LL_STATUS_ERROR_INVALID_CLUSTER_ID;
++      if (partition_id >= m_partition_cnt)
++        return AIPU_LL_STATUS_ERROR_INVALID_PARTITION_ID;
+ #if SIMULATION
+-      if (cluster_id > m_cluster_cnt)
++      if (cluster_id >= m_cluster_cnt)
+         return AIPU_LL_STATUS_ERROR_INVALID_CLUSTER_ID;
+ #else
+-      if (cluster_id > m_part_caps.at(partition_id).cluster_cnt)
++      if (cluster_id >= m_part_caps.at(partition_id).cluster_cnt)
+         return AIPU_LL_STATUS_ERROR_INVALID_CLUSTER_ID;
+ #endif
+       *cnt = m_part_caps.at(partition_id).clusters[cluster_id].core_cnt;

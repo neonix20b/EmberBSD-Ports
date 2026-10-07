@@ -1,6 +1,7 @@
-# Compass UMD descriptor lifetime probe
+# Compass UMD descriptor lifetime and core-count probe
 
-This source probe fixes descriptor ownership in the official Arm China
+This source probe fixes descriptor ownership and public core-count bounds in
+the official Arm China
 Compass NPU UMD at revision `2868d533694740de6891f9998812ceb62a899dee`,
 whose environment declares paired UMD/KMD 6.1.1. It is preparation for an
 EmberBSD port, not an installed NPU package or a working NPU backend.
@@ -52,6 +53,43 @@ before factory deletion, repeated deinit, and the actual tick false/true/error
 branches. Original controls must reproduce the expected diagnostic; unchanged
 positive-descriptor destruction and open-error handling remain passing controls.
 
+## Reproduce the core-count contract
+
+`get_core_count` previously accepted indices equal to the partition/cluster
+count. A partition query could throw `out_of_range`; a cluster query could
+read an absent slot, including one past the fixed eight-cluster array.
+Patch `0002` rejects these indices before access. It preserves the `(0,0)`
+fastpath: v1/v2 initialization intentionally keeps topology counts zero.
+Null/output semantics and the zero-core INVALID_OP result remain unchanged.
+
+```sh
+CORE_TEST_SANITIZERS=1 sh probes/compass-umd/test-core-count.sh \
+  /absolute/compass-original.tar.gz /absolute/new-core-contract-work
+```
+
+The runner verifies the archive, applies both patches with `-f -N -F0`, and
+extracts the complete getter, exact LL enum, used member defaults and current
+KMD capability structures. Only the surrounding class and initialized states
+are modeled. Both `SIMULATION=0` and `1` compile that same production text;
+no simulator SDK or simulator initialization is exercised. Unexpected,
+duplicate and unclosed extraction shapes fail the runner.
+
+Each branch has 29 patched cases: null output, empty/legacy states, one and
+multiple partitions/clusters, equality/larger/maxuint indices, highest valid
+indices, branch-specific cluster counts and zero cores. Original logical
+controls reproduce six hardware-branch and four simulation-branch failures.
+With sanitizers enabled, original cluster index 8 separately triggers UBSan.
+`-fstrict-flex-arrays=3` keeps the actual fixed trailing array bounded; it does
+not change the header or ABI. Patched ASan/UBSan cases must all pass, without
+fallback or recovery. Logs and real exit statuses remain in the work directory.
+
+Sanitizers are opt-in (default `CORE_TEST_SANITIZERS=0`). That mode visibly
+skips the original maximum-bound sanitizer proof and never runs its undefined
+access unsanitized. It still requires all logical REDs and 29 plain GREENs in
+each branch. `CXX` selects the compiler; `CORE_TEST_CXXFLAGS` supplies extra
+compiler/linker flags while preserving required warnings. Core-count checks
+currently pass on macOS ARM64/Clang 21; native checks remain pending.
+
 ## Verified and unresolved scope
 
 On macOS ARM64 with Clang 21 and the NetBSD 11 AArch64 VM with GCC 16.2,
@@ -63,8 +101,10 @@ Linux ioctl encoding compatibility, DMA/mapping/coherency, matched kernel
 support, board execution, model execution or repeated-inference recovery.
 No package, kernel, firmware, compiler selection or board was changed.
 
-Capability partition/ASID/cluster bounds require a separate source and layout
-contract. The current upstream four-entry ASID layout must not be confused
+The getter patch does not harden malformed capability counts, inconsistent
+internal vector/storage state or initialization. ASID bounds and query topology
+changes require a separate source and layout contract. The current upstream
+four-entry ASID layout must not be confused
 with the older CIX vendor ABI. This patch does not address reported historical
 second-inference hangs. A matched native KMD/UMD, accessible model toolchain,
 real target hardware and repeated inference tests remain necessary.

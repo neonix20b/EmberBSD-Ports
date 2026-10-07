@@ -42,9 +42,10 @@ runtime behavior are validated.
   consumer checks on AArch64. They cover numerical inference, stream state,
   speech/silence and invalid inputs; explicit ORT worker affinity is checked
   separately. These are source probes, without microphone or accelerator validation.
-- [Compass NPU UMD lifetime probe](probes/compass-umd/README.md): pinned
-  upstream descriptor-zero and failure-cleanup fixes pass host software
-  contracts against actual production methods. Native kernel/DMA integration
+- [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
+  upstream descriptor-zero and failure-cleanup fixes pass host/native software
+  contracts; public core-count bounds pass host production-extracted checks
+  with legacy behavior preserved. Native kernel/DMA integration
   and model execution remain unverified.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and
