@@ -1,0 +1,1008 @@
+diff -ruN a/Thirdparty/DBoW2/DBoW2/FORB.cpp b/Thirdparty/DBoW2/DBoW2/FORB.cpp
+--- a/Thirdparty/DBoW2/DBoW2/FORB.cpp	2021-12-22 13:56:08.000000000 +0300
++++ b/Thirdparty/DBoW2/DBoW2/FORB.cpp	2026-10-07 11:19:24.429723327 +0300
+@@ -13,7 +13,7 @@
+ #include <vector>
+ #include <string>
+ #include <sstream>
+-#include <stdint-gcc.h>
++#include <stdint.h>
+ 
+ #include "FORB.h"
+ 
+@@ -190,4 +190,3 @@
+ 
+ } // namespace DBoW2
+ 
+-
+diff -ruN a/Thirdparty/g2o/g2o/core/sparse_optimizer.cpp b/Thirdparty/g2o/g2o/core/sparse_optimizer.cpp
+--- a/Thirdparty/g2o/g2o/core/sparse_optimizer.cpp	2021-12-22 13:56:08.000000000 +0300
++++ b/Thirdparty/g2o/g2o/core/sparse_optimizer.cpp	2026-10-07 12:21:41.741548853 +0300
+@@ -48,7 +48,7 @@
+ 
+ 
+   SparseOptimizer::SparseOptimizer() :
+-    _forceStopFlag(0), _verbose(false), _algorithm(0), _computeBatchStatistics(false)
++    _forceStopFlag(0), _atomicForceStopFlag(0), _verbose(false), _algorithm(0), _computeBatchStatistics(false)
+   {
+     _graphActions.resize(AT_NUM_ELEMENTS);
+   }
+@@ -574,6 +574,13 @@
+   void SparseOptimizer::setForceStopFlag(bool* flag)
+   {
+     _forceStopFlag=flag;
++    _atomicForceStopFlag=0;
++  }
++
++  void SparseOptimizer::setAtomicForceStopFlag(const std::atomic<bool>* flag)
++  {
++    _atomicForceStopFlag=flag;
++    _forceStopFlag=0;
+   }
+ 
+   bool SparseOptimizer::removeVertex(HyperGraph::Vertex* v)
+diff -ruN a/Thirdparty/g2o/g2o/core/sparse_optimizer.h b/Thirdparty/g2o/g2o/core/sparse_optimizer.h
+--- a/Thirdparty/g2o/g2o/core/sparse_optimizer.h	2021-12-22 13:56:08.000000000 +0300
++++ b/Thirdparty/g2o/g2o/core/sparse_optimizer.h	2026-10-07 12:21:41.722732217 +0300
+@@ -34,6 +34,7 @@
+ #include "batch_stats.h"
+ 
+ #include <map>
++#include <atomic>
+ 
+ namespace g2o {
+ 
+@@ -182,10 +183,11 @@
+      * sets a variable checked at every iteration to force a user stop. The iteration exits when the variable is true;
+      */
+     void setForceStopFlag(bool* flag);
++    void setAtomicForceStopFlag(const std::atomic<bool>* flag);
+     bool* forceStopFlag() const { return _forceStopFlag;};
+ 
+     //! if external stop flag is given, return its state. False otherwise
+-    bool terminate() {return _forceStopFlag ? (*_forceStopFlag) : false; }
++    bool terminate() {return _atomicForceStopFlag ? _atomicForceStopFlag->load(std::memory_order_relaxed) : (_forceStopFlag ? (*_forceStopFlag) : false); }
+ 
+     //! the index mapping of the vertices
+     const VertexContainer& indexMapping() const {return _ivMap;}
+@@ -288,6 +290,7 @@
+ 
+     protected:
+     bool* _forceStopFlag;
++    const std::atomic<bool>* _atomicForceStopFlag;
+     bool _verbose;
+ 
+     VertexContainer _ivMap;
+diff -ruN a/include/CameraModels/GeometricCamera.h b/include/CameraModels/GeometricCamera.h
+--- a/include/CameraModels/GeometricCamera.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/CameraModels/GeometricCamera.h	2026-10-07 09:51:01.020841846 +0300
+@@ -23,7 +23,7 @@
+ 
+ #include <opencv2/core/core.hpp>
+ #include <opencv2/imgproc/imgproc.hpp>
+-#include <opencv2/features2d/features2d.hpp>
++#include <opencv2/features.hpp>
+ 
+ #include <boost/serialization/serialization.hpp>
+ #include <boost/serialization/access.hpp>
+diff -ruN a/include/FrameDrawer.h b/include/FrameDrawer.h
+--- a/include/FrameDrawer.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/FrameDrawer.h	2026-10-07 09:51:01.029775284 +0300
+@@ -25,7 +25,7 @@
+ #include "Atlas.h"
+ 
+ #include<opencv2/core/core.hpp>
+-#include<opencv2/features2d/features2d.hpp>
++#include<opencv2/features.hpp>
+ 
+ #include<mutex>
+ #include <unordered_set>
+diff -ruN a/include/LoopClosing.h b/include/LoopClosing.h
+--- a/include/LoopClosing.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/LoopClosing.h	2026-10-07 12:22:20.732079995 +0300
+@@ -31,6 +31,7 @@
+ #include <boost/algorithm/string.hpp>
+ #include <thread>
+ #include <mutex>
++#include <atomic>
+ #include "Thirdparty/g2o/g2o/types/types_seven_dof_expmap.h"
+ 
+ namespace ORB_SLAM3
+@@ -80,6 +81,9 @@
+ 
+     void RequestFinish();
+ 
++    // Called by the loop worker, or after that worker has been joined.
++    void JoinGlobalBundleAdjustment();
++
+     bool isFinished();
+ 
+     Viewer* mpViewer;
+@@ -117,6 +121,8 @@
+     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+ 
+ protected:
++    void StopLocalMappingForLoop();
++    void RunGlobalBundleAdjustmentForGeneration(Map *, unsigned long, unsigned long);
+ 
+     bool CheckNewKeyFrames();
+ 
+@@ -215,7 +221,7 @@
+     // Variables related to Global Bundle Adjustment
+     bool mbRunningGBA;
+     bool mbFinishedGBA;
+-    bool mbStopGBA;
++    std::atomic<bool> mbStopGBA;
+     std::mutex mMutexGBA;
+     std::thread* mpThreadGBA;
+ 
+@@ -223,7 +229,7 @@
+     bool mbFixScale;
+ 
+ 
+-    bool mnFullBAIdx;
++    unsigned long mnFullBAIdx;
+ 
+ 
+ 
+diff -ruN a/include/Map.h b/include/Map.h
+--- a/include/Map.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/Map.h	2026-10-07 11:22:15.331273405 +0300
+@@ -24,7 +24,6 @@
+ #include "KeyFrame.h"
+ 
+ #include <set>
+-#include <pangolin/pangolin.h>
+ #include <mutex>
+ 
+ #include <boost/serialization/base_object.hpp>
+@@ -188,7 +187,7 @@
+ 
+ 
+     // View of the map in aerial sight (for the AtlasViewer)
+-    GLubyte* mThumbnail;
++    unsigned char* mThumbnail;
+ 
+     bool mIsInUse;
+     bool mHasTumbnail;
+diff -ruN a/include/ORBmatcher.h b/include/ORBmatcher.h
+--- a/include/ORBmatcher.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/ORBmatcher.h	2026-10-07 09:51:01.023034351 +0300
+@@ -22,7 +22,7 @@
+ 
+ #include<vector>
+ #include<opencv2/core/core.hpp>
+-#include<opencv2/features2d/features2d.hpp>
++#include<opencv2/features.hpp>
+ #include"sophus/sim3.hpp"
+ 
+ #include"MapPoint.h"
+diff -ruN a/include/Optimizer.h b/include/Optimizer.h
+--- a/include/Optimizer.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/Optimizer.h	2026-10-07 12:21:41.778909874 +0300
+@@ -53,6 +53,11 @@
+     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
+                                        const unsigned long nLoopKF=0, const bool bRobust = true);
+     void static FullInertialBA(Map *pMap, int its, const bool bFixLocal=false, const unsigned long nLoopKF=0, bool *pbStopFlag=NULL, bool bInit=false, float priorG = 1e2, float priorA=1e6, Eigen::VectorXd *vSingVal = NULL, bool *bHess=NULL);
++    static void BundleAdjustment(const std::vector<KeyFrame*> &, const std::vector<MapPoint*> &,
++        int, std::atomic<bool> &, unsigned long = 0, bool = true);
++    static void GlobalBundleAdjustemnt(Map *, int, std::atomic<bool> &, unsigned long = 0, bool = true);
++    static void FullInertialBA(Map *, int, bool, unsigned long, std::atomic<bool> &,
++        bool = false, float = 1e2, float = 1e6, Eigen::VectorXd * = NULL, bool * = NULL);
+ 
+     void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag, Map *pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges);
+ 
+@@ -99,6 +104,12 @@
+     void static InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &scale);
+ 
+     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
++private:
++    template<class StopFlag> static void BundleAdjustmentImpl(const std::vector<KeyFrame*> &,
++        const std::vector<MapPoint*> &, int, StopFlag *, unsigned long, bool);
++    template<class StopFlag> static void GlobalBundleAdjustemntImpl(Map *, int, StopFlag *, unsigned long, bool);
++    template<class StopFlag> static void FullInertialBAImpl(Map *, int, bool, unsigned long,
++        StopFlag *, bool, float, float, Eigen::VectorXd *, bool *);
+ };
+ 
+ } //namespace ORB_SLAM3
+diff -ruN a/include/OptimizerStop.h b/include/OptimizerStop.h
+--- a/include/OptimizerStop.h	1970-01-01 03:00:00.000000000 +0300
++++ b/include/OptimizerStop.h	2026-10-07 12:21:41.760227113 +0300
+@@ -0,0 +1,16 @@
++// SPDX-License-Identifier: MIT
++// Copyright (c) 2026 EmberBSD contributors
++#ifndef ORB_SLAM3_OPTIMIZER_STOP_H
++#define ORB_SLAM3_OPTIMIZER_STOP_H
++#include "Thirdparty/g2o/g2o/core/sparse_optimizer.h"
++namespace ORB_SLAM3 {
++inline void SetOptimizerStop(g2o::SparseOptimizer &optimizer, bool *stop)
++{
++    optimizer.setForceStopFlag(stop);
++}
++inline void SetOptimizerStop(g2o::SparseOptimizer &optimizer, std::atomic<bool> *stop)
++{
++    optimizer.setAtomicForceStopFlag(stop);
++}
++}
++#endif
+diff -ruN a/include/SerializationUtils.h b/include/SerializationUtils.h
+--- a/include/SerializationUtils.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/SerializationUtils.h	2026-10-07 09:51:01.025184898 +0300
+@@ -26,7 +26,7 @@
+ #include <Eigen/Core>
+ 
+ #include <opencv2/core/core.hpp>
+-#include <opencv2/features2d/features2d.hpp>
++#include <opencv2/features.hpp>
+ 
+ #include <vector>
+ 
+diff -ruN a/include/System.h b/include/System.h
+--- a/include/System.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/System.h	2026-10-07 09:51:00.875403234 +0300
+@@ -30,13 +30,17 @@
+ 
+ #include "Tracking.h"
+ #include "FrameDrawer.h"
++#ifndef ORB_SLAM3_HEADLESS
+ #include "MapDrawer.h"
++#endif
+ #include "Atlas.h"
+ #include "LocalMapping.h"
+ #include "LoopClosing.h"
+ #include "KeyFrameDatabase.h"
+ #include "ORBVocabulary.h"
++#ifndef ORB_SLAM3_HEADLESS
+ #include "Viewer.h"
++#endif
+ #include "ImuTypes.h"
+ #include "Settings.h"
+ 
+diff -ruN a/include/ThreadUtils.h b/include/ThreadUtils.h
+--- a/include/ThreadUtils.h	1970-01-01 03:00:00.000000000 +0300
++++ b/include/ThreadUtils.h	2026-10-07 12:15:46.153638795 +0300
+@@ -0,0 +1,13 @@
++// SPDX-License-Identifier: MIT
++// Copyright (c) 2026 EmberBSD contributors
++#ifndef ORB_SLAM3_THREAD_UTILS_H
++#define ORB_SLAM3_THREAD_UTILS_H
++#include <thread>
++namespace ORB_SLAM3 {
++inline void JoinUnlessCurrent(std::thread &worker)
++{
++    if (worker.joinable() && worker.get_id() != std::this_thread::get_id())
++        worker.join();
++}
++}
++#endif
+diff -ruN a/include/Tracking.h b/include/Tracking.h
+--- a/include/Tracking.h	2021-12-22 13:56:08.000000000 +0300
++++ b/include/Tracking.h	2026-10-07 09:51:01.027599446 +0300
+@@ -21,9 +21,11 @@
+ #define TRACKING_H
+ 
+ #include <opencv2/core/core.hpp>
+-#include <opencv2/features2d/features2d.hpp>
++#include <opencv2/features.hpp>
+ 
++#ifndef ORB_SLAM3_HEADLESS
+ #include "Viewer.h"
++#endif
+ #include "FrameDrawer.h"
+ #include "Atlas.h"
+ #include "LocalMapping.h"
+@@ -32,7 +34,9 @@
+ #include "ORBVocabulary.h"
+ #include "KeyFrameDatabase.h"
+ #include "ORBextractor.h"
++#ifndef ORB_SLAM3_HEADLESS
+ #include "MapDrawer.h"
++#endif
+ #include "System.h"
+ #include "ImuTypes.h"
+ #include "Settings.h"
+@@ -46,6 +50,7 @@
+ {
+ 
+ class Viewer;
++class MapDrawer;
+ class FrameDrawer;
+ class Atlas;
+ class LocalMapping;
+diff -ruN a/include/TrackingHistory.h b/include/TrackingHistory.h
+--- a/include/TrackingHistory.h	1970-01-01 03:00:00.000000000 +0300
++++ b/include/TrackingHistory.h	2026-10-07 13:34:19.187119573 +0300
+@@ -0,0 +1,39 @@
++/**
++* This file is part of ORB-SLAM3
++*
++* Copyright (C) 2017-2021 Carlos Campos, Richard Elvira, Juan J. Gómez Rodríguez, José M.M. Montiel and Juan D. Tardós, University of Zaragoza.
++* Copyright (C) 2014-2016 Raúl Mur-Artal, José M.M. Montiel and Juan D. Tardós, University of Zaragoza.
++*
++* ORB-SLAM3 is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
++* License as published by the Free Software Foundation, either version 3 of the License, or
++* (at your option) any later version.
++*
++* ORB-SLAM3 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
++* the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License along with ORB-SLAM3.
++* If not, see <http://www.gnu.org/licenses/>.
++*/
++
++// AI-assisted EmberBSD extraction of the unavailable-pose history branch.
++#ifndef ORB_SLAM3_TRACKING_HISTORY_H
++#define ORB_SLAM3_TRACKING_HISTORY_H
++#include <list>
++#include <sophus/se3.hpp>
++
++namespace ORB_SLAM3 {
++class KeyFrame;
++
++inline void AppendUnavailableFrame(std::list<Sophus::SE3f> &poses,
++    std::list<KeyFrame *> &references, std::list<double> &timestamps,
++    std::list<bool> &lost, double current_timestamp)
++{
++    // Retain aligned list entries without claiming a previous pose is current.
++    poses.push_back(poses.back());
++    references.push_back(references.back());
++    timestamps.push_back(current_timestamp);
++    lost.push_back(true);
++}
++}
++#endif
+diff -ruN a/src/Atlas.cc b/src/Atlas.cc
+--- a/src/Atlas.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Atlas.cc	2026-10-07 11:21:16.481830241 +0300
+@@ -17,7 +17,6 @@
+ */
+ 
+ #include "Atlas.h"
+-#include "Viewer.h"
+ 
+ #include "GeometricCamera.h"
+ #include "Pinhole.h"
+diff -ruN a/src/CameraModels/KannalaBrandt8.cpp b/src/CameraModels/KannalaBrandt8.cpp
+--- a/src/CameraModels/KannalaBrandt8.cpp	2021-12-22 13:56:08.000000000 +0300
++++ b/src/CameraModels/KannalaBrandt8.cpp	2026-10-07 12:50:32.947142981 +0300
+@@ -17,6 +17,7 @@
+ */
+ 
+ #include "KannalaBrandt8.h"
++#include <opencv2/geometry.hpp>
+ 
+ #include <boost/serialization/export.hpp>
+ 
+diff -ruN a/src/Frame.cc b/src/Frame.cc
+--- a/src/Frame.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Frame.cc	2026-10-07 12:49:06.556139953 +0300
+@@ -17,6 +17,7 @@
+ */
+ 
+ #include "Frame.h"
++#include <opencv2/geometry.hpp>
+ 
+ #include "G2oTypes.h"
+ #include "MapPoint.h"
+diff -ruN a/src/FrameDrawer.cc b/src/FrameDrawer.cc
+--- a/src/FrameDrawer.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/FrameDrawer.cc	2026-10-07 09:51:01.034724255 +0300
+@@ -20,7 +20,7 @@
+ #include "Tracking.h"
+ 
+ #include <opencv2/core/core.hpp>
+-#include <opencv2/highgui/highgui.hpp>
++#include <opencv2/imgproc.hpp>
+ 
+ #include<mutex>
+ 
+diff -ruN a/src/LocalMapping.cc b/src/LocalMapping.cc
+--- a/src/LocalMapping.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/LocalMapping.cc	2026-10-07 09:51:46.162659117 +0300
+@@ -1158,9 +1158,10 @@
+ 
+ void LocalMapping::SetFinish()
+ {
++    // Use the same lock order as Release during shutdown.
++    unique_lock<mutex> lock2(mMutexStop);
+     unique_lock<mutex> lock(mMutexFinish);
+     mbFinished = true;    
+-    unique_lock<mutex> lock2(mMutexStop);
+     mbStopped = true;
+ }
+ 
+diff -ruN a/src/LoopClosing.cc b/src/LoopClosing.cc
+--- a/src/LoopClosing.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/LoopClosing.cc	2026-10-07 12:27:51.031628446 +0300
+@@ -966,31 +966,31 @@
+     return num_matches;
+ }
+ 
+-void LoopClosing::CorrectLoop()
++void LoopClosing::StopLocalMappingForLoop()
+ {
+-    //cout << "Loop detected!" << endl;
+-
+-    // Send a stop signal to Local Mapping
+-    // Avoid new keyframes are inserted while correcting the loop
+-    mpLocalMapper->RequestStop();
+-    mpLocalMapper->EmptyQueue(); // Proccess keyframes in the queue
+-
+     // If a Global Bundle Adjustment is running, abort it
+     if(isRunningGBA())
+     {
+         cout << "Stoping Global Bundle Adjustment...";
+-        unique_lock<mutex> lock(mMutexGBA);
+-        mbStopGBA = true;
+-
+-        mnFullBAIdx++;
+-
+-        if(mpThreadGBA)
+         {
+-            mpThreadGBA->detach();
+-            delete mpThreadGBA;
++            unique_lock<mutex> lock(mMutexGBA);
++            mbStopGBA = true;
++            mnFullBAIdx++;
+         }
++        // The GBA worker also acquires mMutexGBA while finishing.
++        JoinGlobalBundleAdjustment();
+         cout << "  Done!!" << endl;
+     }
++    // A finishing GBA calls Release(). Let it finish before requesting stop,
++    // otherwise Release can erase our new stop request.
++    JoinGlobalBundleAdjustment();
++    mpLocalMapper->RequestStop();
++    mpLocalMapper->EmptyQueue();
++}
++
++void LoopClosing::CorrectLoop()
++{
++    StopLocalMappingForLoop();
+ 
+     // Wait until Local Mapping has effectively stopped
+     while(!mpLocalMapper->isStopped())
+@@ -1198,12 +1198,18 @@
+     // Launch a new thread to perform Global Bundle Adjustment (Only if few keyframes, if not it would take too much time)
+     if(!pLoopMap->isImuInitialized() || (pLoopMap->KeyFramesInMap()<200 && mpAtlas->CountMaps()==1))
+     {
+-        mbRunningGBA = true;
+-        mbFinishedGBA = false;
+-        mbStopGBA = false;
++        JoinGlobalBundleAdjustment();
+         mnCorrectionGBA = mnNumCorrection;
+ 
+-        mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustment, this, pLoopMap, mpCurrentKF->mnId);
++        unsigned long generation;
++        {
++            unique_lock<mutex> lock(mMutexGBA);
++            mbRunningGBA = true;
++            mbFinishedGBA = false;
++            mbStopGBA = false;
++            generation = mnFullBAIdx;
++        }
++        mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustmentForGeneration, this, pLoopMap, mpCurrentKF->mnId, generation);
+     }
+ 
+     // Loop closed. Release Local Mapping.
+@@ -1230,16 +1236,12 @@
+     // If a Global Bundle Adjustment is running, abort it
+     if(isRunningGBA())
+     {
+-        unique_lock<mutex> lock(mMutexGBA);
+-        mbStopGBA = true;
+-
+-        mnFullBAIdx++;
+-
+-        if(mpThreadGBA)
+         {
+-            mpThreadGBA->detach();
+-            delete mpThreadGBA;
++            unique_lock<mutex> lock(mMutexGBA);
++            mbStopGBA = true;
++            mnFullBAIdx++;
+         }
++        JoinGlobalBundleAdjustment();
+         bRelaunchBA = true;
+     }
+ 
+@@ -1763,10 +1765,16 @@
+     if(bRelaunchBA && (!pCurrentMap->isImuInitialized() || (pCurrentMap->KeyFramesInMap()<200 && mpAtlas->CountMaps()==1)))
+     {
+         // Launch a new thread to perform Global Bundle Adjustment
+-        mbRunningGBA = true;
+-        mbFinishedGBA = false;
+-        mbStopGBA = false;
+-        mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustment,this, pMergeMap, mpCurrentKF->mnId);
++        JoinGlobalBundleAdjustment();
++        unsigned long generation;
++        {
++            unique_lock<mutex> lock(mMutexGBA);
++            mbRunningGBA = true;
++            mbFinishedGBA = false;
++            mbStopGBA = false;
++            generation = mnFullBAIdx;
++        }
++        mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustmentForGeneration,this, pMergeMap, mpCurrentKF->mnId, generation);
+     }
+ 
+     mpMergeMatchedKF->AddMergeEdge(mpCurrentKF);
+@@ -1803,16 +1811,12 @@
+     // If a Global Bundle Adjustment is running, abort it
+     if(isRunningGBA())
+     {
+-        unique_lock<mutex> lock(mMutexGBA);
+-        mbStopGBA = true;
+-
+-        mnFullBAIdx++;
+-
+-        if(mpThreadGBA)
+         {
+-            mpThreadGBA->detach();
+-            delete mpThreadGBA;
++            unique_lock<mutex> lock(mMutexGBA);
++            mbStopGBA = true;
++            mnFullBAIdx++;
+         }
++        JoinGlobalBundleAdjustment();
+         bRelaunchBA = true;
+     }
+ 
+@@ -2266,7 +2270,17 @@
+ }
+ 
+ void LoopClosing::RunGlobalBundleAdjustment(Map* pActiveMap, unsigned long nLoopKF)
+-{  
++{
++    unsigned long generation;
++    {
++        unique_lock<mutex> lock(mMutexGBA);
++        generation = mnFullBAIdx;
++    }
++    RunGlobalBundleAdjustmentForGeneration(pActiveMap, nLoopKF, generation);
++}
++
++void LoopClosing::RunGlobalBundleAdjustmentForGeneration(Map* pActiveMap, unsigned long nLoopKF, const unsigned long idx)
++{
+     Verbose::PrintMess("Starting Global Bundle Adjustment", Verbose::VERBOSITY_NORMAL);
+ 
+ #ifdef REGISTER_TIMES
+@@ -2281,9 +2295,9 @@
+     const bool bImuInit = pActiveMap->isImuInitialized();
+ 
+     if(!bImuInit)
+-        Optimizer::GlobalBundleAdjustemnt(pActiveMap,10,&mbStopGBA,nLoopKF,false);
++        Optimizer::GlobalBundleAdjustemnt(pActiveMap,10,mbStopGBA,nLoopKF,false);
+     else
+-        Optimizer::FullInertialBA(pActiveMap,7,false,nLoopKF,&mbStopGBA);
++        Optimizer::FullInertialBA(pActiveMap,7,false,nLoopKF,mbStopGBA);
+ 
+ #ifdef REGISTER_TIMES
+     std::chrono::steady_clock::time_point time_EndGBA = std::chrono::steady_clock::now();
+@@ -2297,7 +2311,6 @@
+     }
+ #endif
+ 
+-    int idx =  mnFullBAIdx;
+     // Optimizer::GlobalBundleAdjustemnt(mpMap,10,&mbStopGBA,nLoopKF,false);
+ 
+     // Update all MapPoints and KeyFrames
+@@ -2510,6 +2523,20 @@
+     }
+ }
+ 
++void LoopClosing::JoinGlobalBundleAdjustment()
++{
++    if (mpThreadGBA)
++    {
++        if (mpThreadGBA->joinable())
++            mpThreadGBA->join();
++        delete mpThreadGBA;
++        mpThreadGBA = nullptr;
++    }
++    unique_lock<mutex> lock(mMutexGBA);
++    mbRunningGBA = false;
++    mbFinishedGBA = true;
++}
++
+ void LoopClosing::RequestFinish()
+ {
+     unique_lock<mutex> lock(mMutexFinish);
+diff -ruN a/src/Map.cc b/src/Map.cc
+--- a/src/Map.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Map.cc	2026-10-07 11:22:39.887251916 +0300
+@@ -30,7 +30,7 @@
+ mbFail(false), mIsInUse(false), mHasTumbnail(false), mbBad(false), mnMapChangeNotified(0), mbIsInertial(false), mbIMU_BA1(false), mbIMU_BA2(false)
+ {
+     mnId=nNextId++;
+-    mThumbnail = static_cast<GLubyte*>(NULL);
++    mThumbnail = nullptr;
+ }
+ 
+ Map::Map(int initKFid):mnInitKFid(initKFid), mnMaxKFid(initKFid),/*mnLastLoopKFid(initKFid),*/ mnBigChangeIdx(0), mIsInUse(false),
+@@ -38,7 +38,7 @@
+                        mnMapChange(0), mbFail(false), mnMapChangeNotified(0), mbIsInertial(false), mbIMU_BA1(false), mbIMU_BA2(false)
+ {
+     mnId=nNextId++;
+-    mThumbnail = static_cast<GLubyte*>(NULL);
++    mThumbnail = nullptr;
+ }
+ 
+ Map::~Map()
+@@ -51,7 +51,7 @@
+ 
+     if(mThumbnail)
+         delete mThumbnail;
+-    mThumbnail = static_cast<GLubyte*>(NULL);
++    mThumbnail = nullptr;
+ 
+     mvpReferenceMapPoints.clear();
+     mvpKeyFrameOrigins.clear();
+diff -ruN a/src/ORBextractor.cc b/src/ORBextractor.cc
+--- a/src/ORBextractor.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/ORBextractor.cc	2026-10-07 09:51:01.035590841 +0300
+@@ -53,8 +53,8 @@
+ 
+ 
+ #include <opencv2/core/core.hpp>
+-#include <opencv2/highgui/highgui.hpp>
+-#include <opencv2/features2d/features2d.hpp>
++#include <opencv2/imgproc.hpp>
++#include <opencv2/features.hpp>
+ #include <opencv2/imgproc/imgproc.hpp>
+ #include <vector>
+ #include <iostream>
+diff -ruN a/src/ORBmatcher.cc b/src/ORBmatcher.cc
+--- a/src/ORBmatcher.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/ORBmatcher.cc	2026-10-07 11:21:16.501318073 +0300
+@@ -25,7 +25,7 @@
+ 
+ #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
+ 
+-#include<stdint-gcc.h>
++#include<stdint.h>
+ 
+ using namespace std;
+ 
+diff -ruN a/src/Optimizer.cc b/src/Optimizer.cc
+--- a/src/Optimizer.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Optimizer.cc	2026-10-07 13:00:50.233571738 +0300
+@@ -18,6 +18,7 @@
+ 
+ 
+ #include "Optimizer.h"
++#include "OptimizerStop.h"
+ 
+ 
+ #include <complex>
+@@ -51,15 +52,39 @@
+ 
+ void Optimizer::GlobalBundleAdjustemnt(Map* pMap, int nIterations, bool* pbStopFlag, const unsigned long nLoopKF, const bool bRobust)
+ {
++    GlobalBundleAdjustemntImpl(pMap, nIterations, pbStopFlag, nLoopKF, bRobust);
++}
++
++void Optimizer::GlobalBundleAdjustemnt(Map* pMap, int nIterations, std::atomic<bool>& stop, unsigned long nLoopKF, bool bRobust)
++{
++    GlobalBundleAdjustemntImpl(pMap, nIterations, &stop, nLoopKF, bRobust);
++}
++
++template<class StopFlag>
++void Optimizer::GlobalBundleAdjustemntImpl(Map* pMap, int nIterations, StopFlag* pbStopFlag, unsigned long nLoopKF, bool bRobust)
++{
+     vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();
+     vector<MapPoint*> vpMP = pMap->GetAllMapPoints();
+-    BundleAdjustment(vpKFs,vpMP,nIterations,pbStopFlag, nLoopKF, bRobust);
++    BundleAdjustmentImpl(vpKFs,vpMP,nIterations,pbStopFlag, nLoopKF, bRobust);
+ }
+ 
+ 
+ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<MapPoint *> &vpMP,
+                                  int nIterations, bool* pbStopFlag, const unsigned long nLoopKF, const bool bRobust)
+ {
++    BundleAdjustmentImpl(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust);
++}
++
++void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<MapPoint *> &vpMP,
++                                 int nIterations, std::atomic<bool>& stop, unsigned long nLoopKF, bool bRobust)
++{
++    BundleAdjustmentImpl(vpKFs, vpMP, nIterations, &stop, nLoopKF, bRobust);
++}
++
++template<class StopFlag>
++void Optimizer::BundleAdjustmentImpl(const vector<KeyFrame *> &vpKFs, const vector<MapPoint *> &vpMP,
++                                 int nIterations, StopFlag* pbStopFlag, unsigned long nLoopKF, bool bRobust)
++{
+     vector<bool> vbNotIncludedMP;
+     vbNotIncludedMP.resize(vpMP.size());
+ 
+@@ -77,7 +102,7 @@
+     optimizer.setVerbose(false);
+ 
+     if(pbStopFlag)
+-        optimizer.setForceStopFlag(pbStopFlag);
++        SetOptimizerStop(optimizer, pbStopFlag);
+ 
+     long unsigned int maxKFid = 0;
+ 
+@@ -389,8 +414,23 @@
+     }
+ }
+ 
++// Provide concrete implementations for both public stop-flag APIs.
++template void Optimizer::BundleAdjustmentImpl<bool>(const vector<KeyFrame *> &, const vector<MapPoint *> &, int, bool *, unsigned long, bool);
++template void Optimizer::BundleAdjustmentImpl<std::atomic<bool>>(const vector<KeyFrame *> &, const vector<MapPoint *> &, int, std::atomic<bool> *, unsigned long, bool);
++
+ void Optimizer::FullInertialBA(Map *pMap, int its, const bool bFixLocal, const long unsigned int nLoopId, bool *pbStopFlag, bool bInit, float priorG, float priorA, Eigen::VectorXd *vSingVal, bool *bHess)
+ {
++    FullInertialBAImpl(pMap, its, bFixLocal, nLoopId, pbStopFlag, bInit, priorG, priorA, vSingVal, bHess);
++}
++
++void Optimizer::FullInertialBA(Map *pMap, int its, bool bFixLocal, unsigned long nLoopId, std::atomic<bool>& stop, bool bInit, float priorG, float priorA, Eigen::VectorXd *vSingVal, bool *bHess)
++{
++    FullInertialBAImpl(pMap, its, bFixLocal, nLoopId, &stop, bInit, priorG, priorA, vSingVal, bHess);
++}
++
++template<class StopFlag>
++void Optimizer::FullInertialBAImpl(Map *pMap, int its, bool bFixLocal, unsigned long nLoopId, StopFlag *pbStopFlag, bool bInit, float priorG, float priorA, Eigen::VectorXd *vSingVal, bool *bHess)
++{
+     long unsigned int maxKFid = pMap->GetMaxKFid();
+     const vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();
+     const vector<MapPoint*> vpMPs = pMap->GetAllMapPoints();
+@@ -409,7 +449,7 @@
+     optimizer.setVerbose(false);
+ 
+     if(pbStopFlag)
+-        optimizer.setForceStopFlag(pbStopFlag);
++        SetOptimizerStop(optimizer, pbStopFlag);
+ 
+     int nNonFixed = 0;
+ 
+diff -ruN a/src/Settings.cc b/src/Settings.cc
+--- a/src/Settings.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Settings.cc	2026-10-07 12:50:32.972151808 +0300
+@@ -17,6 +17,7 @@
+ */
+ 
+ #include "Settings.h"
++#include <opencv2/stereo.hpp>
+ 
+ #include "CameraModels/Pinhole.h"
+ #include "CameraModels/KannalaBrandt8.h"
+diff -ruN a/src/System.cc b/src/System.cc
+--- a/src/System.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/System.cc	2026-10-07 12:15:46.173130020 +0300
+@@ -19,9 +19,13 @@
+ 
+ 
+ #include "System.h"
++#include "ThreadUtils.h"
+ #include "Converter.h"
+ #include <thread>
++#ifndef ORB_SLAM3_HEADLESS
+ #include <pangolin/pangolin.h>
++#endif
++#include <stdexcept>
+ #include <iomanip>
+ #include <openssl/md5.h>
+ #include <boost/serialization/base_object.hpp>
+@@ -43,6 +47,12 @@
+     mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false), mbResetActiveMap(false),
+     mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbShutDown(false)
+ {
++#ifdef ORB_SLAM3_HEADLESS
++    if (bUseViewer)
++        throw std::invalid_argument("ORB-SLAM3 was built headless; viewer=true is unsupported");
++#endif
++    mptViewer = nullptr;
++
+     // Output welcome message
+     cout << endl <<
+     "ORB-SLAM3 Copyright (C) 2017-2020 Carlos Campos, Richard Elvira, Juan J. Gómez, José M.M. Montiel and Juan D. Tardós, University of Zaragoza." << endl <<
+@@ -183,7 +193,11 @@
+ 
+     //Create Drawers. These are used by the Viewer
+     mpFrameDrawer = new FrameDrawer(mpAtlas);
++#ifndef ORB_SLAM3_HEADLESS
+     mpMapDrawer = new MapDrawer(mpAtlas, strSettingsFile, settings_);
++#else
++    mpMapDrawer = nullptr;
++#endif
+ 
+     //Initialize the Tracking thread
+     //(it will live in the main thread of execution, the one that called this constructor)
+@@ -225,6 +239,7 @@
+ 
+     //usleep(10*1000*1000);
+ 
++#ifndef ORB_SLAM3_HEADLESS
+     //Initialize the Viewer thread and launch
+     if(bUseViewer)
+     //if(false) // TODO
+@@ -236,6 +251,8 @@
+         mpViewer->both = mpFrameDrawer->both;
+     }
+ 
++#endif
++
+     // Fix verbosity
+     Verbose::SetTh(Verbose::VERBOSITY_QUIET);
+ 
+@@ -523,27 +540,23 @@
+ 
+     mpLocalMapper->RequestFinish();
+     mpLoopCloser->RequestFinish();
+-    /*if(mpViewer)
++#ifndef ORB_SLAM3_HEADLESS
++    if(mpViewer)
+     {
+         mpViewer->RequestFinish();
+-        while(!mpViewer->isFinished())
+-            usleep(5000);
+-    }*/
++        // Viewer::Run can request Shutdown from its own menu callback.
++        if (mptViewer)
++            JoinUnlessCurrent(*mptViewer);
++    }
++#endif
+ 
+-    // Wait until all thread have effectively stopped
+-    /*while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
+-    {
+-        if(!mpLocalMapper->isFinished())
+-            cout << "mpLocalMapper is not finished" << endl;*/
+-        /*if(!mpLoopCloser->isFinished())
+-            cout << "mpLoopCloser is not finished" << endl;
+-        if(mpLoopCloser->isRunningGBA()){
+-            cout << "mpLoopCloser is running GBA" << endl;
+-            cout << "break anyway..." << endl;
+-            break;
+-        }*/
+-        /*usleep(5000);
+-    }*/
++    // Call Shutdown after the final Track* call. Joining the loop worker
++    // before GBA prevents creation of another GBA worker during shutdown.
++    if (mptLocalMapping->joinable())
++        mptLocalMapping->join();
++    if (mptLoopClosing->joinable())
++        mptLoopClosing->join();
++    mpLoopCloser->JoinGlobalBundleAdjustment();
+ 
+     if(!mStrSaveAtlasToFile.empty())
+     {
+@@ -551,9 +564,6 @@
+         SaveAtlas(FileType::BINARY_FILE);
+     }
+ 
+-    /*if(mpViewer)
+-        pangolin::BindToContext("ORB-SLAM2: Map Viewer");*/
+-
+ #ifdef REGISTER_TIMES
+     mpTracker->PrintTimeStats();
+ #endif
+@@ -1546,4 +1556,3 @@
+ }
+ 
+ } //namespace ORB_SLAM
+-
+diff -ruN a/src/Tracking.cc b/src/Tracking.cc
+--- a/src/Tracking.cc	2021-12-22 13:56:08.000000000 +0300
++++ b/src/Tracking.cc	2026-10-07 13:34:19.234981095 +0300
+@@ -18,6 +18,7 @@
+ 
+ 
+ #include "Tracking.h"
++#include "TrackingHistory.h"
+ 
+ #include "ORBmatcher.h"
+ #include "FrameDrawer.h"
+@@ -2199,8 +2200,10 @@
+ 
+         // Update drawer
+         mpFrameDrawer->Update(this);
++#ifndef ORB_SLAM3_HEADLESS
+         if(mCurrentFrame.isSet())
+             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
++#endif
+ 
+         if(bOK || mState==RECENTLY_LOST)
+         {
+@@ -2215,8 +2218,10 @@
+                 mbVelocity = false;
+             }
+ 
++#ifndef ORB_SLAM3_HEADLESS
+             if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+                 mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
++#endif
+ 
+             // Clean VO matches
+             for(int i=0; i<mCurrentFrame.N; i++)
+@@ -2311,10 +2316,8 @@
+         else
+         {
+             // This can happen if tracking is lost
+-            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+-            mlpReferences.push_back(mlpReferences.back());
+-            mlFrameTimes.push_back(mlFrameTimes.back());
+-            mlbLost.push_back(mState==LOST);
++            AppendUnavailableFrame(mlRelativeFramePoses, mlpReferences,
++                mlFrameTimes, mlbLost, mCurrentFrame.mTimeStamp);
+         }
+ 
+     }
+@@ -2438,7 +2441,9 @@
+ 
+         mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.push_back(pKFini);
+ 
++#ifndef ORB_SLAM3_HEADLESS
+         mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
++#endif
+ 
+         mState=OK;
+     }
+@@ -2649,7 +2654,9 @@
+ 
+     mpAtlas->SetReferenceMapPoints(mvpLocalMapPoints);
+ 
++#ifndef ORB_SLAM3_HEADLESS
+     mpMapDrawer->SetCurrentCameraPose(pKFcur->GetPose());
++#endif
+ 
+     mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.push_back(pKFini);
+ 
+@@ -3780,6 +3787,7 @@
+ {
+     Verbose::PrintMess("System Reseting", Verbose::VERBOSITY_NORMAL);
+ 
++#ifndef ORB_SLAM3_HEADLESS
+     if(mpViewer)
+     {
+         mpViewer->RequestStop();
+@@ -3787,6 +3795,7 @@
+             usleep(3000);
+     }
+ 
++#endif
+     // Reset Local Mapping
+     if (!bLocMap)
+     {
+@@ -3831,8 +3840,10 @@
+     mpLastKeyFrame = static_cast<KeyFrame*>(NULL);
+     mvIniMatches.clear();
+ 
++#ifndef ORB_SLAM3_HEADLESS
+     if(mpViewer)
+         mpViewer->Release();
++#endif
+ 
+     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
+ }
+@@ -3840,6 +3851,7 @@
+ void Tracking::ResetActiveMap(bool bLocMap)
+ {
+     Verbose::PrintMess("Active map Reseting", Verbose::VERBOSITY_NORMAL);
++#ifndef ORB_SLAM3_HEADLESS
+     if(mpViewer)
+     {
+         mpViewer->RequestStop();
+@@ -3847,6 +3859,7 @@
+             usleep(3000);
+     }
+ 
++#endif
+     Map* pMap = mpAtlas->GetCurrentMap();
+ 
+     if (!bLocMap)
+@@ -3922,8 +3935,10 @@
+ 
+     mbVelocity = false;
+ 
++#ifndef ORB_SLAM3_HEADLESS
+     if(mpViewer)
+         mpViewer->Release();
++#endif
+ 
+     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
+ }

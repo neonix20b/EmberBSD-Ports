@@ -54,6 +54,12 @@ runtime behavior are validated.
   The [standalone BPSK example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/gnuradio-channel)
   recovers 2,048 payload bits through a noisy software channel and measures
   the expected errors without carrier correction. No physical SDR or GUI is required.
+- [Offline visual SLAM](probes/orb-slam3/README.md): ORB-SLAM3 v1.0 uses common
+  Eigen 5.0.1/OpenCV 5.0.0 through a headless adaptation with worker shutdown,
+  cancellation and missing-pose export regressions. Eight installed AArch64 VM
+  cases pass. The [RGB-D example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
+  tracks 573 TUM fr1/desk pairs with 1.71–1.76 cm translation ATE RMSE in two
+  controlled runs. Cameras, IMU fusion, boards and sustained operation are unverified.
 - [Robotics and automotive developer tools](probes/robotics-tools/README.md):
   MCAP C++ 2.1.3, AprilTag 3.4.5, dbcppp 3.2.6, iso14229 0.11.0,
   Ceres 2.2.0, BehaviorTree.CPP 4.9.0 and libmodbus 3.2.0 source profiles.
