@@ -1,0 +1,215 @@
+From: EmberBSD Ports contributors
+Subject: [LOCAL] virtio-gpu: classic backing ownership ledger
+
+Origin: EmberBSD, AI-assisted by Codex. Not submitted or accepted upstream.
+Against pinned QEMU 6601422 after complete selected UTM overlay and C8b CREATE.
+Original Red Hat authors and GPL-2.0-or-later notices remain in source.
+
+--- a/hw/display/virtio-gpu-virgl.c
++++ b/hw/display/virtio-gpu-virgl.c
+@@ -44,6 +44,12 @@
+      VIRGL_VERSION_MICRO >= (micro))
+ #endif
+ 
++enum virtio_gpu_classic_backing_state {
++    CLASSIC_BACKING_NONE,
++    CLASSIC_BACKING_ATTACHED,
++    CLASSIC_BACKING_DETACHED_RETAINED,
++};
++
+ struct virtio_gpu_virgl_resource {
+     struct virtio_gpu_simple_resource base;
+     MemoryRegion *mr;
+@@ -53,6 +59,11 @@
+     /* A MAP_BLOB is suspended at the cmdq head (renderer_blocked held)
+      * until the in-flight unmap of this resource finalizes. */
+     bool map_blocked;
++    /* QEMU owns classic DMA mappings; the renderer only borrows them. */
++    bool classic_backing_managed;
++    enum virtio_gpu_classic_backing_state classic_backing_state;
++    struct iovec *classic_iov;
++    uint32_t classic_iov_count;
+ };
+ 
+ static struct virtio_gpu_virgl_resource *
+@@ -68,6 +79,41 @@
+     return container_of(res, struct virtio_gpu_virgl_resource, base);
+ }
+ 
++/* Main-loop serialized: keep DMA mappings live through renderer CUSTOM copy. */
++static void detach_classic_backing(struct virtio_gpu_virgl_resource *res)
++{
++    struct iovec *iov = NULL;
++    int count = 0;
++
++    if (res->classic_backing_state != CLASSIC_BACKING_ATTACHED) {
++        return;
++    }
++    virgl_renderer_resource_detach_iov(res->base.resource_id, &iov, &count);
++    if (iov != res->classic_iov || count < 0 ||
++        (uint32_t)count != res->classic_iov_count) {
++        /* A host ownership violation must not complete reset or free DMA. */
++        error_report("virtio-gpu: classic backing detach ownership mismatch");
++        abort();
++    }
++    res->classic_backing_state = CLASSIC_BACKING_DETACHED_RETAINED;
++}
++
++static void release_classic_backing(VirtIOGPU *g,
++                                    struct virtio_gpu_virgl_resource *res)
++{
++    if (res->classic_backing_state == CLASSIC_BACKING_ATTACHED) {
++        error_report("virtio-gpu: releasing attached classic backing");
++        abort();
++    }
++    if (res->classic_backing_state == CLASSIC_BACKING_DETACHED_RETAINED) {
++        virtio_gpu_cleanup_mapping_iov(g, res->classic_iov,
++                                       res->classic_iov_count);
++        res->classic_iov = NULL;
++        res->classic_iov_count = 0;
++        res->classic_backing_state = CLASSIC_BACKING_NONE;
++    }
++}
++
+ #if VIRGL_RENDERER_CALLBACKS_VERSION >= 4
+ static void *
+ virgl_get_egl_display(G_GNUC_UNUSED void *cookie)
+@@ -138,10 +184,15 @@
+     }
+     res->unref_cmd = NULL;
+ 
+-    virgl_renderer_resource_detach_iov(res->base.resource_id,
++    if (res->classic_backing_managed) {
++        detach_classic_backing(res);
++        release_classic_backing(g, res);
++    } else {
++        virgl_renderer_resource_detach_iov(res->base.resource_id,
+                                        &res_iovs, &num_iovs);
+-    if (res_iovs != NULL && num_iovs != 0) {
+-        virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++        if (res_iovs != NULL && num_iovs != 0) {
++            virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++        }
+     }
+     virgl_renderer_resource_unref(res->base.resource_id);
+     QTAILQ_REMOVE(&g->reslist, &res->base, next);
+@@ -369,9 +420,14 @@
+     }
+ #endif
+ 
+-    virgl_renderer_resource_detach_iov(res->resource_id, &res_iovs, &num_iovs);
+-    if (res_iovs && num_iovs) {
+-        virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++    if (vres->classic_backing_managed) {
++        detach_classic_backing(vres);
++        release_classic_backing(g, vres);
++    } else {
++        virgl_renderer_resource_detach_iov(res->resource_id, &res_iovs, &num_iovs);
++        if (res_iovs && num_iovs) {
++            virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++        }
+     }
+     /* The detached iov is the same allocation virgl took at attach time;
+      * clear res->iov so the base destroy does not free it again. */
+@@ -448,6 +504,7 @@
+         return;
+     }
+ 
++    res->classic_backing_managed = true;
+     QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ }
+ 
+@@ -509,6 +566,7 @@
+         return;
+     }
+ 
++    res->classic_backing_managed = true;
+     QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ }
+ 
+@@ -552,11 +610,16 @@
+     }
+ #endif
+ 
+-    virgl_renderer_resource_detach_iov(unref.resource_id,
++    if (res->classic_backing_managed) {
++        detach_classic_backing(res);
++        release_classic_backing(g, res);
++    } else {
++        virgl_renderer_resource_detach_iov(unref.resource_id,
+                                        &res_iovs,
+                                        &num_iovs);
+-    if (res_iovs != NULL && num_iovs != 0) {
+-        virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++        if (res_iovs != NULL && num_iovs != 0) {
++            virtio_gpu_cleanup_mapping_iov(g, res_iovs, num_iovs);
++        }
+     }
+     virgl_renderer_resource_unref(unref.resource_id);
+ 
+@@ -820,6 +883,7 @@
+                                           struct virtio_gpu_ctrl_command *cmd)
+ {
+     struct virtio_gpu_resource_attach_backing att_rb;
++    struct virtio_gpu_virgl_resource *res;
+     struct iovec *res_iovs;
+     uint32_t res_niov;
+     int ret;
+@@ -827,6 +891,13 @@
+     VIRTIO_GPU_FILL_CMD(att_rb);
+     trace_virtio_gpu_cmd_res_back_attach(att_rb.resource_id);
+ 
++    res = virtio_gpu_virgl_find_resource(g, att_rb.resource_id);
++    if (res && res->classic_backing_managed &&
++        res->classic_backing_state == CLASSIC_BACKING_DETACHED_RETAINED) {
++        error_report("virtio-gpu: attach during retained classic backing");
++        abort();
++    }
++
+     ret = virtio_gpu_create_mapping_iov(g, att_rb.nr_entries, sizeof(att_rb),
+                                         cmd, NULL, &res_iovs, &res_niov);
+     if (ret != 0) {
+@@ -834,23 +905,42 @@
+         return;
+     }
+ 
++    if (res && res->classic_backing_managed && res_niov > INT_MAX) {
++        virtio_gpu_cleanup_mapping_iov(g, res_iovs, res_niov);
++        cmd->error = VIRTIO_GPU_RESP_ERR_UNSPEC;
++        return;
++    }
++
+     ret = virgl_renderer_resource_attach_iov(att_rb.resource_id,
+                                              res_iovs, res_niov);
+ 
+-    if (ret != 0)
++    if (ret != 0) {
+         virtio_gpu_cleanup_mapping_iov(g, res_iovs, res_niov);
++    } else if (res && res->classic_backing_managed && res_iovs) {
++        res->classic_iov = res_iovs;
++        res->classic_iov_count = res_niov;
++        res->classic_backing_state = CLASSIC_BACKING_ATTACHED;
++    }
+ }
+ 
+ static void virgl_resource_detach_backing(VirtIOGPU *g,
+                                           struct virtio_gpu_ctrl_command *cmd)
+ {
+     struct virtio_gpu_resource_detach_backing detach_rb;
++    struct virtio_gpu_virgl_resource *res;
+     struct iovec *res_iovs = NULL;
+     int num_iovs = 0;
+ 
+     VIRTIO_GPU_FILL_CMD(detach_rb);
+     trace_virtio_gpu_cmd_res_back_detach(detach_rb.resource_id);
+ 
++    res = virtio_gpu_virgl_find_resource(g, detach_rb.resource_id);
++    if (res && res->classic_backing_managed) {
++        detach_classic_backing(res);
++        release_classic_backing(g, res);
++        return;
++    }
++
+     virgl_renderer_resource_detach_iov(detach_rb.resource_id,
+                                        &res_iovs,
+                                        &num_iovs);

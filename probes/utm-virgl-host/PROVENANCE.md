@@ -72,3 +72,31 @@ QEMU file SHA256 is
 the IOV-plus-CREATE renderer file SHA256 is
 `7bb55e69e483df96d7e14895dab2e0cae6f13d60c8fcd0293169a2942fe421df`.
 [`CREATE.md`](CREATE.md) records preparation, causal checks and limitations.
+
+## Classic backing ownership stage
+
+[BACKING.md](BACKING.md) describes the local AI-assisted foundation. Its only
+production target is QEMU `hw/display/virtio-gpu-virgl.c`; the patch is local,
+not submitted or accepted upstream. Red Hat authors and GPL-2.0-or-later notices
+remain in all prepared QEMU files. Renderer code is unchanged beyond the prior
+accepted IOV/local CREATE stages. Selected renderer originals come from the
+same archive and retain MIT/BSD notices, including Michael Ringgaard's IOV code.
+New shell/AWK/C helpers retain `LICENSE.tests` and SPDX BSD-2-Clause notices.
+
+`prepare-backing.sh` consumes the complete pinned mbox and records all sections,
+including exclusions. It preserves author/subject/commit metadata in each of
+eight selected complete file diffs. No individual function hunks are selected
+from that overlay. C8b QEMU hunk coordinates are derived mechanically with
+complete exact-context and complete CREATE-body identity checks; the accepted
+raw patch/entry bytes remain unchanged. Preparation records complete source
+SHA256 receipts. No full host build or upstream acceptance is implied.
+
+| Prepared source or patch | SHA256 |
+|---|---|
+| Post-overlay GPU GL | `36ae5b2763e48aa696a574ac7c50c46e59020cfa47989d1c2d0deb000ad174f4` |
+| Post-overlay GPU VirGL | `fa586e30890ca8e55899b69151bcba043acb89b1deddd2b89f8c27d4fb81c1e0` |
+| Post-overlay GPU | `669effd30d221024f40af56b842247a5a2be8c68bc471ac533415214ac48d304` |
+| Post-overlay GPU header | `25e032f22e32d860fea74c1e598de1df0268111a1d2e7367dcbdd9e5f42a8a73` |
+| Post-overlay plus C8b GPU VirGL baseline | `c381fd9bdf0c6fb3e58dcb01c263b1cc77d510f0b39fa31e654933c7de1f5544` |
+| Final GPU VirGL ledger | `a7bb36d50c0ff30a88a2313554fbf3c73a3f9bf24298a10035ac6351ecf26e5f` |
+| `patches/backing-qemu-local.patch` | `d5e6a264f3902843f0225723aaa6cdface622bdd1c5516338a08a38e2c2d72de` |

@@ -106,6 +106,15 @@ completion/reset, full QEMU and host builds, installation, pixel readback and
 acceleration remain unverified. [CREATE.md](CREATE.md) records the seams,
 exact source preparation and remaining gate.
 
+The separate [classic backing foundation](BACKING.md) records guest DMA mapping
+ownership through actual renderer CUSTOM detach and all cleanup consumers,
+including UTM's deferred finish_unmap. Selected-file projection applies all
+eight relevant whole UTM overlay sections before accepted CREATE and the local
+QEMU ledger patch. Compiled baseline RED, patched GREEN, ASan/UBSan and NDEBUG
+contracts pass; removing the deferred consumer's helpers causes a runtime
+ownership failure. This source foundation does not qualify reset quiescence
+or a complete installed host.
+
 The former 0.10.4 recovery host and the UTM beta installation are unchanged.
 There is no installed host, enabled VirGL, pixel, Mesa runtime, GPU/NPU,
 VM or board validation claim. Parent integration owns publication and the
