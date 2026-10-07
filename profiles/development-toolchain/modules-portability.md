@@ -48,7 +48,7 @@ they do not establish a rebuilt native frontend or installable package.
 Use the committed source delta with the retained configured native GCC build.
 Preserve the original source, `cp/module.o`, `cc1plus`, command lines and hashes
 before replacing owned outputs. Recompile only `cp/module.o` and relink
-`cc1plus`; do not rebuild unchanged GCC objects or modify original suite logs.
+`cc1plus`, refreshing its generated checksum object. Do not rebuild unchanged\nGCC objects or modify original suite logs.
 Test with the existing installed GCC driver and a private `-B` frontend prefix,
 starting with the unchanged upstream `atom-pragma-1.C`, then export/import/link
 and run a small module consumer. Keep the ordinary loader and existing runtime.
@@ -58,4 +58,33 @@ levels. Keep the original package for rollback. Do not infer that this repair
 resolves all failures in the original full module suite. Common consumer
 selection must require the repaired package revision while retaining the valid
 `GCC_REQD=16.2` major/minor floor; that policy update needs its own real pkgsrc
-metadata validation. Native compiler, package and policy results are pending.
+metadata validation. The common profile uses the standard
+`BUILDLINK_API_DEPENDS.gcc16+=gcc16>=16.2.0nb1` dependency.
+
+## Validation status
+
+The private repaired frontend and the exact stripped frontend extracted from
+the repaired package pass the unchanged upstream `atom-pragma-1.C` and a small
+module export/import/link/run check on Orange Pi Zero 3W A733 with the updated
+EmberBSD kernel/libc. All five compile/link/run statuses are zero; the consumer
+prints 42. Native production-extracted tests reproduce baseline/upstream-only
+failures for 45 and pass all 16 final allocation cases plus 16 ftruncate-only
+cases. These bounded checks do not establish complete C++ modules support.
+
+Normal pkgsrc fresh check-files and package creation pass for
+`gcc16-16.2.0nb1`, SHA256
+`0dd92fa4b006bd66d61841ef6401f193b2950fa96809a5193ea46aab5af4a433`.
+The package identity is checked inside `+CONTENTS`; only the staged C++
+frontend differs from the original payload. Drivers/runtime libraries remain
+byte-identical. The original package is retained for rollback. Package
+installation and the updated native common-consumer fixture remain pending.
+
+Real exported C/C++ recipe metadata preserves the repaired revision dependency,
+`GCC_REQD=16.2`, the full compiler package and no separate runtime. Package
+matching rejects 16.2.0 and accepts nb1/nb2. Run the focused revision check with
+an actual native make/pkg_admin or the documented host metadata boundary:
+
+```sh
+sh profiles/common-build-tools/tests/gcc16-revision.sh \
+    EXPORTED_PKGSRC MAKE_WRAPPER PKG_ADMIN NEW_OUTPUT
+```

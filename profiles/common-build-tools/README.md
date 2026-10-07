@@ -41,7 +41,7 @@ requires Python 314, Meson >=1.12.1 and pkgsrc GCC for native NetBSD 11/AArch64,
 with final `LOCALBASE=PREFIX=/usr/pkg` and one worker. It sets `GCC_REQD+=16.2`,
 `PKGSRC_COMPILER=gcc`, `USE_PKGSRC_GCC=yes` and `USE_NATIVE_GCC=no`.
 `GCC_REQD` is a major.minor floor, not an exact installed-version check;
-the prepared recipe supplies `gcc16-16.2.0`. The pinned pkgsrc comparison
+the prepared recipe supplies `gcc16-16.2.0nb1`. The standard\n`BUILDLINK_API_DEPENDS.gcc16+=gcc16>=16.2.0nb1` dependency requires the\n[C++ modules allocation repair](../development-toolchain/modules-portability.md). The pinned pkgsrc comparison
 cannot handle `GCC_REQD=16.2.0`; use `16.2`. Compatible command-line floors
 and `ccache gcc` / `distcc gcc` chains remain supported. Incompatible compiler,
 native-compiler, runtime and dependency-method overrides fail explicitly.
@@ -62,9 +62,9 @@ runtime dependency, including C-only consumers. The public
 and pkgsrc RPATH select the complete package's own runtime. `no` disables
 that separate provider; it does not select the base GCC12 runtime.
 Native compile/link/runtime checks must verify the actual loaded libraries.
-The [native selection fixture](tests/native-compiler-selection/README.md) passes
+The original [native selection fixture](tests/native-compiler-selection/README.md) passes
 on physical Orange Pi Zero 3W: actual pkgsrc wrappers compile and package C/C++,
-and the installed consumer loads the selected GCC16 runtime. The
+and the installed consumer loads the selected GCC16 runtime. The updated\nfixture requires nb1 or newer and must be repeated after repaired-package\ninstallation. The
 [compiler validation](../development-toolchain/native-validation.md) records
 current math dependencies, focused LTO checks and remaining compiler limits.
 This source selection does not change `/usr/bin/cc`, `/etc/mk.conf`, running

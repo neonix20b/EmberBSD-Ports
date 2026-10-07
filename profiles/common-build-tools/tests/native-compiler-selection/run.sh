@@ -19,7 +19,7 @@ case "$(uname -r)" in 11.*) ;; *) fail "requires NetBSD 11" ;; esac
 [ -z "${LD_LIBRARY_PATH-}${LD_PRELOAD-}" ] || fail "loader overrides are forbidden"
 [ -f "$pkgsrc/mk/bsd.pkg.mk" ] && [ -f "$makeconf" ] || fail "missing inputs"
 [ ! -e "$work" ] || fail "work directory already exists"
-pkg_info -e gcc16-16.2.0 >/dev/null || fail "install GCC16 before this check"
+pkg_info -e "gcc16>=16.2.0nb1" >/dev/null || fail "install repaired GCC16 16.2.0nb1 or newer before this check"
 [ "$(/usr/pkg/gcc16/bin/gcc -dumpfullversion)" = 16.2.0 ] || fail "wrong GCC"
 for tool in cwrappers mktools checkperms; do
     pkg_info -e "$tool-[0-9]*" >/dev/null || fail "install $tool before this check"
@@ -63,12 +63,12 @@ grep -Fx prefix=/usr/pkg/gcc16/ "$work/selection.txt" >/dev/null || fail "wrong 
 grep -Fx runtime=no "$work/selection.txt" >/dev/null || fail "separate GCC runtime selected"
 grep -Fx method=full "$work/selection.txt" >/dev/null || fail "missing full GCC dependency"
 grep -Fx fail= "$work/selection.txt" >/dev/null || fail "pkgsrc rejected configuration"
-grep 'gcc16>=16.2' "$work/selection.txt" >/dev/null || fail "missing GCC16.2 floor"
+grep 'gcc16>=16.2.0nb1' "$work/selection.txt" >/dev/null || fail "missing repaired GCC16 package floor"
 if grep gcc16-libs "$work/selection.txt"; then fail "duplicate runtime dependency"; fi
 make_pkg package >"$work/package.log" 2>&1
 package=$work/packages/All/$name.tgz
 tar -xzOf "$package" +CONTENTS >"$work/contents.txt"
-grep '^@pkgdep gcc16>=16.2' "$work/contents.txt" >/dev/null || fail "missing packaged GCC dependency"
+grep '^@pkgdep gcc16>=16.2.0nb1' "$work/contents.txt" >/dev/null || fail "missing packaged GCC dependency"
 if grep -E 'gcc16-libs|^@(exec|unexec)' "$work/contents.txt"; then fail "unexpected package action"; fi
 if tar -tzf "$package" | grep -E '^\+(INSTALL|DEINSTALL)$'; then fail "unexpected package script"; fi
 sha256 "$package" "$work/source/files/consumer.c" "$work/source/files/consumer.cc" >"$work/hashes.txt"

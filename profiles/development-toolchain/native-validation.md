@@ -64,10 +64,12 @@ No vulnerability-database check is claimed; the test host lacked that database.
 
 The completed original VM upstream suite returned status 1 on its earlier
 kernel/libc. Its logs remain unchanged; the board subset does not turn that
-baseline into a successful full suite. A module exporter still reproduces an
-ICE because NetBSD returns EOPNOTSUPP from posix_fallocate; the
-[source repair](modules-portability.md) and its native/package acceptance are
-tracked separately. No complete C++20 modules support is claimed here.
+baseline into a successful full suite. The [module allocation repair](modules-portability.md)
+passes the unchanged upstream reproducer and a module export/import/link/run
+check through a private frontend on this board. The repaired nb1 package also
+passes normal staging/file checks; its extracted frontend passes the same
+private-prefix checks. Global installation and the updated common-consumer
+fixture are pending. No complete C++20 modules support is claimed here.
 
 The VM's old Qt/ICU/LLVM closure still requires coordinated rebuilding.
 Current binutils, self-hosting and complete base/image integration are separate

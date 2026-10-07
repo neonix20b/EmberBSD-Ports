@@ -6,7 +6,7 @@ installed execution, exceptions, and loaded GCC16 C++/unwind libraries.
 It uses normal package and file checks, then removes only its test package.
 It does not change the global compiler or rebuild GCC and its prerequisites.
 
-Run as root on native NetBSD 11/AArch64 after installing GCC 16.2.0,
+Run as root on native NetBSD 11/AArch64 after installing repaired GCC 16.2.0nb1 or newer,
 cwrappers, mktools and checkperms. Use a prepared common-tools pkgsrc export
 and a private MAKECONF that includes its `EMBERBSD-COMMON-TOOLS-MK.CONF`.
 The runner supplies `PREFIX=LOCALBASE=/usr/pkg` before profile evaluation.
@@ -23,8 +23,8 @@ is removed from the export. No loader overrides are allowed.
 
 The original recipe and unchanged C/C++ source bytes passed native
 compile/link/package/install/runtime checks on Orange Pi Zero 3W A733.
-The reusable runner passed the same native gate, including a GDB stop at the
-exported `__cxa_throw` symbol in the stripped installed executable. This focused
+The original runner passed the same native gate with GCC 16.2.0, including a GDB stop at the
+exported `__cxa_throw` symbol in the stripped installed executable. The updated\nrunner requires the repaired package revision; its gate must be repeated after\nthat package is installed. This focused
 contract does not establish GCC self-hosting, complete upstream-suite success,
 C++ modules support, or migration of optional GMP C++ consumers.
 Reuse [the development runtime check](../../../development-toolchain/tests/run.sh)

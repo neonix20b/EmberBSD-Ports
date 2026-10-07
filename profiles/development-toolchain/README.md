@@ -46,8 +46,10 @@ the probe code is BSD-2-Clause.
 
 The [C++ modules allocation repair](modules-portability.md) prepares
 `gcc16-16.2.0nb1` with the accepted upstream `ENOTSUP` fix and a local NetBSD
-`EOPNOTSUPP` extension. Production-function source regressions pass; native
-frontend and repaired package validation remain pending.
+`EOPNOTSUPP` extension. Production-function source regressions and private
+frontend module export/import/link/run pass on Zero 3W A733. Normal package
+creation/file checks pass; installation and the updated common-consumer
+fixture remain pending.
 
 The [TSVC portability backport](testsuite-portability.md) applies GCC's accepted
 NetBSD allocator fix without changing the compiler or runtime. The exported
