@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.22)
+project(ember_gnuradio_contract LANGUAGES CXX)
+enable_testing()
+foreach(prefix PROBE_PREFIX FFTW_PREFIX VOLK_PREFIX)
+    if(NOT IS_ABSOLUTE "${${prefix}}")
+        message(FATAL_ERROR "${prefix} must be an absolute installed prefix")
+    endif()
+endforeach()
+set(spdlog_DIR "${PROBE_PREFIX}/lib/cmake/spdlog")
+set(fmt_DIR "${VOLK_PREFIX}/lib/cmake/fmt")
+set(Volk_DIR "${VOLK_PREFIX}/lib/cmake/volk")
+set(Boost_DIR /usr/pkg/lib/cmake/Boost-1.91.0)
+set(FFTW3f_INCLUDE_DIRS "${FFTW_PREFIX}/include")
+set(FFTW3f_LIBRARIES "${FFTW_PREFIX}/lib/libfftw3f.so")
+set(FFTW3f_THREADS_LIBRARIES "${FFTW_PREFIX}/lib/libfftw3f_threads.so")
+list(APPEND CMAKE_PREFIX_PATH "${PROBE_PREFIX}" "${VOLK_PREFIX}" "${FFTW_PREFIX}" /usr/pkg)
+find_package(Gnuradio 3.10.12.0 EXACT CONFIG REQUIRED
+    COMPONENTS blocks fft filter analog digital channels
+    PATHS "${PROBE_PREFIX}/lib/cmake/gnuradio" NO_DEFAULT_PATH)
+foreach(component pmt runtime blocks fft filter analog digital channels)
+    get_target_property(location gnuradio::gnuradio-${component} IMPORTED_LOCATION_RELEASE)
+    string(FIND "${location}" "${PROBE_PREFIX}/" position)
+    if(NOT position EQUAL 0)
+        message(FATAL_ERROR "GNU Radio ${component} escaped the selected installation")
+    endif()
+endforeach()
+add_executable(gnuradio-contract contract.cc)
+target_compile_features(gnuradio-contract PRIVATE cxx_std_17)
+target_compile_options(gnuradio-contract PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(gnuradio-contract PRIVATE
+    gnuradio::gnuradio-runtime gnuradio::gnuradio-blocks gnuradio::gnuradio-fft
+    gnuradio::gnuradio-filter gnuradio::gnuradio-analog gnuradio::gnuradio-digital
+    gnuradio::gnuradio-channels)
+foreach(mode finite fft error-stop)
+    add_test(NAME gnuradio-${mode} COMMAND gnuradio-contract ${mode} "${PROBE_PREFIX}")
+    set_tests_properties(gnuradio-${mode} PROPERTIES TIMEOUT 20)
+endforeach()

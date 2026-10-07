@@ -49,6 +49,11 @@ runtime behavior are validated.
   They cover filtering, resampling, QPSK, spectra, generic/NEON vector kernels
   and synthetic orientation/bias estimation. Ports preserves the common FFTW,
   source adaptations and pkgsrc patch origins; physical SDR and IMU are unverified.
+- [Software radio flowgraphs](probes/gnuradio/README.md): GNU Radio 3.10.12.0
+  reuses common FFTW/VOLK/fmt and passes three installed AArch64 VM contracts.
+  The [standalone BPSK example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/gnuradio-channel)
+  recovers 2,048 payload bits through a noisy software channel and measures
+  the expected errors without carrier correction. No physical SDR or GUI is required.
 - [Robotics and automotive developer tools](probes/robotics-tools/README.md):
   MCAP C++ 2.1.3, AprilTag 3.4.5, dbcppp 3.2.6, iso14229 0.11.0,
   Ceres 2.2.0, BehaviorTree.CPP 4.9.0 and libmodbus 3.2.0 source profiles.

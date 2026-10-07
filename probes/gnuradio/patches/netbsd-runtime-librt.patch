@@ -1,0 +1,21 @@
+Link NetBSD's POSIX shared-memory implementation from the runtime itself.
+
+GNU Radio 3.10.12.0's vmcircbuf_mmap_shm_open.cc uses shm_open/shm_unlink.
+On NetBSD 11 they are supplied by librt, not libc. Without this dependency,
+the runtime shared library has unresolved symbols and config-info cannot link.
+Original AI-assisted EmberBSD portability patch; not submitted upstream.
+
+--- gnuradio-runtime/lib/CMakeLists.txt.orig
++++ gnuradio-runtime/lib/CMakeLists.txt
+@@ -130,6 +130,11 @@ target_link_libraries(
+         Boost::program_options
+         libunwind::libunwind)
+ 
++# NetBSD provides shm_open and shm_unlink in librt rather than libc.
++if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++    target_link_libraries(gnuradio-runtime PRIVATE rt)
++endif()
++
+ # Address linker issues with std::filesystem on Centos 8 and Debian
+ target_link_libraries(
+     gnuradio-runtime
