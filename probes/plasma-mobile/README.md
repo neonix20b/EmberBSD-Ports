@@ -12,6 +12,12 @@ portability probe, not the final system baseline. The coordinated rebuild
 targets GCC 16.2, Qt 6.12.0 LTS and KDE Frameworks 6.30.0 with one C++ runtime.
 Qt 6.12 was [released on September 30, 2026](https://www.qt.io/blog/qt-6.12-released).
 
+The [common toolkit source candidate](toolkit/README.md) now exports Qt 6.12
+and Frameworks 6.30 over the existing common build-tools profile. Its source,
+patch and selection checks are separate from native packages and PLIST
+acceptance. The [migration sequence](toolkit/MIGRATION.md) preserves one
+runtime closure; current Mesa and FFmpeg package integration is still required.
+
 `sources.sha256` pins original upstream archives. The Plasma hashes were
 checked against KDE's official `.sha256` responses before recording them.
 Keep archives, extracted sources, build products and logs outside Git.

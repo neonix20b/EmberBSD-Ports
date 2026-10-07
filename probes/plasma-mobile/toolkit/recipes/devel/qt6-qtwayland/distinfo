@@ -1,0 +1,7 @@
+$NetBSD: distinfo,v 1.23 2026/08/18 18:26:07 adam Exp $
+
+BLAKE2s (qtwayland-everywhere-src-6.12.0.tar.xz) = d131bf97b9a724a3c62cfdc55504d61bb88b1462311871fce932be8e8c21889a
+SHA512 (qtwayland-everywhere-src-6.12.0.tar.xz) = ec0c926e530e4d5015e60f133e4a84d01309eb8071e604480968d4a17ac06dd7dc1e4d35ce685f56beb824d8a804f07e535b0e074ae469570e61b912822e4473
+Size (qtwayland-everywhere-src-6.12.0.tar.xz) = 908828 bytes
+SHA1 (patch-CMakeLists.txt) = d8e01e15aa06d64810c45a9e72783aea423e152f
+SHA1 (patch-src_configure.cmake) = e9ec38d070fc3830705ae6fd9a6daefaa390f59a

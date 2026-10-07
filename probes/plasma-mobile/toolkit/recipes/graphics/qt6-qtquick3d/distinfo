@@ -1,0 +1,7 @@
+$NetBSD: distinfo,v 1.30 2026/08/18 18:26:04 adam Exp $
+
+BLAKE2s (qtquick3d-everywhere-src-6.12.0.tar.xz) = b00b3b7f3bf60eaada1228d177aa44903c5ae501e9b8d05d1d4ffb2a84f17f9e
+SHA512 (qtquick3d-everywhere-src-6.12.0.tar.xz) = 4b81fb3a6bb5c78e01f3900533deb81fe4ddb79fe0a999ce27f5b6c971e4cc6e340979860eb5358a2156162f710d11af490462aefb4054a9ccc0b8dd3fdd1a77
+Size (qtquick3d-everywhere-src-6.12.0.tar.xz) = 70489844 bytes
+SHA1 (patch-src_3rdparty_xatlas_xatlas.cpp) = 1f6741c74d1b88dc454f188e4756673d4ae80fa2
+SHA1 (patch-src_helpers_proceduralskytexturedata.cpp) = 82b23567218170b016385135d0854bd6c6a544c8

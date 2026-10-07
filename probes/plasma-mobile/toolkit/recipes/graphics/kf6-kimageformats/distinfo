@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.5 2026/09/06 10:05:15 markd Exp $
+
+BLAKE2s (kimageformats-6.30.0.tar.xz) = f79e8104045fc2891b72b8731f083ff309540e52e8bc0a09e42815dc03e04d43
+SHA512 (kimageformats-6.30.0.tar.xz) = 3a18092fb9f44efa4b1261564914e5b88af91d2ea1cc6326a2a22252fab9a86ee57609ab1d754425d3d725525e9c5151da9ff93240ade1bf73938a97f6440497
+Size (kimageformats-6.30.0.tar.xz) = 33912684 bytes

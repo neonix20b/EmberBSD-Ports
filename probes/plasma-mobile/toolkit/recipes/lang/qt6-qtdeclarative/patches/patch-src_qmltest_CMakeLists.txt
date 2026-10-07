@@ -1,0 +1,20 @@
+$NetBSD: patch-src_qmltest_CMakeLists.txt,v 1.1 2022/11/25 11:50:59 nros Exp $
+
+Origin: pkgsrc; AI-assisted EmberBSD refresh for Qt 6.12.0, not submitted upstream.
+
+Preserve the pkgsrc Solaris link option after the new Android target block.
+
+--- src/qmltest/CMakeLists.txt.orig
++++ src/qmltest/CMakeLists.txt
+@@ -62,6 +62,11 @@
+         android/quickforandroidtest.cpp
+ )
+ 
++qt_internal_extend_target(QuickTest CONDITION SOLARIS
++    LINK_OPTIONS
++        -mimpure-text
++)
++
+ qt_internal_add_docs(QuickTest
+     doc/qtqmltest.qdocconf
+ )

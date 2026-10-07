@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.5 2026/09/06 10:05:20 markd Exp $
+
+BLAKE2s (kded-6.30.0.tar.xz) = ad5a6a951ad9e9e3751bb5b3c09a5783ae83da0dcb2653af93426777b36f1c8e
+SHA512 (kded-6.30.0.tar.xz) = 418a5817fb3a28f93ce25b1e18e48d1a955f659231f655a54909900f33808af10f399ca09fcfe34384a6ba103ffbd48f02ea917298fcfabad9ff10df385098b6
+Size (kded-6.30.0.tar.xz) = 34736 bytes

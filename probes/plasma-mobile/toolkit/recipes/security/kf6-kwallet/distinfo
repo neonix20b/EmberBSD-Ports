@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.5 2026/09/06 10:05:17 markd Exp $
+
+BLAKE2s (kwallet-6.30.0.tar.xz) = b107e948e85bad83785a56a1a59b040f445f4465733cabf3136e9cfe29f60e7b
+SHA512 (kwallet-6.30.0.tar.xz) = 3d040fbd907d50dd1a82164fc93af144a7b80026acc2cf1eb0fe65677a2c34a13a202a35160f9bfbf282f91905d4597eafa6291e049db766330242fa516e3ac7
+Size (kwallet-6.30.0.tar.xz) = 378552 bytes

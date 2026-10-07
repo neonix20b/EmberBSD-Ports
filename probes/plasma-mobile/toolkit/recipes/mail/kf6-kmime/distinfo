@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.1 2026/09/06 10:05:15 markd Exp $
+
+BLAKE2s (kmime-6.30.0.tar.xz) = 21f47f5d83d57e0379c5fba5125be50673645e98bb555539aadf690b1c79178c
+SHA512 (kmime-6.30.0.tar.xz) = a4cb622f7fef57346b6be2a325df62260acc97b45c62a1cdaf3217eebf6f809acfd683951e46dc193bfa4e3cdde4d80cec44e99fe61b1fabb9f897529b75bf87
+Size (kmime-6.30.0.tar.xz) = 174940 bytes

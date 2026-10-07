@@ -6,3 +6,4 @@ work.*/
 *.core
 !/pkgsrc/**/Makefile
 !/profiles/common-build-tools/recipes/**/Makefile
+!/probes/plasma-mobile/toolkit/recipes/**/Makefile

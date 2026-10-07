@@ -1,0 +1,19 @@
+$NetBSD: patch-src_plugins_multimedia_ffmpeg_CMakeLists.txt,v 1.3 2026/05/13 05:31:23 adam Exp $
+
+Origin: pkgsrc; AI-assisted EmberBSD refresh for Qt 6.12.0, not submitted upstream.
+
+Link VAAPI directly where FFmpeg stub helpers are unavailable.
+Only Linux and Android include QtAddFFmpegStubs.cmake; the FFmpeg dependency
+metadata may still mention va on other Unix platforms.
+
+--- src/plugins/multimedia/ffmpeg/CMakeLists.txt.orig
++++ src/plugins/multimedia/ffmpeg/CMakeLists.txt
+@@ -119,7 +119,7 @@
+     )
+ 
+     list(FIND FFMPEG_STUBS "va" va_stub_index)
+-    if (${va_stub_index} EQUAL -1)
++    if (${va_stub_index} EQUAL -1 OR NOT (LINUX OR ANDROID))
+         # va is not provided via the stub mechanism: link directly to libva
+         qt_internal_extend_target(FFmpegMediaPluginImplPrivate LIBRARIES VAAPI::VAAPI)
+     elseif (NOT QT_LINK_STUBS_TO_FFMPEG_PLUGIN AND FFMPEG_SHARED_LIBRARIES)

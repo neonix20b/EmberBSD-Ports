@@ -1,0 +1,19 @@
+# $NetBSD: buildlink3.mk,v 1.18 2026/09/02 19:01:31 wiz Exp $
+
+BUILDLINK_TREE+=	kf6-knotifyconfig
+
+.if !defined(KF6_KNOTIFYCONFIG_BUILDLINK3_MK)
+KF6_KNOTIFYCONFIG_BUILDLINK3_MK:=
+
+BUILDLINK_API_DEPENDS.kf6-knotifyconfig+=	kf6-knotifyconfig>=6.30.0
+BUILDLINK_ABI_DEPENDS.kf6-knotifyconfig+=	kf6-knotifyconfig>=6.30.0
+BUILDLINK_PKGSRCDIR.kf6-knotifyconfig?=		../../devel/kf6-knotifyconfig
+
+.include "../../devel/kf6-kconfig/buildlink3.mk"
+.include "../../devel/kf6-ki18n/buildlink3.mk"
+.include "../../devel/kf6-kio/buildlink3.mk"
+.include "../../textproc/kf6-kcompletion/buildlink3.mk"
+.include "../../x11/qt6-qtbase/buildlink3.mk"
+.endif	# KF6_KNOTIFYCONFIG_BUILDLINK3_MK
+
+BUILDLINK_TREE+=	-kf6-knotifyconfig

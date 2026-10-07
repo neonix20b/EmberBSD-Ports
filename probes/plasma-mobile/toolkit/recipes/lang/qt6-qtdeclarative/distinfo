@@ -1,0 +1,11 @@
+$NetBSD: distinfo,v 1.26 2026/08/18 18:26:03 adam Exp $
+
+BLAKE2s (qtdeclarative-everywhere-src-6.12.0.tar.xz) = 192d9d7ba5fd5020347f78bd5680d2c62745cb97b879de7ce3e56ab4e8a5d6b2
+SHA512 (qtdeclarative-everywhere-src-6.12.0.tar.xz) = 7de1bc7484e734c34b4f745d9557536b410e56c02fc5e002bc3dd6265b7442f65856f1d47e1cd59ccb240e2190770da9d5fbbdd0df42257629dbd7c5640bd7e1
+Size (qtdeclarative-everywhere-src-6.12.0.tar.xz) = 39221652 bytes
+SHA1 (patch-src_3rdparty_masm_assembler_ARMv7Assembler.h) = 08689530423b3502f27e532737c1cfc9d9aeac09
+SHA1 (patch-src_3rdparty_masm_wtf_Compiler.h) = 8d7e318e0148eea0f262ec13463bc15bd03478dc
+SHA1 (patch-src_qml_common_qv4alloca__p.h) = bd199e6cc0a7c9f208a3f8180682290ef2efc1f9
+SHA1 (patch-src_qml_jit_qv4assemblercommon__p.h) = 90761bc35eec8adb67c35c335ce7a918281626ce
+SHA1 (patch-src_qml_memory_qv4stacklimits.cpp) = dc86bb49177ce728470367c24fc650b9cf823b5a
+SHA1 (patch-src_qmltest_CMakeLists.txt) = 86ce5687b95e0e6f28a15315b850ad162d59669f

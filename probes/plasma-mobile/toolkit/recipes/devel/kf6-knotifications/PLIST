@@ -1,0 +1,26 @@
+@comment $NetBSD: PLIST,v 1.3 2026/09/06 10:05:13 markd Exp $
+include/KF6/KNotifications/KNotification
+include/KF6/KNotifications/KNotificationConfiguration
+include/KF6/KNotifications/KNotificationPermission
+include/KF6/KNotifications/KNotificationReplyAction
+include/KF6/KNotifications/KNotifyConfig
+include/KF6/KNotifications/knotification.h
+include/KF6/KNotifications/knotificationconfiguration.h
+include/KF6/KNotifications/knotificationpermission.h
+include/KF6/KNotifications/knotificationreplyaction.h
+include/KF6/KNotifications/knotifications_export.h
+include/KF6/KNotifications/knotifications_version.h
+include/KF6/KNotifications/knotifyconfig.h
+lib/cmake/KF6Notifications/KF6NotificationsConfig.cmake
+lib/cmake/KF6Notifications/KF6NotificationsConfigVersion.cmake
+lib/cmake/KF6Notifications/KF6NotificationsTargets-noconfig.cmake
+lib/cmake/KF6Notifications/KF6NotificationsTargets.cmake
+lib/libKF6Notifications.so
+lib/libKF6Notifications.so.6
+lib/libKF6Notifications.so.${PKGVERSION}
+qt6/qml/org/kde/notification/kde-qmlmodule.version
+qt6/qml/org/kde/notification/knotificationqmlplugin.qmltypes
+qt6/qml/org/kde/notification/libknotificationqmlplugin.so
+qt6/qml/org/kde/notification/qmldir
+share/qlogging-categories6/knotifications.categories
+share/qlogging-categories6/knotifications.renamecategories
