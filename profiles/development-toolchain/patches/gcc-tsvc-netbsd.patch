@@ -1,0 +1,34 @@
+Origin: EmberBSD; AI-assisted packaging of an accepted GCC testsuite fix.
+GCC commit 19888932d149c9df18306544d5b0ad0e38f2a6fe by Rainer Orth.
+The compiler and installed runtime are unchanged; this fixes test portability.
+Original patch URL/SHA256 is pinned in ../sources.tsv.
+
+--- a/lang/gcc16/distinfo
++++ b/lang/gcc16/distinfo
+@@ -1,3 +1,4 @@
+ $NetBSD: distinfo,v 1.4 2026/09/26 12:39:53 wiz Exp $
+ 
++SHA1 (patch-gcc_testsuite_gcc.dg_vect_tsvc_tsvc.h) = eb86527a4697d2d1ed34b22c8083796644888b68
+ BLAKE2s (gcc-16.2.0.tar.xz) = b2a4b0c96c7025de8336afaa77eb1c7ce61021110dcf8d3ada3cd064830e5afa
+--- /dev/null
++++ b/lang/gcc16/patches/patch-gcc_testsuite_gcc.dg_vect_tsvc_tsvc.h
+@@ -0,0 +1,19 @@
++$NetBSD$
++
++Origin: GCC upstream 19888932d149c9df18306544d5b0ad0e38f2a6fe.
++Author: Rainer Orth, 2026-07-16; accepted upstream.
++https://github.com/gcc-mirror/gcc/commit/19888932d149c9df18306544d5b0ad0e38f2a6fe
++EmberBSD AI-assisted pkgsrc packaging only. Use NetBSD's POSIX allocator;
++retain all TSVC checks and the upstream University of Illinois license.
++
++--- gcc/testsuite/gcc.dg/vect/tsvc/tsvc.h.orig
+++++ gcc/testsuite/gcc.dg/vect/tsvc/tsvc.h
++@@ -195,7 +195,7 @@ void set_2d_array(real_t arr[LEN_2D][LEN_2D], real_t value, int stride)
++ }
++ 
++ void init(int** ip, real_t* s1, real_t* s2){
++-#if !defined (__APPLE__) && !defined (_AIX) && !defined(__DragonFly__)
+++#if !defined (__APPLE__) && !defined (_AIX) && !defined(__DragonFly__) && !defined(__NetBSD__)
++     xx = (real_t*) memalign(ARRAY_ALIGNMENT, LEN_1D*sizeof(real_t));
++     *ip = (int *) memalign(ARRAY_ALIGNMENT, LEN_1D*sizeof(real_t));
++ #else

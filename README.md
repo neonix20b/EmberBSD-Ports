@@ -25,7 +25,8 @@ runtime behavior are validated.
 - [Common development toolchain](profiles/development-toolchain/README.md):
   GCC 16.2.0 builds and installs as an AArch64 VM candidate, passing native
   C11/C++20 threads, TLS and shared-library runtime checks. The full upstream
-  suite exposes platform compatibility failures; their repair, the common
+  suite exposes platform compatibility failures; a tested upstream backport
+  repairs TSVC allocation on NetBSD. Remaining repairs, the common
   Qt/LLVM rebuild and image/default integration remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source

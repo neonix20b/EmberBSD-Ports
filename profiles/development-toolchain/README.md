@@ -40,6 +40,10 @@ runtime ABI is renamed. Existing pkgsrc patches retain their authorship.
 GCC and its runtime retain upstream licenses and GCC Runtime Library Exception;
 the probe code is BSD-2-Clause.
 
+The [TSVC portability backport](testsuite-portability.md) applies GCC's accepted
+NetBSD allocator fix without changing the compiler or runtime. The exported
+recipe keeps every vectorization assertion and the strict test exit status.
+
 ```sh
 git submodule update --init --depth 1 upstream/pkgsrc
 sh scripts/prepare-pkgsrc.sh /absolute/new-pkgsrc development-toolchain

@@ -122,7 +122,7 @@ fi
 mkdir "$work/gcc-reference"
 git -C "$root/upstream/pkgsrc" archive HEAD lang/gcc16 lang/gcc16-libs lang/gcc16-libjit \
     math/mpcomplex devel/gtexinfo lang/tcl-expect | tar -xf - -C "$work/gcc-reference"
-for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch; do
+for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch; do
     patch -f -E -F 0 -p1 -d "$work/gcc-reference" < \
         "$root/profiles/development-toolchain/patches/$delta" >> "$work/gcc-export.log"
 done

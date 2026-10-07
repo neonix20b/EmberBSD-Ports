@@ -102,7 +102,7 @@ for recipe in lang/python314 devel/meson; do
 done
 git -C "$root/upstream/pkgsrc" archive HEAD lang/gcc16 lang/gcc16-libs lang/gcc16-libjit \
     math/mpcomplex devel/gtexinfo lang/tcl-expect | tar -xf - -C "$work/reference"
-for patch in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch; do
+for patch in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch; do
     patch -f -N -E -F 0 -p1 -d "$work/reference" < \
         "$root/profiles/development-toolchain/patches/$patch" >> "$work/gcc-reference.log"
 done
