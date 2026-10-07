@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Origin: EmberBSD, AI-assisted source and profile integration regression.
 set -eu
-[ "$#" -eq 2 ] || { echo "Usage: $0 VERIFIED_DISTFILES NEW_WORK" >&2; exit 2; }
+[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { echo "Usage: $0 VERIFIED_DISTFILES NEW_WORK [python-source]" >&2; exit 2; }
+scope=${3:-all}
+case "$scope" in all|python-source) ;; *) echo 'Unknown source gate.' >&2; exit 2 ;; esac
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 distfiles=$(CDPATH= cd -- "$1" && pwd)
 mkdir "$2"
@@ -32,10 +34,12 @@ export DIGEST=$work/digest
 verifier=$root/upstream/pkgsrc/mk/checksum/checksum.awk
 while IFS="$(printf '\t')" read -r archive sha url; do
     case "$archive" in ''|'#'*) continue ;; esac
+    [ "$scope" != python-source ] || [ "$archive" = Python-3.14.8.tar.xz ] || continue
     [ "$(shasum -a 256 "$distfiles/$archive" | awk '{print $1}')" = "$sha" ]
 done < "$profile/sources.tsv"
 for pair in 'lang/python314 Python-3.14.8.tar.xz' 'devel/meson meson-1.12.1.tar.gz'; do
     set -- $pair
+    [ "$scope" != python-source ] || [ "$1" = lang/python314 ] || continue
     recipe=$profile/recipes/$1 archive=$2
     awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$recipe/distinfo" > "$work/required-patches"
     while read -r required; do [ -f "$recipe/patches/$required" ]; done < "$work/required-patches"
@@ -45,10 +49,13 @@ for pair in 'lang/python314 Python-3.14.8.tar.xz' 'devel/meson meson-1.12.1.tar.
     awk -f "$verifier" -- -p "$recipe/distinfo" "$recipe"/patches/patch-*
 done
 # A corrupt archive, unfiltered RCS hash, and absent required patch must fail.
-cp "$distfiles/meson-1.12.1.tar.gz" "$work/meson-1.12.1.tar.gz"
-printf x >> "$work/meson-1.12.1.tar.gz"
-if (cd "$work" && awk -f "$verifier" -- "$profile/recipes/devel/meson/distinfo" \
-    meson-1.12.1.tar.gz) > "$work/corrupt.log" 2>&1; then exit 1; fi
+if [ "$scope" = python-source ]; then corrupt=Python-3.14.8.tar.xz; recipe=lang/python314; else
+    corrupt=meson-1.12.1.tar.gz; recipe=devel/meson
+fi
+cp "$distfiles/$corrupt" "$work/$corrupt"
+printf x >> "$work/$corrupt"
+if (cd "$work" && awk -f "$verifier" -- "$profile/recipes/$recipe/distinfo" \
+    "$corrupt") > "$work/corrupt.log" 2>&1; then exit 1; fi
 raw=$(shasum -a 1 "$profile/recipes/lang/python314/patches/patch-configure" | awk '{print $1}')
 sed "s/^SHA1 (patch-configure) = .*/SHA1 (patch-configure) = $raw/" \
     "$profile/recipes/lang/python314/distinfo" > "$work/raw-distinfo"
@@ -56,12 +63,16 @@ if awk -f "$verifier" -- -p "$work/raw-distinfo" \
     "$profile/recipes/lang/python314/patches/patch-configure" > "$work/raw.log" 2>&1; then exit 1; fi
 if awk -f "$verifier" -- -p "$profile/recipes/lang/python314/distinfo" \
     "$work/patch-configure" > "$work/missing.log" 2>&1; then exit 1; fi
-mkdir "$work/python-pristine" "$work/python-patched" "$work/meson-patched"
+mkdir "$work/python-pristine" "$work/python-patched"
 tar -xf "$distfiles/Python-3.14.8.tar.xz" --strip-components=1 -C "$work/python-pristine"
 cp -R "$work/python-pristine/." "$work/python-patched/"
-tar -xf "$distfiles/meson-1.12.1.tar.gz" --strip-components=1 -C "$work/meson-patched"
+if [ "$scope" = all ]; then
+    mkdir "$work/meson-patched"
+    tar -xf "$distfiles/meson-1.12.1.tar.gz" --strip-components=1 -C "$work/meson-patched"
+fi
 for pair in 'lang/python314 python-patched' 'devel/meson meson-patched'; do
     set -- $pair
+    [ "$scope" != python-source ] || [ "$1" = lang/python314 ] || continue
     recipe=$profile/recipes/$1 tree=$work/$2
     for delta in "$recipe"/patches/patch-*; do
         patch -f -N -F 0 -p0 -d "$tree" < "$delta"
@@ -83,16 +94,26 @@ for module in test_capi/test_slice test_free_threading/test_context; do
     done
 done
 cmp "$work/python-pristine/configure.ac" "$work/python-patched/configure.ac"
-cmp "$root/upstream/pkgsrc/devel/meson/PLIST" "$profile/recipes/devel/meson/PLIST"
-# The dropped ELF depfixer patch must leave this upstream implementation exact.
-# The pristine archive copy is small; inspect it without modifying saved sources.
-mkdir "$work/meson-pristine"
-tar -xf "$distfiles/meson-1.12.1.tar.gz" --strip-components=1 -C "$work/meson-pristine"
-cmp "$work/meson-pristine/mesonbuild/scripts/depfixer.py" "$work/meson-patched/mesonbuild/scripts/depfixer.py"
+cmp "$work/python-pristine/Modules/faulthandler.c" "$work/python-patched/Modules/faulthandler.c"
+if [ "$scope" = all ]; then
+    cmp "$root/upstream/pkgsrc/devel/meson/PLIST" "$profile/recipes/devel/meson/PLIST"
+    # The dropped ELF depfixer patch must leave this upstream implementation exact.
+    # The pristine archive copy is small; inspect it without modifying saved sources.
+    mkdir "$work/meson-pristine"
+    tar -xf "$distfiles/meson-1.12.1.tar.gz" --strip-components=1 -C "$work/meson-pristine"
+    cmp "$work/meson-pristine/mesonbuild/scripts/depfixer.py" "$work/meson-patched/mesonbuild/scripts/depfixer.py"
+fi
 sh "$root/scripts/prepare-pkgsrc.sh" "$work/pkgsrc" common-build-tools > "$work/export.log"
 for recipe in lang/python314 devel/meson; do
+    [ "$scope" != python-source ] || [ "$recipe" = lang/python314 ] || continue
     diff -r "$profile/recipes/$recipe" "$work/pkgsrc/$recipe"
 done
+if [ "$scope" = python-source ]; then
+    [ ! -e "$work/pkgsrc/lang/python314/patches/patch-Modules_faulthandler.c" ]
+    ! grep -q 'patch-Modules_faulthandler.c' "$work/pkgsrc/lang/python314/distinfo"
+    echo 'PASS: Python source/checksum/negative cases/export; unchanged Meson/GCC/native contracts not run'
+    exit 0
+fi
 # Existing GCC recipes must remain byte-for-byte identical to the established
 # development profile composition. This checks the newly added export mode.
 mkdir "$work/gcc-reference"

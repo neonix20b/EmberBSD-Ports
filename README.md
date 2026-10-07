@@ -29,7 +29,8 @@ runtime behavior are validated.
   Qt/LLVM rebuild and image/default integration remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   coherent Python 3.14.8 and Meson 1.12.1 source recipes, strict common
-  interpreter/tool selection and host source contracts. Native packages,
+  interpreter/tool selection, host source contracts and focused native
+  macro/selection checks. Native packages,
   installed extensions, ELF consumers and LLVM23/Mesa26 acceptance remain pending.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,

@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-2-Clause
 # Origin: EmberBSD, AI-assisted extraction of CPython's production definitions.
-# Compile the proposed upstream array count, without dropping the recipe workaround.
+# Compile upstream's array count with the retained platform macro adaptations.
 set -eu
 [ "$#" -eq 3 ] || { echo "Usage: $0 PATCHED_PYTHON PRISTINE_PYTHON NEW_WORK" >&2; exit 2; }
 patched=$1 pristine=$2

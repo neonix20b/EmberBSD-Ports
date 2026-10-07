@@ -2,7 +2,8 @@
 
 This profile prepares one common Python 3.14.8 and Meson 1.12.1 for the
 GCC 16 / LLVM 23 / Mesa 26 dependency closure. Source preparation and host
-contracts are available. Native packages, package-file checks, installed
+contracts and focused native macro/selection checks pass. Native packages,
+package-file checks, installed
 extensions and consumers remain pending. This is not an installed Mesa stack.
 
 The profile owns the full `lang/python314` and `devel/meson` recipes, based on
@@ -51,7 +52,7 @@ these adaptations have not been submitted or accepted upstream.
 | `Lib_ctypes_util.py` | Retain PREFIX/X11 clang search and conditional SunOS lookup. |
 | `Lib_sysconfig_____init____.py` | Retain coupled platform-only sysconfig and config-directory naming. |
 | `Makefile.pre.in` | Retain install ordering, optimization levels 0/1, naming and suppression of generic libpython3.so; correct the policy description. |
-| `Modules_faulthandler.c` | Retain manual count until the actual macro/initializer contract passes native GCC16; host success is insufficient. |
+| `Modules_faulthandler.c` | Drop the inherited manual-count workaround after eight actual native GCC16 initializer variants and pointer rejection pass; retain the upstream array-derived count. |
 | `Modules_readline.c` | Retain selected readline portability; editline is not accepted here. |
 | `Modules_socketmodule.c` | Retain conditional SunOS declaration. |
 | `configure` | Retain packaging/UUID hunks; remove blanket cross-validation bypass. |
@@ -95,13 +96,18 @@ sh profiles/common-build-tools/tests/source-profile.sh \
     /absolute/verified-distfiles /absolute/new-source-check
 ```
 
-The test verifies archives and all 14 patches through actual pkgsrc
+The test verifies archives and all 13 patches through actual pkgsrc
 `checksum.awk`, rejects corrupted archives, unfiltered patch hashes,
 missing patches and repeated application, and applies the full series
 forward with zero fuzz. It checks PLIST additions and restored upstream
 ELF fixup, exports exact recipes, compares unchanged GCC recipe composition,
 and rejects existing destinations and unknown profiles. Logs and extracted
 sources remain in the private output directory.
+
+The named `python-source` third argument limits a follow-up to Python archive,
+eight-patch series, negative checksum/application cases, source invariants and
+exact exported recipe. It explicitly excludes unchanged Meson/GCC/native
+contracts from its result; omitted tests are not counted as passed.
 
 Actual Meson CLI fixtures exercise C++20 through a compiler proxy and ten
 LLVM selection cases. Fake LLVM metadata proves tool choice/error handling;
@@ -113,7 +119,8 @@ refuses it. The fixture preserves the actual configure statuses.
 `tests/python-selection.sh EXPORTED_PKGSRC NEW_WORK` parses the actual
 pkgsrc selection block with BSD make. It checks default 314, rejected old
 CLI selection and unsupported/incompatible consumers. If BSD make is absent,
-the source check prints an explicit SKIP; native parsing remains required.
+the source check prints an explicit SKIP. Native NetBSD BSD make has passed
+the five selection cases; full package parsing/builds remain required.
 
 The faulthandler compile gate is independently usable by a native parent:
 
@@ -130,8 +137,10 @@ only the declaration-only visibility macro for unrelated prototypes is supplied.
 Host builds select the NetBSD
 macro branch after their system headers; they are not NetBSD execution proof.
 The sole suppressed warning covers intentionally omitted trailing record
-fields, as in the production initializer. Native GCC16 evidence is required
-before dropping the count workaround; LLVM23 should check the same contract.
+fields, as in the production initializer. Native GCC16 passed all eight
+variants and pointer rejection, allowing removal of the manual count.
+LLVM23 should check the same contract. See [native evidence](native-evidence.md)
+for the bounded result; this is not a native Python package acceptance.
 
 ## Native acceptance still required
 
