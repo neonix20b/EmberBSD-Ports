@@ -146,7 +146,9 @@ runtime behavior are validated.
   The [full renderer recipe](probes/utm-virgl-host/host/README.md) builds and
   links with current libepoxy 1.5.10 on macOS. Direct Apple M3 acceptance
   passes texture readback, real fences and three cleanup/reinit cycles; a
-  reproduced null-context cleanup failure is fixed. The [full paired QEMU
+  reproduced null-context cleanup failure is fixed. Truncated command payloads
+  also return EINVAL instead of false success, verified through the full native
+  decoder with valid-command controls. The [full paired QEMU
   recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
   Native reset/display lifetimes and the accelerated guest session remain

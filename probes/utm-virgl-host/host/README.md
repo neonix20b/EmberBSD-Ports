@@ -14,7 +14,8 @@ host boundary are documented in [CREATE.md](../CREATE.md#version-selection-and-r
 Preparation invokes the accepted IOV/CREATE/backing/lifecycle/completion/wait
 chain unchanged. Exact whole renderer files overlay the complete pinned archive;
 unmodified translation units, generated headers and Meson are built together.
-QEMU remains a selected-source contract at this stage, not a full host build.
+The separate [paired QEMU recipe](../qemu/README.md) builds the full host and
+checks a bounded 2D guest boot; this recipe tests the renderer directly.
 
 Upstream libepoxy 1.5.10 lacks this UTM macOS EGL/ANGLE integration. The patch
 rebases UTM commit `bf98587477fe68d07b93319ece7b40a7d0e2eabe` from its 1.5.9 base
@@ -32,6 +33,13 @@ blitter context's destroy callback. Full native cleanup exposed an unconditional
 `destroy_gl_context(NULL)`, which caused EGL_BAD_CONTEXT in the embedding host.
 Ordinary owned-context cleanup is retained. This local fix and the epoxy rebase
 have not been submitted or accepted upstream.
+
+`decoder-truncated-error.patch` also returns EINVAL when a command payload
+extends beyond its submitted buffer. Previously the decoder marked its context
+in error, broke the loop and returned success to the caller. The patch preserves
+the existing bounds check and context error, changing only the returned status.
+It is a local, AI-assisted MIT adaptation, not an accepted upstream change.
+Already executed commands are not rolled back.
 
 ## Reproduction
 
@@ -102,19 +110,28 @@ the checked polling API, and cleans up. It verifies rejection of live reinit,
 conservation of created contexts and continued usability of the caller's EGL
 context/display. This is direct renderer API execution, without a guest VM.
 
+Each cycle also submits six command buffers through the complete decoder with
+real EGL contexts. Before the decoder fix, missing payload, truncation after a
+valid command and an absent maximum-size payload returned success: three failures
+out of six cases. The fixed library returns EINVAL; NOP, opaque END_TRANSFERS
+padding and unknown-opcode controls retain their expected results. All six pass
+in each of three cycles. This does not prove rollback of a valid command prefix
+or all command semantics. The native test is not sanitizer-instrumented.
+
 Before the blitter fix, full native cleanup failed on the absent context. The
 small regression compiles the complete original/patched `vrend_blitter_fini`
 body with explicit callback/table seams. Plain and ASan/UBSan agree: baseline
 has eight checks and four behavioral failures; patched has six checks and none.
 The difference is two forbidden null-destroy calls. Owned cleanup and repeated
 cleanup are checked. This seam does not validate GL program deletion or ABI layout.
-Nine guards reject invalid work paths, missing/altered archives, patch/manifest
+Ten guards reject invalid work paths, missing/altered archives, both patch types/manifest
 drift, and changed source/header/DSO files before native execution.
 
 The native renderer warns that ARB/KHR robustness is absent. The short successful
-run does not qualify recovery from GPU faults. Native error injection, query,
+run does not qualify recovery from GPU faults. Native backend error injection, query,
 draw, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
-qualification remain open. Full QEMU build, reset/BH/display integration, guest
-DMA and Mesa consumers are also unverified. No accelerated EmberBSD session,
+qualification remain open. The full QEMU build and bounded 2D boot are checked
+separately; live QEMU decoder-error delivery, reset/BH/display integration, guest
+3D DMA and Mesa consumers are unverified. No accelerated EmberBSD session,
 Vulkan Compute, NPU execution or target package registration is established.
-The classic lifecycle profile remains OFF in the host and guest configuration.
+The host classic profile defaults to OFF; guest VirGL remains disabled.

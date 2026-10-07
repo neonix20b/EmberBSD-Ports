@@ -11,7 +11,7 @@ hash() { shasum -a 256 "$1" | awk '{print $1}'; }
 base=$work/stages/renderer-extra-original/src/vrend/vrend_blitter.c
 fixed=$work/renderer/src/vrend/vrend_blitter.c
 [ "$(hash "$base")" = 06521a4bc1320a2e6e02d553fb8d02361c18c22a6b348247999810e7aa31dfb3 ]
-expected=$(awk -F '\t' '$1=="output"{print $3}' "$recipe/renderer-files.tsv")
+expected=$(awk -F '\t' '$1=="output" && $2=="src/vrend/vrend_blitter.c" {print $3; n++} END {if (n != 1) exit 1}' "$recipe/renderer-files.tsv")
 [ "$(hash "$fixed")" = "$expected" ]
 mkdir "$out"
 for variant in baseline patched; do

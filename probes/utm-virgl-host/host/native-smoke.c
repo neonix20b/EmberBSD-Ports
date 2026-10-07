@@ -87,6 +87,7 @@ static void *get_display(void *opaque)
 {
     return ((struct state *)opaque)->display;
 }
+#include "native-decoder.h"
 /* Check resolved images, not just the linker's intended install names. */
 static void check_image(const char *symbol, const char *directory, const char *file)
 {
@@ -171,6 +172,7 @@ int main(int argc, char **argv)
         if (ret) { fprintf(stderr, "renderer init=%d\n", ret); die("classic init"); }
         if (virgl_renderer_ember_classic_init_v1(&s, 0, &cb) != -EBUSY)
             die("live reinitialization was accepted");
+        check_decoder_results();
         uint32_t version = 0, size = 0;
         virgl_renderer_get_cap_set(1, &version, &size);
         if (!version || !size) die("classic capset");

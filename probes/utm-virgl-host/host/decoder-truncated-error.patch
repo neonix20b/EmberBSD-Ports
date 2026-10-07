@@ -1,0 +1,13 @@
+# Origin: EmberBSD, AI-assisted error propagation for truncated command payloads.
+# Not submitted or accepted upstream. Original renderer MIT license applies.
+--- a/src/vrend/vrend_decode.c
++++ b/src/vrend/vrend_decode.c
+@@ -2087,7 +2087,7 @@
+       /* check if the guest is doing something bad */
+       if (buf_offset > buf_total) {
+          vrend_report_buffer_error(gdctx->grctx, 0);
+-         break;
++         return EINVAL;
+       }
+ 
+       VREND_DEBUG(dbg_cmd, gdctx->grctx, "%-4d %-20s len:%d\n",
