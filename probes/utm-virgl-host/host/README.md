@@ -41,13 +41,22 @@ the existing bounds check and context error, changing only the returned status.
 It is a local, AI-assisted MIT adaptation, not an accepted upstream change.
 Already executed commands are not rolled back.
 
+`context-errors.patch` propagates errors reported by void command handlers in
+the opt-in classic profile. It rejects a poisoned current context before the
+fast context-switch path, including empty submissions. GL errors are fatal in
+this profile even when upstream `check-gl-errors` is disabled. Legacy initialization
+retains its existing policy. This local, AI-assisted MIT adaptation is not
+submitted or accepted upstream; it does not cover unreported backend failures.
+
 ## Reproduction
 
 Requirements: macOS/arm64, Apple Clang, shell, Ruby, ripgrep, AWK, tar, patch,
 shasum, current Python with PyYAML, Meson, Ninja and pkgconf. The measured build
 used Apple Clang 21.0.0, Python 3.14.8, PyYAML 6.0.3, Meson 1.12.1,
 Ninja 1.13.2 and pkgconf 3.0.7. Upstream Python generators remain dependencies;
-new project helpers are shell and C under [BSD-2-Clause](../LICENSE.tests). Reuse common host tools rather than building
+new project helpers are shell and C under [BSD-2-Clause](../LICENSE.tests), except
+`native-draw.h`, which preserves the MIT license of its Red Hat upstream test
+adaptation. Reuse common host tools rather than building
 another LLVM or target toolchain for this recipe.
 
 Download the three original build archives listed in `sources.tsv` and the raw
@@ -79,6 +88,10 @@ The build defaults to two workers (`JOBS` overrides this), uses nodownload wrap
 mode, and installs only under the work directory. It rejects an existing build
 prefix. The profile selects EGL, with video/Venus/Neptune/DRM renderers disabled.
 The upstream test-suite option is disabled; its tests have not been claimed.
+`RENDERER_BUILD_TYPE=release` selects a release build. Separately,
+`RENDERER_CHECK_GL_ERRORS=false` disables upstream's default GL error checking.
+The default values are `debugoptimized` and `true`; build type alone does not
+select the error policy. Use a fresh work directory for each configuration.
 
 Source, tool, build, exported-symbol, installed-file and DSO receipts remain in
 the private work directory. Native acceptance verifies source and installed
@@ -110,6 +123,28 @@ the checked polling API, and cleans up. It verifies rejection of live reinit,
 conservation of created contexts and continued usability of the caller's EGL
 context/display. This is direct renderer API execution, without a guest VM.
 
+The same cycle creates a context and submits actual classic surface/framebuffer/
+CLEAR commands for that texture. Red and green alternate between cycles. CPU
+backing is replaced with `0xa5` before readback; all 256 RGBA pixels must match
+the selected clear color exactly. The context then detaches the resource and is
+destroyed before the caller releases its IOV/texture. This checks decoded GPU
+commands through Metal; guest Mesa rendering is separate.
+
+The native draw check creates a separate RGBA target and vertex buffer, submits
+TGSI vertex/fragment shaders, state and DRAW_VBO commands, and waits for a real
+fence before readback. A green pre-draw control checks all 256 pixels. Each of
+three drawn frames checks 50 magenta interior and 158 green background pixels
+exactly; 48 pixels near edges are excluded, so rasterization edge rules and MSAA
+are not qualified. CPU backing is overwritten before each readback. Resources,
+context and the exact IOVs are detached and freed after the fence.
+
+On 2026-10-08 this shader/draw/readback test passes through the full renderer on
+Apple M3/ANGLE Metal. A privately compiled control with DRAW_VBO count changed
+from three to zero fails the interior-pixel oracle while the background remains
+green and GL reports no error. The setup derives from the pinned renderer's
+`tests/testvirgl_encode.c` and `tests/test_virgl_cmd.c`, with their MIT notices
+preserved. This does not establish a guest Mesa driver, compositor or 3D reset.
+
 Each cycle also submits six command buffers through the complete decoder with
 real EGL contexts. Before the decoder fix, missing payload, truncation after a
 valid command and an absent maximum-size payload returned success: three failures
@@ -118,18 +153,29 @@ padding and unknown-opcode controls retain their expected results. All six pass
 in each of three cycles. This does not prove rollback of a valid command prefix
 or all command semantics. The native test is not sanitizer-instrumented.
 
+On 2026-10-08, the context-error regression reproduced eight failures in twelve
+native checks before the fix. Unknown color/depth surfaces returned success;
+same-context empty/NOP submissions also succeeded after surface or GL errors.
+With the patch, all twelve pass in each of three classic cycles. Destroying and
+recreating each context restores valid NOP submission. Twelve legacy controls
+also pass after classic cleanup, confirming that the opt-in policy resets.
+Fresh complete debugoptimized/check-gl-errors=true and release/check-gl-errors=false
+libraries both pass on Metal. Their actual config headers are checked: the latter
+undefines CHECK_GL_ERRORS. The GL case injects an invalid enum into the current
+real GL context before NOP; it does not claim that NOP naturally causes that error.
+
 Before the blitter fix, full native cleanup failed on the absent context. The
 small regression compiles the complete original/patched `vrend_blitter_fini`
 body with explicit callback/table seams. Plain and ASan/UBSan agree: baseline
 has eight checks and four behavioral failures; patched has six checks and none.
 The difference is two forbidden null-destroy calls. Owned cleanup and repeated
 cleanup are checked. This seam does not validate GL program deletion or ABI layout.
-Ten guards reject invalid work paths, missing/altered archives, both patch types/manifest
+Eleven guards reject invalid work paths, missing/altered archives, patch/manifest
 drift, and changed source/header/DSO files before native execution.
 
 The native renderer warns that ARB/KHR robustness is absent. The short successful
-run does not qualify recovery from GPU faults. Native backend error injection, query,
-draw, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
+run does not qualify recovery from GPU faults. Further backend failures, delayed query writes,
+further draw paths, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
 qualification remain open. The full QEMU build and bounded 2D boot are checked
 separately; live QEMU decoder-error delivery, reset/BH/display integration, guest
 3D DMA and Mesa consumers are unverified. No accelerated EmberBSD session,

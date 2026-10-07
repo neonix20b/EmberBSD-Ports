@@ -117,6 +117,10 @@ runtime behavior are validated.
   generation on a physical A733 board. Explicit metadata preparation preserves
   the model's weights and tokenizer. These are source builds, without GPU/NPU
   validation; the profile records memory use and model limits.
+- [A733 accelerator audit](probes/a733-accelerators/README.md): compiled vendor
+  and Mesa feature tables identify the VIP9000 NPU's missing TP path and MMU
+  differences. Exact PowerVR firmware is pinned. The Zero 3W FDT and device
+  checks confirm that native accelerator drivers are not attached yet.
 - [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
   upstream descriptor-zero and failure-cleanup fixes pass host/native software
   contracts; public core-count bounds pass 58 native production-extracted cases
@@ -152,13 +156,19 @@ runtime behavior are validated.
   preserve ownership through a failed poll and reject the old host ABI.
   The [full renderer recipe](probes/utm-virgl-host/host/README.md) builds and
   links with current libepoxy 1.5.10 on macOS. Direct Apple M3 acceptance
-  passes texture readback, real fences and three cleanup/reinit cycles; a
+  passes texture readback, decoded framebuffer clears, shader triangle pixels,
+  real fences and three
+  cleanup/reinit cycles; a
   reproduced null-context cleanup failure is fixed. Truncated command payloads
   also return EINVAL instead of false success, verified through the full native
-  decoder with valid-command controls. The [full paired QEMU
+  decoder with valid-command controls. Reported surface/GL errors also reject
+  classic submissions and poisoned contexts, with native checks both with and
+  without upstream GL error checking. The [full paired QEMU
   recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
-  Native reset/display lifetimes and the accelerated guest session remain
+  Three [real QMP resets](probes/utm-virgl-host/qemu/reset.md) with a live guest
+  2D GEM resource also pass, including four Metal renderer initializations.
+  In-flight 3D reset/display lifetimes and the accelerated guest session remain
   unverified. The host profile defaults to OFF; guest VirGL stays disabled.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.

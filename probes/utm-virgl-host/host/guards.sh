@@ -26,6 +26,9 @@ cp "$recipe/libepoxy-current-angle.patch" "$out/recipe/libepoxy-current-angle.pa
 printf '\n' >> "$out/recipe/decoder-truncated-error.patch"
 reject decoder-patch 'SHA256 mismatch' sh "$out/recipe/prepare.sh" "$renderer" "$epoxy" "$mesa" "$inputs" "$out/decoder-patch-work"
 cp "$recipe/decoder-truncated-error.patch" "$out/recipe/decoder-truncated-error.patch"
+printf '\n' >> "$out/recipe/context-errors.patch"
+reject context-patch 'SHA256 mismatch' sh "$out/recipe/prepare.sh" "$renderer" "$epoxy" "$mesa" "$inputs" "$out/context-patch-work"
+cp "$recipe/context-errors.patch" "$out/recipe/context-errors.patch"
 printf '\n' >> "$out/recipe/epoxy-files.tsv"
 reject manifest 'SHA256 mismatch' sh "$out/recipe/prepare.sh" "$renderer" "$epoxy" "$mesa" "$inputs" "$out/manifest-work"
 # Private copies receive mutations; original sources and libraries are untouched.

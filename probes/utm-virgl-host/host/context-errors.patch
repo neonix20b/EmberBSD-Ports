@@ -1,0 +1,50 @@
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -7656,25 +7656,25 @@
+ bool vrend_check_no_error(struct vrend_context *ctx)
+ {
+    GLenum err;
++   bool report_error = vrend_state.ember_classic_wait;
++
++#ifdef CHECK_GL_ERRORS
++   report_error = true;
++#endif
+ 
+    err = glGetError();
+    if (err == GL_NO_ERROR)
+-      return true;
++      return !(vrend_state.ember_classic_wait && ctx->in_error);
+ 
+    while (err != GL_NO_ERROR) {
+-#ifdef CHECK_GL_ERRORS
+-      vrend_report_context_error(ctx, VIRGL_ERROR_CTX_UNKNOWN, err);
+-#else
+-      virgl_warn("GL error reported (%d) for context %d\n", err, ctx->ctx_id);
+-#endif
++      if (report_error)
++         vrend_report_context_error(ctx, VIRGL_ERROR_CTX_UNKNOWN, err);
++      else
++         virgl_warn("GL error reported (%d) for context %d\n", err, ctx->ctx_id);
+       err = glGetError();
+    }
+ 
+-#ifdef CHECK_GL_ERRORS
+-   return false;
+-#else
+-   return true;
+-#endif
++   return !report_error;
+ }
+ 
+ const struct virgl_resource_pipe_callbacks *
+@@ -12086,6 +12086,10 @@
+    if (!ctx)
+       return false;
+ 
++   /* Classic submission must reject a poisoned context even when current. */
++   if (vrend_state.ember_classic_wait && ctx->ctx_id != 0 && ctx->in_error)
++      return false;
++
+    if (ctx == vrend_state.current_ctx && ctx->ctx_switch_pending == false)
+       return true;
+ 
