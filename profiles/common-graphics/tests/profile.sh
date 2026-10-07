@@ -15,6 +15,8 @@ MK
 make=${BMAKE:-bmake}
 run() { (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes "$@"); }
 [ -z "$(run)" ]
+run PKGSRC_COMPILER=clang | grep 'selected GCC 16.2 compiler'
+run GCC_REQD=12 | grep 'selected GCC 16.2 compiler'
 run USE_CROSS_COMPILE=yes | grep 'requires native package builds'
 run MACHINE_ARCH=x86_64 | grep 'NetBSD 11/AArch64 only'
 run OS_VERSION=10.1 | grep 'NetBSD 11/AArch64 only'
