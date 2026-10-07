@@ -40,6 +40,10 @@ RCS-filtered patch hashes before creating its destination. It replaces only
 existing destinations and category collisions remain errors. No system
 configuration or installed package is changed by preparation.
 
+GCC selection belongs to the included common-tools configuration, including
+the complete compiler package's runtime policy and native bootstrap boundary.
+The graphics profile adds no second compiler policy.
+
 The profile rejects conflicting command-line providers, dependency minima,
 Meson overrides, old/unprepared recipes, cross builds, another platform or
 prefix. Mesa substitutes one absolute common `PYTHONBIN` into upstream's

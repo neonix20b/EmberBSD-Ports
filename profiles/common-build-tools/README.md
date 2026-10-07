@@ -11,8 +11,9 @@ The profile owns full Python, Meson and
 [LLVM family recipes](llvm-family.md), based on
 pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`. It composes the established
 [development toolchain](../development-toolchain/README.md) export without
-changing GCC recipes or bootstrap options. LLVM family builds request
-GCC16 and prepare scoped native Clang defaults. The default
+changing GCC recipes or bootstrap options. The common MAKECONF selects
+the prepared GCC16 package for new native builds. LLVM family recipes also
+prepare scoped native Clang defaults. The default
 export and `development-toolchain` mode retain their previous behavior.
 
 The [common graphics profile](../common-graphics/README.md) composes these
@@ -36,15 +37,53 @@ in Git.
 A later native build's private MAKECONF includes the exported
 `EMBERBSD-COMMON-TOOLS-MK.CONF`. Include `EMBERBSD-DEVELOPMENT-MK.CONF` only
 when its documented C/C++ options are also intended. The common-tools file
-requires Python 314 and Meson >=1.12.1, uses one worker and rejects cross
-package builds. It does not set `GCC_REQD` or activate a compiler by default.
-Parent native work selects the already built current compiler explicitly.
+requires Python 314, Meson >=1.12.1 and pkgsrc GCC for native NetBSD 11/AArch64,
+with final `LOCALBASE=PREFIX=/usr/pkg` and one worker. It sets `GCC_REQD+=16.2`,
+`PKGSRC_COMPILER=gcc`, `USE_PKGSRC_GCC=yes` and `USE_NATIVE_GCC=no`.
+`GCC_REQD` is a major.minor floor, not an exact installed-version check;
+the prepared recipe supplies `gcc16-16.2.0`. The pinned pkgsrc comparison
+cannot handle `GCC_REQD=16.2.0`; use `16.2`. Compatible command-line floors
+and `ccache gcc` / `distcc gcc` chains remain supported. Incompatible compiler,
+native-compiler, runtime and dependency-method overrides fail explicitly.
+
+The complete compiler package must already be bootstrapped with
+`EMBERBSD-DEVELOPMENT-MK.CONF` and native GCC12. Do not include common tools
+while building GCC16 or its bootstrap closure. After installation, include
+common tools for new consumers; pkgsrc obtains `/usr/pkg/gcc16` from the
+installed package's file metadata. Missing metadata retains the normal GCC16
+dependency and does not prove a compiler executable exists.
+
+The package includes its own runtime through `always-libgcc`.
+`BUILDLINK_DEPMETHOD.gcc16=full` keeps that complete package as a consumer
+runtime dependency, including C-only consumers. The public
+`.MAKEFLAGS: USE_PKGSRC_GCC_RUNTIME=no` setting is intentional: pinned
+`gcc.mk` otherwise forces this knob to `yes` on NetBSD, adding a separate
+`gcc16-libs` dependency and custom runtime specs. Here the selected driver
+and pkgsrc RPATH select the complete package's own runtime. `no` disables
+that separate provider; it does not select the base GCC12 runtime.
+Native compile/link/runtime checks must verify the actual loaded libraries.
+This source selection does not change `/usr/bin/cc`, `/etc/mk.conf`, running
+old GUI programs or the image's user-facing defaults. Consumer migration
+and fresh-image acceptance remain separate gates.
 
 The opt-in `lang/python/pyversion.mk` guard rejects unsupported consumers
 and older command-line interpreter overrides. Repair those consumers through
 Ports; do not select an old interpreter or install another one beside this
 stack. This source stage does not uninstall existing packages or change
 system defaults. Later package migration must check their reverse dependencies.
+
+Run the focused metadata gate against a prepared common-media export:
+
+```sh
+BMAKE=/absolute/bmake sh profiles/common-build-tools/tests/compiler-selection.sh \
+    EXPORTED_PKGSRC NEW_WORK
+```
+
+It executes complete pinned pkgsrc compiler/buildlink/dependency metadata
+with declared target and installed-package receipts. It checks ordinary C/C++
+consumers, LLVM/graphics/media composition, policy overrides and native GCC12
+bootstrap boundaries. It does not execute a target compiler or accept native
+packages. Missing BSD make fails this gate.
 
 ## Patch decisions
 

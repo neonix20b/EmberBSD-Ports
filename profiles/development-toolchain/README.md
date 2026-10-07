@@ -4,8 +4,9 @@ This profile builds GCC 16.2.0 for native EmberBSD/NetBSD 11 AArch64.
 The candidate package builds and installs in the AArch64 VM and passes native
 C11/C++20 thread, TLS, shared-library and runtime-identity probes. It is the
 compiler foundation for a reproducible distribution development environment.
-It is not selected as default; full upstream tests, the common C++ consumer
-rebuild and image integration remain acceptance gates.
+The common build-tools MAKECONF selects it for new package consumers after
+bootstrap. Full upstream tests, native selection/consumer acceptance and
+image integration remain gates; user-facing system defaults are unchanged.
 
 On the AArch64 NetBSD 11 VM, the native prerequisites are now validated:
 MPC 1.4.1 (75 tests), Texinfo 7.3 (required XS plus Info/HTML output),
@@ -54,7 +55,8 @@ sh scripts/prepare-pkgsrc.sh /absolute/new-pkgsrc development-toolchain
 The destination must be new. Existing exports are never changed in place.
 The [common build tools](../common-build-tools/README.md) preparation mode
 composes this export with current Python/Meson recipes; its native package
-acceptance is separate and it does not rebuild or activate GCC.
+acceptance is separate. Its MAKECONF selects the prepared GCC16 package
+for new consumers; keep it out of this native-GCC bootstrap closure.
 The exported `EMBERBSD-DEVELOPMENT-MK.CONF` selects C/C++ only, external
 GMP/MPFR/MPC, one worker, `-O2` without debug information, and the compiler's
 own libgcc. Graphite, NLS, Fortran, Cobol, Go, and Objective-C are disabled.
@@ -147,7 +149,10 @@ and `.sum`/`.log` files. Failed checks need classification and concrete fixes;
 a generated summary or successful `--version` is not acceptance.
 
 For new pkgsrc consumers, select GCC16 through the common build MAKECONF
-(`GCC_REQD=16.2.0`, `USE_PKGSRC_GCC=yes`) after the bootstrap package exists.
+by including `EMBERBSD-COMMON-TOOLS-MK.CONF` after the bootstrap package exists.
+It uses `GCC_REQD+=16.2`, the major.minor floor understood by pinned pkgsrc;
+the package version remains 16.2.0. It retains the complete `always-libgcc`
+package as a full dependency, without adding a separate `gcc16-libs` provider.
 For CMake/Meson, use explicit compiler paths in fresh build directories;
 cached compiler identities cannot be changed by modifying PATH alone.
 Verify generated compile commands and runtime mappings before selecting
@@ -211,10 +216,12 @@ explicitly to the corrected objects. The installed libc remains unchanged;
 its replacement and acceptance are still required. Other LTO and
 target/configuration failures remain under investigation. These findings do not invalidate the
 completed package build or justify rebuilding the same sources unchanged.
-Preserve unmodified test results; default selection stays deferred.
+Preserve unmodified test results; native consumer acceptance and
+user-facing image defaults remain deferred.
 
 Source validation covers pinned archives, the upstream update, all 23 GCC
 source patches without fuzz, native prerequisite fixes, and negative checker
 fixtures for duplicate or foreign runtimes. Physical-board compiler testing,
-self-hosting, current-binutils validation, common consumer repairs, default
-selection and release-image integration are not established by this VM result.
+self-hosting, current-binutils validation, common consumer repairs, native
+common selection and release-image integration are not established by this
+VM result. The source MAKECONF policy alone does not close those gates.

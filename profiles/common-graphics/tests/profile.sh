@@ -8,6 +8,7 @@ mkdir "$2"
 work=$(CDPATH= cd -- "$2" && pwd)
 cat > "$work/Makefile" <<MK
 BSD_PKG_MK=yes
+.include "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF"
 .include "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
 all:
 	@printf '%s\n' '\${PKG_FAIL_REASON:U}'
@@ -15,8 +16,8 @@ MK
 make=${BMAKE:-bmake}
 run() { (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes "$@"); }
 [ -z "$(run)" ]
-run PKGSRC_COMPILER=clang | grep 'selected GCC 16.2 compiler'
-run GCC_REQD=12 | grep 'selected GCC 16.2 compiler'
+run PKGSRC_COMPILER=clang | grep 'selected pkgsrc GCC 16.2 compiler'
+run GCC_REQD=12 | grep 'requires GCC_REQD=16.2'
 run USE_CROSS_COMPILE=yes | grep 'requires native package builds'
 run MACHINE_ARCH=x86_64 | grep 'NetBSD 11/AArch64 only'
 run OS_VERSION=10.1 | grep 'NetBSD 11/AArch64 only'
