@@ -23,6 +23,7 @@ export DYLD_FRAMEWORK_PATH="$frameworks"
 shasum -a 256 "$frameworks/EGL.framework/EGL" "$frameworks/GLESv2.framework/GLESv2" \
     "$work/prefix/lib/libvirglrenderer.1.dylib" "$work/prefix/lib/libepoxy.0.dylib" \
     "$recipe/native-smoke.c" "$recipe/native-decoder.h" "$recipe/native-clear.h" \
+    "$recipe/native-context-errors.h" \
     "$work/native-smoke" > "$work/native-inputs-sha256.txt"
 otool -L "$work/native-smoke" > "$work/native-linked-libraries.txt"
 # Keep failure status and diagnostic log. Lack of GPU access is not PASS/SKIP.

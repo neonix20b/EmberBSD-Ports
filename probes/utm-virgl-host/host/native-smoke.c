@@ -89,6 +89,7 @@ static void *get_display(void *opaque)
 }
 #include "native-decoder.h"
 #include "native-clear.h"
+#include "native-context-errors.h"
 /* Check resolved images, not just the linker's intended install names. */
 static void check_image(const char *symbol, const char *directory, const char *file)
 {
@@ -174,6 +175,7 @@ int main(int argc, char **argv)
         if (virgl_renderer_ember_classic_init_v1(&s, 0, &cb) != -EBUSY)
             die("live reinitialization was accepted");
         check_decoder_results();
+        check_context_errors(1);
         uint32_t version = 0, size = 0;
         virgl_renderer_get_cap_set(1, &version, &size);
         if (!version || !size) die("classic capset");
@@ -221,6 +223,11 @@ int main(int argc, char **argv)
             die("borrowed EGL display after renderer cleanup");
         printf("PASS: classic init/fence/poll/cleanup cycle %u\n", cycle);
     }
+    /* The stricter error contract belongs to the opt-in classic profile. */
+    if (virgl_renderer_init(&s, 0, &cb)) die("legacy init control");
+    check_context_errors(0);
+    virgl_renderer_cleanup(&s);
+    if (s.live != 0) die("legacy cleanup ownership");
     if (!eglMakeCurrent(s.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ||
         !eglDestroyContext(s.display, s.anchor) || !eglDestroySurface(s.display, s.surface) ||
         !eglTerminate(s.display)) die("EGL cleanup");

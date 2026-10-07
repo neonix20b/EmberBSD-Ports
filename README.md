@@ -149,7 +149,9 @@ runtime behavior are validated.
   cleanup/reinit cycles; a
   reproduced null-context cleanup failure is fixed. Truncated command payloads
   also return EINVAL instead of false success, verified through the full native
-  decoder with valid-command controls. The [full paired QEMU
+  decoder with valid-command controls. Reported surface/GL errors also reject
+  classic submissions and poisoned contexts, with native checks both with and
+  without upstream GL error checking. The [full paired QEMU
   recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
   Three [real QMP resets](probes/utm-virgl-host/qemu/reset.md) with a live guest

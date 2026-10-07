@@ -41,6 +41,13 @@ the existing bounds check and context error, changing only the returned status.
 It is a local, AI-assisted MIT adaptation, not an accepted upstream change.
 Already executed commands are not rolled back.
 
+`context-errors.patch` propagates errors reported by void command handlers in
+the opt-in classic profile. It rejects a poisoned current context before the
+fast context-switch path, including empty submissions. GL errors are fatal in
+this profile even when upstream `check-gl-errors` is disabled. Legacy initialization
+retains its existing policy. This local, AI-assisted MIT adaptation is not
+submitted or accepted upstream; it does not cover unreported backend failures.
+
 ## Reproduction
 
 Requirements: macOS/arm64, Apple Clang, shell, Ruby, ripgrep, AWK, tar, patch,
@@ -79,6 +86,10 @@ The build defaults to two workers (`JOBS` overrides this), uses nodownload wrap
 mode, and installs only under the work directory. It rejects an existing build
 prefix. The profile selects EGL, with video/Venus/Neptune/DRM renderers disabled.
 The upstream test-suite option is disabled; its tests have not been claimed.
+`RENDERER_BUILD_TYPE=release` selects a release build. Separately,
+`RENDERER_CHECK_GL_ERRORS=false` disables upstream's default GL error checking.
+The default values are `debugoptimized` and `true`; build type alone does not
+select the error policy. Use a fresh work directory for each configuration.
 
 Source, tool, build, exported-symbol, installed-file and DSO receipts remain in
 the private work directory. Native acceptance verifies source and installed
@@ -125,17 +136,28 @@ padding and unknown-opcode controls retain their expected results. All six pass
 in each of three cycles. This does not prove rollback of a valid command prefix
 or all command semantics. The native test is not sanitizer-instrumented.
 
+On 2026-10-08, the context-error regression reproduced eight failures in twelve
+native checks before the fix. Unknown color/depth surfaces returned success;
+same-context empty/NOP submissions also succeeded after surface or GL errors.
+With the patch, all twelve pass in each of three classic cycles. Destroying and
+recreating each context restores valid NOP submission. Twelve legacy controls
+also pass after classic cleanup, confirming that the opt-in policy resets.
+Fresh complete debugoptimized/check-gl-errors=true and release/check-gl-errors=false
+libraries both pass on Metal. Their actual config headers are checked: the latter
+undefines CHECK_GL_ERRORS. The GL case injects an invalid enum into the current
+real GL context before NOP; it does not claim that NOP naturally causes that error.
+
 Before the blitter fix, full native cleanup failed on the absent context. The
 small regression compiles the complete original/patched `vrend_blitter_fini`
 body with explicit callback/table seams. Plain and ASan/UBSan agree: baseline
 has eight checks and four behavioral failures; patched has six checks and none.
 The difference is two forbidden null-destroy calls. Owned cleanup and repeated
 cleanup are checked. This seam does not validate GL program deletion or ABI layout.
-Ten guards reject invalid work paths, missing/altered archives, both patch types/manifest
+Eleven guards reject invalid work paths, missing/altered archives, patch/manifest
 drift, and changed source/header/DSO files before native execution.
 
 The native renderer warns that ARB/KHR robustness is absent. The short successful
-run does not qualify recovery from GPU faults. Native backend error injection, query,
+run does not qualify recovery from GPU faults. Further backend failures, delayed query writes,
 draw, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
 qualification remain open. The full QEMU build and bounded 2D boot are checked
 separately; live QEMU decoder-error delivery, reset/BH/display integration, guest

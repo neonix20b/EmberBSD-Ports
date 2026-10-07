@@ -12,6 +12,10 @@ NINJA=${NINJA:-ninja}
 PKG_CONFIG=${PKG_CONFIG:-pkg-config}
 CC=${CC:-cc}
 JOBS=${JOBS:-2}
+RENDERER_BUILD_TYPE=${RENDERER_BUILD_TYPE:-debugoptimized}
+case "$RENDERER_BUILD_TYPE" in debugoptimized|release) ;; *) echo 'Unsupported renderer build type' >&2; exit 2;; esac
+RENDERER_CHECK_GL_ERRORS=${RENDERER_CHECK_GL_ERRORS:-true}
+case "$RENDERER_CHECK_GL_ERRORS" in true|false) ;; *) echo 'Unsupported GL error check option' >&2; exit 2;; esac
 case "$JOBS" in ''|*[!0-9]*|0) echo 'JOBS must be positive' >&2; exit 2;; esac
 case "$PYTHON" in /*) ;; *) echo 'PYTHON must be an absolute executable path' >&2; exit 2;; esac
 [ -x "$PYTHON" ] || exit 2
@@ -40,8 +44,9 @@ export PKG_CONFIG_PATH="$work/prefix/lib/pkgconfig"
 "$NINJA" -C "$work/epoxy-build" -j "$JOBS" install > "$work/epoxy-build.log" 2>&1
 [ "$("$PKG_CONFIG" --modversion epoxy)" = 1.5.10 ]
 "$PYTHON" "$MESON" setup "$work/renderer-build" "$work/renderer" \
-    --prefix="$work/prefix" --buildtype=debugoptimized --wrap-mode=nodownload \
+    --prefix="$work/prefix" --buildtype="$RENDERER_BUILD_TYPE" --wrap-mode=nodownload \
     -Dplatforms=egl -Dvideo=false -Dvenus=false -Dneptune=false \
+    "-Dcheck-gl-errors=$RENDERER_CHECK_GL_ERRORS" \
     '-Ddrm-renderers=[]' -Dvtest=false -Dtests=false "-Dc_args=-I$work/khronos" > "$work/renderer-configure.log" 2>&1
 "$NINJA" -C "$work/renderer-build" -j "$JOBS" install > "$work/renderer-build.log" 2>&1
 nm -gU "$work/prefix/lib/libvirglrenderer.1.dylib" > "$work/renderer-symbols.txt"
