@@ -152,7 +152,9 @@ runtime behavior are validated.
   decoder with valid-command controls. The [full paired QEMU
   recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
-  Native reset/display lifetimes and the accelerated guest session remain
+  Three [real QMP resets](probes/utm-virgl-host/qemu/reset.md) with a live guest
+  2D GEM resource also pass, including four Metal renderer initializations.
+  In-flight 3D reset/display lifetimes and the accelerated guest session remain
   unverified. The host profile defaults to OFF; guest VirGL stays disabled.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.

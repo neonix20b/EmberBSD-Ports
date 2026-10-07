@@ -116,3 +116,8 @@ are live, blocked display cleanup, no-touch-after-revoke, silent errors and
 remaining transfer bounds are unqualified. Guest Mesa/LLVM packages, consumer
 migration, accelerated Wayland, Vulkan Compute and NPU execution remain open.
 A successful process exit alone does not prove all native cleanup paths.
+
+The separate [live-backing reset check](reset.md) subsequently passed three
+actual QMP resets, four Metal renderer initializations and final quit while
+the guest retained a 2D GEM resource. It uses an isolated read-only root and
+does not extend this result to in-flight 3D commands or blocked display cleanup.
