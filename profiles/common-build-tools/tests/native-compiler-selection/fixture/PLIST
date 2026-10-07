@@ -1,0 +1,3 @@
+@comment Private native compiler selection fixture
+libexec/emberbsd-transition/c-consumer
+libexec/emberbsd-transition/cxx-consumer
