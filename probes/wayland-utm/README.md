@@ -16,9 +16,12 @@ separate prerequisites; a build does not prove GPU acceleration.
 
 [`sources.tsv`](sources.tsv) pins original archive URLs and SHA256, checked
 before extraction. Mesa 26.2.4 replaces the former 21.3.9 source selection.
-The current source recipe and narrow portability regressions are prepared;
-**complete Mesa 26 build and renderer runtime remain pending** on the common
-toolchain. Configuration does not establish a validated graphics stack.
+The current source recipe and portability regressions are prepared. A
+[temporary headless cross build](../../profiles/common-graphics/cross/README.md#temporary-headless-mesa-diagnostic)
+passes software GLES shader/pixel checks and 30 selected upstream test runs on
+Orange Pi Zero 3W (A733). It excludes LLVM, X11/Wayland and package installation.
+**The complete common Mesa/LLVM profile and guest accelerated runtime remain
+pending.** Configuration alone does not establish a validated graphics stack.
 
 The [common graphics package profile](../../profiles/common-graphics/README.md)
 now owns canonical MesaLib/libdrm recipes for the final `/usr/pkg` transition.

@@ -5,8 +5,8 @@ BUILDLINK_TREE+=	MesaLib
 .if !defined(MESALIB_BUILDLINK3_MK)
 MESALIB_BUILDLINK3_MK:=
 
-BUILDLINK_API_DEPENDS.MesaLib+=	MesaLib>=26.2.4
-BUILDLINK_ABI_DEPENDS.MesaLib+=	MesaLib>=26.2.4
+BUILDLINK_API_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb1
+BUILDLINK_ABI_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb1
 BUILDLINK_PKGSRCDIR.MesaLib?=	../../graphics/MesaLib
 
 .include "../../graphics/MesaLib/features.mk"

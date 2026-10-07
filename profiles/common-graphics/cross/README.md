@@ -79,3 +79,71 @@ Examples GEM/PRIME probe, which passed malformed requests and 32 process
 lifetime cycles. The [kernel receipt](https://github.com/apovalixin/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
 records this separate serial-only boot. It does not establish a visible
 console, accelerated rendering, the UTM desktop or package registration.
+
+## Temporary headless Mesa diagnostic
+
+`build-mesa-diagnostic.sh` builds Mesa 26.2.4 with all canonical source patches,
+EGL/GLES/GBM, classic VirGL and softpipe. This temporary, uninstalled diagnostic
+isolates graphics portability while shared LLVM23 is prepared. It deliberately
+omits llvmpipe, X11/Wayland, XML configuration and zlib. It must not replace the
+full common profile or become a second installed Mesa provider.
+
+Supply the existing GCC16 cross compiler/sysroot, accepted libdrm prefix,
+target zstd headers and library, prepared Meson, and host Bison 3.8.2. Python
+3.14.8 needs Mako, packaging and PyYAML; existing verified source modules can
+be supplied through `PYTHONPATH`. Host pkg-config reads only the two supplied
+target providers. Ninja, Flex, Ruby, shasum and tar are also build-host tools.
+The helper does not build or install common tools or target dependencies.
+Keep the whole profile snapshot unchanged while the build runs and use a
+fresh output directory. A running shell can reread edited script text.
+
+```sh
+PYTHON=/absolute/python3.14 JOBS=3 sh build-mesa-diagnostic.sh \
+    /absolute/mesa-26.2.4.tar.xz /absolute/cross-prefix \
+    /absolute/target-sysroot /absolute/libdrm-stage/usr/pkg \
+    /absolute/target-zstd-prefix /absolute/prepared-meson \
+    /absolute/host-bison /absolute/new-work
+```
+
+Archive URLs and SHA256 remain in [sources.tsv](../sources.tsv). The recipe
+checks archive and patch hashes, rejects patch context drift and emits the
+exact cross file, logs, tool versions and input hashes. ELF RPATH checks reject
+build paths. Seven host tests inspect source data and actual target ELF API
+exports; they do not execute target code. Undefined weak imports are excluded
+from exports, while defined weak exports remain checked.
+
+`mesa-diagnostic.tar.gz` contains private runtime libraries, the pixel test,
+and 30 upstream target-test cases. Verify `bundle.sha256` after transfer and
+extract into a new private directory. No package is installed. Inside `bundle`:
+
+```sh
+sh run-mesa-diagnostic.sh surfaceless softpipe
+sh run-mesa-upstream.sh
+# Only with a matched, enabled VirGL kernel/host and its actual render node:
+sh run-mesa-diagnostic.sh /dev/dri/renderD128 virgl
+```
+
+Both runners check the complete artifact hash manifest before `ldd` or tests.
+The host regression `../tests/mesa-bundle-integrity.sh NEW_WORK` confirms that
+modified executables and libraries are rejected before loader execution.
+The render runner checks loader paths, bounds rendering
+to 60 seconds, rejects an unexpected renderer and verifies shader compilation,
+clear/triangle pixels and four EGL lifecycles. `TIMEOUT` may name an alternative
+target timeout executable. The upstream runner bounds each case to 120 seconds
+and records failures and skips separately. It preserves the user's HOME;
+the diagnostic's XML configuration is disabled. Runner `SKIP` means process
+exit 77. Internal GTest skips and disabled cases remain in the per-case logs.
+
+On 2026-10-08 the cross-built Mesa26 softpipe diagnostic passed all four render
+lifecycles on Orange Pi Zero 3W (Allwinner A733), with EGL1.5 and GLES3.1 reported by the
+driver. All 30 selected upstream target test runs exited 0. Within those
+runs, `util_tests` passed 253 cases and skipped `Cache.List` because dynamic
+Foz database lists are unsupported. NIR passed 6197 cases and reported nine
+upstream-disabled cases. The process-name cases use an absolute executable
+path matching `BUILD_FULL_PATH`.
+The strict C11/C++17 stack-allocation regression also passed four target cases.
+The complete diagnostic cross-build and seven host checks passed using the
+[current GCC16 cross compiler](../../development-toolchain/cross/README.md),
+whose host prerequisites are GMP 6.3.0, MPFR 4.2.2 and MPC 1.4.1.
+This does not establish VirGL acceleration, LLVM/ORC, the complete graphics
+package, X11/Wayland consumers or long-running stability.

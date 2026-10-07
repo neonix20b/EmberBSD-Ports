@@ -1,7 +1,7 @@
 # Mesa 26.2.4 patch inventory
 
 The selected common source is [Mesa 26.2.4](https://docs.mesa3d.org/relnotes/26.2.4.html).
-The three local patches are AI-assisted, not submitted upstream. Mesa source
+The four local patches are AI-assisted, not submitted upstream. Mesa source
 licenses remain unchanged; new utility code is MIT and probe tests are
 BSD-2-Clause. The archive URL and SHA256 are in [sources.tsv](sources.tsv).
 
@@ -16,8 +16,15 @@ BSD-2-Clause. The archive URL and SHA256 are in [sources.tsv](sources.tsv).
   unconditional `HAVE_NOATEXIT` destructor strategy.
 - `patch-src_util_half__float.c` normalizes binary16 subnormals using integers,
   avoiding a binary32 subnormal intermediate flushed by the caller FP state.
+- `patch-include_c99__alloca.h` selects compiler stack allocation on NetBSD
+  in strict C11/C++17 modes. The libc declaration otherwise becomes an
+  unresolved external call. No allocation shim or GNU dialect is introduced.
 - `patch-bin_symbols-check.py` extends the existing upstream ELF bookkeeping
-  allowlist to NetBSD without relaxing extra/missing API checks.
+  allowlist to NetBSD without relaxing extra/missing API checks. Meson passes
+  its target system explicitly, so a macOS host checks NetBSD ELF correctly.
+  Direct native invocation retains the host default. The cross regression
+  uses actual AArch64 ELF and native Mach-O libraries, including extra and
+  missing export failures.
 
 The lifetime patch covers all 13 registration sites in the selected source:
 EGL, GLX, context, formats, extensions, options cache, locale, process name,
@@ -30,6 +37,21 @@ The queue fixture tests callback dependencies; it does not replace the actual
 Mesa queue or EGL integration tests. Its executable links pthread at startup:
 NetBSD cannot initialize threading by loading libpthread late through a plugin.
 Check this same constraint in dynamically loaded real graphics consumers.
+
+The symbol policy also has a macOS cross check using the prepared compiler
+and an existing Python interpreter. It builds small real target ELF and
+native Mach-O libraries, then verifies target selection and export failures:
+
+```sh
+PYTHON=/absolute/python3.14 sh tests/mesa-symbols-cross.sh \
+    PATCHED_MESA CROSS_GCC16_PREFIX TARGET_SYSROOT NEW_WORK
+```
+
+`tests/mesa-alloca.sh` takes the same four path arguments. It reconstructs
+the unpatched header and requires both strict-mode links to fail, then
+builds the patched C11/C++17 fixtures without an external `alloca` reference.
+Run both outputs on the target with zero and several arguments to check
+dynamic length, alignment, guard bytes and storage across another stack call.
 
 ## Disposition of all 44 previous patches
 
@@ -95,8 +117,10 @@ and classic VirGL remain enabled together. Vulkan, video frontends, Rusticl,
 physical-driver tools and GLVND are outside this initial probe.
 Mesa 26 installs `libgallium-26.2.4.so`; shared libglapi is no longer installed.
 Do not emulate its old SONAME with symlinks. Audit and rebuild Qt/GNOME/Xorg
-consumers against the common ABI before package promotion. Current source
-adaptation does not establish a full build or renderer run.
+consumers against the common ABI before package promotion. The
+[temporary headless cross diagnostic](../../profiles/common-graphics/cross/README.md)
+has separate softpipe board evidence; it does not establish the complete
+shared-LLVM23 package or X11/Wayland renderer acceptance.
 
 The 2026-10-06 native ABI inventory found Qt6Gui 6.11.1 depends on base
 libEGL.so.0/libGL.so.3/libstdc++.so.9, while Mutter 40.2 and COGL depend on

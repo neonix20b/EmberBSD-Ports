@@ -1,6 +1,6 @@
 # Common graphics source packages
 
-This opt-in source profile prepares canonical MesaLib 26.2.4 and adapted
+This opt-in source profile prepares canonical MesaLib 26.2.4nb1 and adapted
 libdrm 2.4.134nb1 for native NetBSD 11/AArch64. It composes the existing
 [common build tools](../common-build-tools/README.md): GCC16, Python3.14.8,
 Meson1.12.1 and shared LLVM23.1.2 remain one dependency graph with final
@@ -14,6 +14,11 @@ libdrm payload on macOS with GCC16. All 26 staged entries match PLIST, and
 hash, drmsl and symbol checks pass in AArch64 UTM. Device enumeration is
 skipped on the current framebuffer-only kernel. Package registration and
 the Mesa/LLVM consumer transition are still separate gates.
+
+The same cross directory contains a temporary Mesa26 headless diagnostic.
+Its private softpipe bundle passed shader rejection, triangle pixels, four
+EGL lifecycles and 30 selected upstream test runs on Orange Pi Zero 3W (A733).
+That result excludes LLVM/llvmpipe, X11/Wayland and installed packages.
 
 The selected APIs are X11/Wayland, EGL, GBM, OpenGL and GLES; renderers are
 classic VirGL, softpipe and llvmpipe with ORC JIT. The recipe requires shared
@@ -102,7 +107,7 @@ records BLAKE2s, SHA512, size and filtered patch SHA1. Original RCS identifiers,
 ownership and licences are retained. Local work is AI-assisted and has not
 been submitted or accepted upstream.
 
-The three exact accepted Mesa patches and the complete 44-patch disposition
+The four exact accepted Mesa patches and the complete 44-patch disposition
 belong to [the source probe](../../probes/wayland-utm/mesa-patches.md).
 The package-only explicit-Python patch is the sole additional Mesa delta.
 All seven imported libdrm patches plus the three accepted symbol/identity/
@@ -118,6 +123,7 @@ OpenSSL with BLAKE2s, shasum, tar and patch:
 ```sh
 sh profiles/common-graphics/tests/source.sh VERIFIED_DISTFILES NEW_WORK
 sh profiles/common-graphics/tests/export.sh NEW_WORK
+sh profiles/common-graphics/tests/mesa-bundle-integrity.sh NEW_WORK
 BMAKE=/absolute/bmake sh profiles/common-graphics/tests/profile.sh EXPORTED_PKGSRC NEW_WORK
 BMAKE=/absolute/bmake sh profiles/common-graphics/tests/qtbase-egl.sh QTBASE_MAKEFILE NEW_WORK
 BMAKE=/absolute/bmake sh profiles/common-graphics/tests/selection.sh \

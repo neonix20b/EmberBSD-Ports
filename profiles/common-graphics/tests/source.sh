@@ -48,7 +48,7 @@ if tar -xf "$work/corrupt.tar.xz" -C "$work" > "$work/extraction-negative.log" 2
 if patch -f -N -F 0 -p0 -d "$work/mesa-26.2.4" < "$profile/recipes/graphics/MesaLib/patches/patch-meson-python-selection" > "$work/repeated.log" 2>&1; then exit 1; fi
 # Accepted probe source deltas remain byte-identical; do not repeat their contracts.
 root=$(CDPATH= cd -- "$profile/../.." && pwd)
-for name in patch-dso-lifetime patch-src_util_half__float.c patch-bin_symbols-check.py; do
+for name in patch-dso-lifetime patch-src_util_half__float.c patch-bin_symbols-check.py patch-include_c99__alloca.h; do
     cmp "$root/probes/wayland-utm/patches/mesa/$name" "$profile/recipes/graphics/MesaLib/patches/$name"
 done
 for file in "$root"/probes/wayland-utm/patches/libdrm/patch-*; do

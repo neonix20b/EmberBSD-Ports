@@ -2,6 +2,7 @@
 # Origin: EmberBSD; AI-assisted bounded NetBSD 11/AArch64 source candidate.
 DISTNAME=	mesa-26.2.4
 PKGNAME=	${DISTNAME:S/mesa/MesaLib/}
+PKGREVISION=	1
 CATEGORIES=	graphics
 MASTER_SITES=	https://archive.mesa3d.org/
 EXTRACT_SUFX=	.tar.xz
@@ -26,8 +27,8 @@ PYTHON_VERSION_REQD=	314
 .if !defined(EMBERBSD_COMMON_GRAPHICS)
 PKG_FAIL_REASON+= "Mesa requires the prepared common graphics profile"
 .endif
-.if ${DISTNAME} != "mesa-26.2.4"
-PKG_FAIL_REASON+= "The common graphics profile requires Mesa 26.2.4"
+.if ${DISTNAME} != "mesa-26.2.4" || ${PKGREVISION} != "1"
+PKG_FAIL_REASON+= "The common graphics profile requires adapted MesaLib 26.2.4nb1"
 .endif
 TOOL_DEPENDS+=	${PYPKGPREFIX}-mako-[0-9]*:../../devel/py-mako
 TOOL_DEPENDS+=	${PYPKGPREFIX}-packaging-[0-9]*:../../devel/py-packaging

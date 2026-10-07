@@ -47,14 +47,16 @@ runtime behavior are validated.
   native LLVM23/compiler-family checks, packages,
   installed extensions, ELF consumers and LLVM23/Mesa26 acceptance remain pending.
 - [Common graphics source packages](profiles/common-graphics/README.md):
-  canonical MesaLib 26.2.4 and adapted libdrm 2.4.134nb1 compose the common
+  canonical MesaLib 26.2.4nb1 and adapted libdrm 2.4.134nb1 compose the common
   GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.
   Source, export and dependency-selection checks cover X11/Wayland,
   EGL/GBM and classic VirGL/softpipe/llvmpipe. The complete core-only libdrm
   payload cross-builds on macOS/GCC16, matches all 26 PLIST entries and passes
   upstream hash, skip-list and exported-symbol checks in AArch64 UTM.
-  Package registration, Mesa/LLVM builds, consumer migration and renderer
-  runtime remain unverified.
+  A [temporary Mesa26 cross diagnostic](profiles/common-graphics/cross/README.md#temporary-headless-mesa-diagnostic)
+  passes software GLES shader/pixel checks and 30 upstream target test runs on
+  Orange Pi Zero 3W (A733). The full Mesa/LLVM profile, package registration,
+  consumer migration and guest GPU rendering remain unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -136,9 +138,10 @@ runtime behavior are validated.
   validates quotations from the existing llama.cpp CPU server on AArch64.
 - [Native Wayland and VirGL build probe](probes/wayland-utm/README.md): pinned
   current Mesa 26.2.4 source adaptation with DSO-lifetime and numeric
-  regressions, paired libdrm, wlroots and labwc recipes. Earlier Mesa 21
-  software EGL/native KMS-input checks pass; the common Mesa 26 build and
-  VirGL hardware runtime remain pending.
+  regressions, paired libdrm, wlroots and labwc recipes. Mesa26 headless
+  softpipe tests now pass on A733; earlier Mesa21 native KMS/input checks
+  remain separate. The full common Mesa/LLVM build and guest VirGL runtime
+  are still pending.
 - [UTM VirGL host source adaptations](probes/utm-virgl-host/README.md): the
   accepted upstream size-truncation fix is prepared for UTM's pinned 1.3.0
   renderer. Actual-source macOS/arm64 checks show compiled BASE RED and
