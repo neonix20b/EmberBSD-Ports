@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.22)
+project(ember_osqp_contract LANGUAGES C)
+enable_testing()
+find_package(osqp 1.0.0 EXACT CONFIG REQUIRED
+    PATHS "${PROBE_PREFIX}/lib/cmake/osqp" NO_DEFAULT_PATH)
+get_target_property(location osqp::osqp IMPORTED_LOCATION_RELEASE)
+string(FIND "${location}" "${PROBE_PREFIX}/" position)
+if(NOT position EQUAL 0)
+    message(FATAL_ERROR "OSQP escaped the selected installation")
+endif()
+add_executable(osqp-contract contract.c)
+target_compile_features(osqp-contract PRIVATE c_std_11)
+target_compile_options(osqp-contract PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(osqp-contract PRIVATE osqp::osqp m)
+foreach(mode qp infeasible)
+    add_test(NAME osqp-${mode} COMMAND osqp-contract ${mode})
+    set_tests_properties(osqp-${mode} PROPERTIES TIMEOUT 15)
+endforeach()
+# This implementation regression deliberately uses OSQP's private listener
+# declarations, separately from the installed public-API numerical contract.
+add_executable(osqp-interrupt interrupt.c)
+target_link_libraries(osqp-interrupt PRIVATE osqp::osqp)
+add_test(NAME osqp-interrupt COMMAND osqp-interrupt)
+set_tests_properties(osqp-interrupt PROPERTIES TIMEOUT 5)
