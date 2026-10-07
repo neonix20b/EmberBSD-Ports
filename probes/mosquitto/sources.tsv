@@ -1,0 +1,3 @@
+# archive sha256 upstream_url
+mosquitto-2.1.2.tar.gz fd905380691ac65ea5a93779e8214941829e3d6e038d5edff9eac5fd74cbed02 https://mosquitto.org/files/source/mosquitto-2.1.2.tar.gz
+cjson-1.7.19.tar.gz 7fa616e3046edfa7a28a32d5f9eacfd23f92900fe1f8ccd988c1662f30454562 https://codeload.github.com/DaveGamble/cJSON/tar.gz/refs/tags/v1.7.19
