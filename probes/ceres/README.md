@@ -57,3 +57,20 @@ sh probes/ceres/tests/build-guards.sh /var/tmp
 These reject an existing work path, zero jobs and a corrupt archive before
 extraction. This is a source probe, not a pkgsrc package, physical calibration,
 a full Ceres upstream suite, GPU validation, or a hard-real-time guarantee.
+
+## Shared Eigen installation
+
+When common Eigen 5.0.1 is already installed, select it explicitly:
+
+```sh
+EIGEN_PREFIX=/absolute/common-foundations/install \
+sh probes/ceres/build.sh /absolute/new-ceres-work /absolute/archive-cache
+sh probes/ceres/test.sh /absolute/new-ceres-work
+```
+
+This mode validates and records the exact external Eigen version, skips its
+archive, and builds/installs only Ceres. The installed consumer uses the recorded
+Eigen prefix. Without `EIGEN_PREFIX`, the standalone behavior remains available.
+The earlier native result covers standalone mode; the external-prefix mode
+needs its own three-consumer native regression before acceptance. Neither mode
+imposes an address-space limit or changes system packages.

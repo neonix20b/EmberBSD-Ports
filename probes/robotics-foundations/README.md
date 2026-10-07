@@ -103,3 +103,24 @@ other boards require separate evidence. The probe never configures hardware.
 
 The general design and validation plan are in
 [docs/robotics-foundations](../../docs/robotics-foundations/design.md).
+
+## Reuse the shared media OpenCV provider
+
+The expanded [media recipe](../media/README.md) prepares the union of robotics
+and video modules at the same OpenCV 5.0.0 version. Its native build has not
+been run. After that profile passes
+its native tests, this consumer can select it explicitly:
+
+```sh
+OPENCV_PREFIX=/var/tmp/ember-media/install \
+TEST_BUILD="$work/test-shared-opencv" \
+sh probes/robotics-foundations/test.sh "$work"
+```
+
+Use a fresh `TEST_BUILD` for the dependency transition. The test records the
+selected prefix and requires its OpenCV runtime linkage. Eigen and gpsd still
+come from `WORK/install`. This source preparation is not evidence that the
+expanded provider has passed the foundations contract; the result above belongs
+to the original configuration. Do not keep two installed OpenCV providers after
+the coordinated transition. Preserve existing Eigen/gpsd files when retiring
+only the old OpenCV installation.

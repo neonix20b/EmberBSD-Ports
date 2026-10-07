@@ -15,11 +15,14 @@ grep -q 'Work path already exists' "$scratch/existing.log"
 if JOBS=0 sh "$recipe/build.sh" "$scratch/jobs" > "$scratch/jobs.log" 2>&1; then exit 1; fi
 grep -q 'JOBS must be positive' "$scratch/jobs.log"
 [ ! -e "$scratch/jobs" ]
-if EIGEN_PREFIX="$scratch/missing-eigen" sh "$recipe/build.sh" "$scratch/external" > "$scratch/external.log" 2>&1; then exit 1; fi
-grep -q 'Common Eigen 5.0.1 required' "$scratch/external.log"
-[ ! -e "$scratch/external" ]
+if BUILD_AS_KIB=0 sh "$recipe/build.sh" "$scratch/as-zero" > "$scratch/as-zero.log" 2>&1; then exit 1; fi
+grep -q 'BUILD_AS_KIB must be positive' "$scratch/as-zero.log"
+[ ! -e "$scratch/as-zero" ]
+if BUILD_AS_KIB=unlimited sh "$recipe/build.sh" "$scratch/as-unlimited" > "$scratch/as-unlimited.log" 2>&1; then exit 1; fi
+grep -q 'BUILD_AS_KIB must be positive' "$scratch/as-unlimited.log"
+[ ! -e "$scratch/as-unlimited" ]
 while read -r name expected url; do printf 'corrupt\n' > "$scratch/cache/$name"; done < "$recipe/sources.tsv"
 if sh "$recipe/build.sh" "$scratch/corrupt" "$scratch/cache" > "$scratch/corrupt.log" 2>&1; then exit 1; fi
 grep -q 'Checksum mismatch' "$scratch/corrupt.log"
 [ -z "$(ls -A "$scratch/corrupt/src")" ]
-echo 'PASS existing work, zero jobs, and corrupt archive rejected before extraction'
+echo 'PASS existing work, zero jobs, invalid address-space limits, and corrupt archive rejected before extraction'
