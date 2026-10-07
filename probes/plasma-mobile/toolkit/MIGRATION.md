@@ -97,10 +97,16 @@ The private toolkit MAKECONF therefore rejects these two consumer recipes
 and older FFmpeg packages until that integration is prepared. This blocker
 must be removed together with the actual recipe/buildlink/PLIST migration.
 
-Likewise, the modern Mesa source probe needs package integration with one
-EGL/GL ABI. The toolkit rejects the inherited Mesa21 recipe, requires
-Mesa26.2.4 and disables built-in GL/GLU selection. The separately built
-BluezQt/NetworkManagerQt/ModemManagerQt
+The [common graphics source profile](../../../profiles/common-graphics/README.md)
+now provides canonical Mesa26.2.4/libdrm2.4.134nb1 recipes with one EGL/GL ABI.
+Include common-tools, common-graphics and toolkit MAKECONF files in that order.
+This completes source preparation only. Build/package shared LLVM23 first,
+then libdrm and Mesa with upstream tests and strict check-files. Audit real
+installed symlink chains and ELF dependencies; rebuild GLU, libepoxy and
+all GL/EGL/GBM/DRM consumers. Base GL3/EGL0/DRM3 and libglapi are outside
+the candidate closure. Never mask consumer failures with SONAME aliases.
+
+The separately built BluezQt/NetworkManagerQt/ModemManagerQt
 clients need the same KF6.30/GCC16 migration. Do not run a recursive package
 upgrade from this export before resolving these dependencies. Full native
 PLIST generation/check-files remains required for every updated recipe.

@@ -1,0 +1,41 @@
+$NetBSD$
+
+Origin: EmberBSD; AI-assisted package-only explicit Python selection.
+Not submitted upstream. Retain upstream MIT licensing.
+Use one substituted common interpreter; import failures cannot select another.
+
+--- meson.build.orig
++++ meson.build
+@@ -1089,9 +1089,8 @@
+ # Find a python executable that meets our version requirement.
+ # - On Windows, a venv has no versioned aliased to 'python'.
+ # - On RHEL 9, python3 is 3.9, so we must use python3.12.
+-python_version_req = '>= 3.10'
+-python_exec_list = ['python3.16', 'python3.15', 'python3.14', 'python3.13',
+-                    'python3.12', 'python3.11', 'python3.10', 'python3', 'python']
++python_version_req = '>= 3.14'
++python_exec_list = ['@PYTHONBIN@']
+ 
+ foreach p : python_exec_list
+   prog_python = find_program(p, required : false, version : python_version_req)
+@@ -1105,10 +1104,7 @@
+ import sys
+ 
+ try:
+-    try:
+-        from packaging.version import Version
+-    except:
+-        from distutils.version import StrictVersion as Version
++    from packaging.version import Version
+ except:
+     sys.exit(2)
+ 
+@@ -1139,7 +1135,7 @@
+ if has_mako.returncode() == 1
+   error('Python (3.x) mako module >= 0.8.0 required to build mesa.')
+ elif has_mako.returncode() == 2
+-  error('One of Python (3.x) packaging or distutils module is required.')
++  error('Python (3.x) packaging module is required.')
+ endif
+ 
+ if has_yaml.returncode() != 0

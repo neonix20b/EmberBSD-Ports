@@ -32,12 +32,16 @@ Buildlink requirements select the new versions, including transitive consumers.
 Qt's common build and consumer files require GCC 16.2.
 
 For a later native build, a private MAKECONF includes the exported
-`EMBERBSD-COMMON-TOOLS-MK.CONF` and then
+`EMBERBSD-COMMON-TOOLS-MK.CONF`, then
+`EMBERBSD-COMMON-GRAPHICS-MK.CONF` and finally
 `EMBERBSD-PLASMA-TOOLKIT-MK.CONF`. The latter selects GCC 16.2, one worker and
 release compiler flags without changing `/etc/mk.conf`. It refuses inherited
 FFmpeg8 consumers until their common FFmpeg9 integration is ready, requires
-Mesa26.2.4 and disables the built-in X11 GL/GLU fallback. The native dependency
-closure must be prepared first as described in MIGRATION.md.
+the [common graphics source profile](../../../profiles/common-graphics/README.md)
+with Mesa26.2.4/libdrm2.4.134nb1 and disables native GL/GLU/DRM providers.
+Qtbase selects its EGL-device PLIST from the canonical package header;
+configuration, installed plugin contents and native check-files remain gates.
+The native dependency closure must be prepared first as described in MIGRATION.md.
 
 ## Provenance and patch decisions
 

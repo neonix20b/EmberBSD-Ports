@@ -1,0 +1,3 @@
+# Recipe	Archive	SHA256	Upstream URL
+graphics/MesaLib	mesa-26.2.4.tar.xz	bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9	https://archive.mesa3d.org/mesa-26.2.4.tar.xz
+x11/libdrm	libdrm-2.4.134.tar.xz	ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95	https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz

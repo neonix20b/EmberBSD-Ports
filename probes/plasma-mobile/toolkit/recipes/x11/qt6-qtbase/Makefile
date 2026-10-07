@@ -246,8 +246,15 @@ PLIST.x11=	yes
 .include "../../graphics/vulkan-headers/buildlink3.mk"
 .  if !empty(MESALIB_SUPPORTS_EGL:Myes)
 PLIST.egl=	yes
-.    if exists(${X11BASE}/include/EGL/eglext.h)
-EGL_EXT_FILE=	cat ${X11BASE}/include/EGL/eglext.h
+.    if defined(EMBERBSD_COMMON_GRAPHICS)
+# The selected Mesa 26 header supplies EGL_DRM_MASTER_FD_EXT; require its
+# canonical installed header. Native configure/plugin/check-files still gate this.
+EGL_EXT_HEADER= ${BUILDLINK_PREFIX.MesaLib}/include/EGL/eglext.h
+.    else
+EGL_EXT_HEADER= ${X11BASE}/include/EGL/eglext.h
+.    endif
+.    if exists(${EGL_EXT_HEADER})
+EGL_EXT_FILE=	cat ${EGL_EXT_HEADER:Q}
 .      if !empty(EGL_EXT_FILE:sh:MEGL_DRM_MASTER_FD_EXT)
 PLIST.egldevice=	yes
 .      endif

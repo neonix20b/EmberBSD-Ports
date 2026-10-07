@@ -1,0 +1,358 @@
+Origin: EmberBSD; AI-assisted Mesa 26.2.4 adaptation.
+Status: local; not submitted upstream.
+
+NetBSD plain atexit does not record a DSO owner. Register using the native
+__cxa_atexit ABI so dlclose removes callbacks before code is unmapped.
+Preserve call-time reverse registration order, including C++ destructors,
+rather than unconditional per-file destructor order. The trampoline retains
+the real callback type and frees its allocation on registration failure.
+
+Supersedes pkgsrc HAVE_NOATEXIT adaptations from revision
+0491f5e57e8fba00998bf1a6c0958ef421fefaa1 (NetBSD patch identifiers and
+individual disposition recorded in ../../mesa-patches.md). New helper code
+is MIT-licensed; original Mesa licenses and copyright remain unchanged.
+
+--- src/util/u_atexit.c.orig
++++ src/util/u_atexit.c
+@@ -0,0 +1,46 @@
++/* Copyright 2026 EmberBSD contributors
++ * SPDX-License-Identifier: MIT
++ */
++#include <stdlib.h>
++
++#include "u_atexit.h"
++
++#if defined(__NetBSD__)
++extern int __cxa_atexit(void (*)(void *), void *, void *);
++extern void *__dso_handle __attribute__((visibility("hidden")));
++
++struct util_exit_callback {
++   void (*func)(void);
++};
++
++static void
++util_run_exit_callback(void *data)
++{
++   struct util_exit_callback *callback = data;
++   void (*func)(void) = callback->func;
++
++   free(callback);
++   func();
++}
++#endif
++
++int
++util_atexit(void (*func)(void))
++{
++#if defined(__NetBSD__)
++   /* NetBSD's plain atexit does not bind callbacks to their owning DSO.
++    * Keep registration order and remove callbacks before that DSO unloads.
++    */
++   struct util_exit_callback *callback = malloc(sizeof(*callback));
++   if (!callback)
++      return -1;
++
++   callback->func = func;
++   int result = __cxa_atexit(util_run_exit_callback, callback, &__dso_handle);
++   if (result != 0)
++      free(callback);
++   return result;
++#else
++   return atexit(func);
++#endif
++}
+--- src/util/u_atexit.h.orig
++++ src/util/u_atexit.h
+@@ -0,0 +1,21 @@
++/* Copyright 2026 EmberBSD contributors
++ * SPDX-License-Identifier: MIT
++ */
++#ifndef U_ATEXIT_H
++#define U_ATEXIT_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/* Keep the registration helper local to each library that links Mesa util. */
++#if defined(__GNUC__)
++__attribute__((visibility("hidden")))
++#endif
++int util_atexit(void (*func)(void));
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+--- src/util/meson.build.orig
++++ src/util/meson.build
+@@ -130,6 +130,8 @@
+   'texcompress_astc.cpp',
+   'texcompress_astc.h',
+   'timespec.h',
++  'u_atexit.c',
++  'u_atexit.h',
+   'u_atomic.c',
+   'u_atomic.h',
+   'u_call_once.c',
+--- src/glx/dri_common.c.orig
++++ src/glx/dri_common.c
+@@ -35,6 +35,8 @@
+ 
+ #if defined(GLX_DIRECT_RENDERING)
+ 
++#include "util/u_atexit.h"
++
+ #include <unistd.h>
+ #include <dlfcn.h>
+ #include <stdarg.h>
+@@ -730,7 +732,7 @@
+    driver_config_cache = e;
+ 
+    if (!e->next)
+-      atexit(clear_driver_config_cache);
++      util_atexit(clear_driver_config_cache);
+ 
+ out:
+    pthread_mutex_unlock(&driver_config_mutex);
+--- src/egl/main/eglglobals.c.orig
++++ src/egl/main/eglglobals.c
+@@ -27,6 +27,8 @@
+  *
+  **************************************************************************/
+ 
++#include "util/u_atexit.h"
++
+ #include <assert.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -115,7 +117,7 @@
+    simple_mtx_lock(_eglGlobal.Mutex);
+ 
+    if (!registered) {
+-      atexit(_eglAtExit);
++      util_atexit(_eglAtExit);
+       registered = EGL_TRUE;
+    }
+ 
+--- src/gallium/auxiliary/driver_trace/tr_dump.c.orig
++++ src/gallium/auxiliary/driver_trace/tr_dump.c
+@@ -38,6 +38,8 @@
+  * @author Jose Fonseca <jfonseca@vmware.com>
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "util/detect.h"
+ 
+ #include <stdio.h>
+@@ -281,7 +283,7 @@
+        * screen multiple times, so we only write </trace> tag and close at exit
+        * time.
+        */
+-      atexit(trace_dump_trace_close);
++      util_atexit(trace_dump_trace_close);
+ 
+       const char *trigger = debug_get_option("GALLIUM_TRACE_TRIGGER", NULL);
+       if (trigger && __normal_user()) {
+--- src/gallium/auxiliary/gallivm/lp_bld_init_orc.cpp.orig
++++ src/gallium/auxiliary/gallivm/lp_bld_init_orc.cpp
+@@ -3,6 +3,8 @@
+  * SPDX-License-Identifier: MIT
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "util/detect.h"
+ #include "util/u_cpu_detect.h"
+ #include "util/u_debug.h"
+@@ -278,7 +280,7 @@
+ 
+    static void init_lpjit() {
+       jit = new LPJit;
+-      std::atexit(lpjit_exit);
++      util_atexit(lpjit_exit);
+    }
+    static LPJit* jit;
+ 
+--- src/util/os_misc.c.orig
++++ src/util/os_misc.c
+@@ -26,6 +26,8 @@
+  **************************************************************************/
+ 
+ 
++#include "util/u_atexit.h"
++
+ #include "hash_table.h"
+ #include "macros.h"
+ #include "os_misc.h"
+@@ -313,7 +315,7 @@
+       if (options_tbl == NULL) {
+          goto exit_mutex;
+       }
+-      atexit(options_tbl_fini);
++      util_atexit(options_tbl_fini);
+    }
+    struct hash_entry *entry = _mesa_hash_table_search(options_tbl, name);
+    if (entry) {
+--- src/util/perf/u_perfetto.cc.orig
++++ src/util/perf/u_perfetto.cc
+@@ -21,6 +21,8 @@
+  * SOFTWARE.
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "u_perfetto.h"
+ 
+ #include "c11/threads.h"
+@@ -211,7 +213,7 @@
+    static UtilPerfettoObserver observer;
+    perfetto::TrackEvent::Register();
+ 
+-   atexit(&util_perfetto_fini);
++   util_atexit(&util_perfetto_fini);
+ }
+ 
+ static once_flag perfetto_once_flag = ONCE_FLAG_INIT;
+--- src/util/perf/u_trace.c.orig
++++ src/util/perf/u_trace.c
+@@ -21,6 +21,8 @@
+  * DEALINGS IN THE SOFTWARE.
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "u_trace.h"
+ 
+ #include <inttypes.h>
+@@ -334,7 +336,7 @@
+    if (tracefile_name && __normal_user()) {
+       u_trace_state.trace_file = fopen(tracefile_name, "w");
+       if (u_trace_state.trace_file != NULL) {
+-         atexit(trace_file_fini);
++         util_atexit(trace_file_fini);
+       }
+    }
+    if (!u_trace_state.trace_file) {
+--- src/util/strtod.c.orig
++++ src/util/strtod.c
+@@ -24,6 +24,8 @@
+  */
+ 
+ 
++#include "util/u_atexit.h"
++
+ #include <stdlib.h>
+ 
+ #if defined(_GNU_SOURCE) && defined(HAVE_STRTOD_L)
+@@ -50,7 +52,7 @@
+ _mesa_locale_init_once(void)
+ {
+    loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+-   atexit(_mesa_locale_fini);
++   util_atexit(_mesa_locale_fini);
+ }
+ 
+ static ALWAYS_INLINE locale_t
+--- src/util/u_process.c.orig
++++ src/util/u_process.c
+@@ -25,6 +25,8 @@
+  * of the Software.
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "util/os_misc.h"
+ #include "u_process.h"
+ #include "detect_os.h"
+@@ -208,7 +210,7 @@
+    program_name = override_name ? strdup(override_name) : __getProgramName();
+ 
+    if (program_name)
+-      atexit(free_program_name);
++      util_atexit(free_program_name);
+ }
+ 
+ const char *
+--- src/util/u_queue.c.orig
++++ src/util/u_queue.c
+@@ -24,6 +24,8 @@
+  * of the Software.
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "u_queue.h"
+ 
+ #include "c11/threads.h"
+@@ -80,7 +82,7 @@
+ global_init(void)
+ {
+    mtx_init(&exit_mutex, mtx_plain);
+-   atexit(atexit_handler);
++   util_atexit(atexit_handler);
+ }
+ 
+ static void
+--- src/mesa/main/context.c.orig
++++ src/mesa/main/context.c
+@@ -76,6 +76,8 @@
+  */
+ 
+ 
++#include "util/u_atexit.h"
++
+ #include "util/glheader.h"
+ #include "util/u_thread.h"
+ 
+@@ -219,7 +221,7 @@
+       _mesa_ubyte_to_float_color_tab[i] = (float) i / 255.0F;
+    }
+ 
+-   atexit(one_time_fini);
++   util_atexit(one_time_fini);
+ 
+ #if MESA_DEBUG
+    if (MESA_VERBOSE != 0) {
+--- src/mesa/main/formats.c.orig
++++ src/mesa/main/formats.c
+@@ -24,6 +24,8 @@
+  */
+ 
+ 
++#include "util/u_atexit.h"
++
+ #include "errors.h"
+ 
+ #include "formats.h"
+@@ -496,7 +498,7 @@
+                                          (void *)(intptr_t)f);
+    }
+ 
+-   atexit(format_array_format_table_destroy);
++   util_atexit(format_array_format_table_destroy);
+ }
+ 
+ mesa_format
+--- src/mesa/main/extensions.c.orig
++++ src/mesa/main/extensions.c
+@@ -29,6 +29,8 @@
+  * \brief Extension handling
+  */
+ 
++#include "util/u_atexit.h"
++
+ #include "util/os_misc.h"
+ 
+ #include "util/glheader.h"
+@@ -232,7 +234,7 @@
+       free(env);
+    } else {
+       unrecognized_extensions.env = env;
+-      atexit(free_unknown_extensions_strings);
++      util_atexit(free_unknown_extensions_strings);
+    }
+ }
+ 

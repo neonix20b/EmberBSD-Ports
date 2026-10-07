@@ -1,0 +1,5 @@
+Mesa is an open-source implementation of OpenGL and related graphics APIs.
+This bounded NetBSD 11/AArch64 source candidate selects classic VirGL,
+softpipe and llvmpipe/ORC using the common shared LLVM 23 runtime, with
+X11, Wayland, EGL, GBM, OpenGL and GLES. Package and native runtime acceptance
+remain separate from source preparation.
