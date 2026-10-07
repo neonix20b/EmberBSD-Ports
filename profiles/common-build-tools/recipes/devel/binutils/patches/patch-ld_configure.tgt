@@ -1,0 +1,21 @@
+$NetBSD: patch-ld_configure.tgt,v 1.10 2023/07/31 14:08:34 fcambus Exp $
+
+NetBSD/aarch64 support patches for ld from src.
+
+Origin: EmberBSD (AI-assisted), refresh the inherited pkgsrc patch for 2.47.
+
+--- ld/configure.tgt.orig
++++ ld/configure.tgt
+@@ -122,6 +122,12 @@
+ aarch64-*-haiku*)	targ_emul=aarch64haiku
+ 			targ_extra_emuls="aarch64elf aarch64elf32 aarch64elf32b aarch64elfb armelf armelfb armelf_haiku"
+ 			;;
++aarch64_be-*-netbsd*)	targ_emul=aarch64nbsdb
++			targ_extra_emuls="aarch64nbsd aarch64elfb aarch64elf armelfb_nbsd_eabihf armelf_nbsd_eabihf armelfb_nbsd_eabi armelf_nbsd_eabi armelfb_nbsd armelf_nbsd armelf armelfb"
++			;;
++aarch64-*-netbsd*)	targ_emul=aarch64nbsd
++			targ_extra_emuls="aarch64nbsdb aarch64elf aarch64elfb armelf_nbsd_eabihf armelfb_nbsd_eabihf armelf_nbsd_eabi armelfb_nbsd_eabi armelf_nbsd armelfb_nbsd armelf armelfb"
++			;;
+ aarch64-*-nto*)		targ_emul=aarch64nto
+ 			targ_extra_emuls="aarch64elf aarch64elf32 aarch64elf32b aarch64elfb armelf armelfb"
+ 			;;

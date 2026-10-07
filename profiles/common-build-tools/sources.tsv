@@ -5,3 +5,4 @@ llvm-project-23.1.2.src.tar.xz	c98bbef08a2b4c2613cd50e9aa9ae7b69b1fe6c16b2c40373
 pkgconf-3.0.7.tar.xz	028889796fd6d556e019d35b8e8d68d321cbb5cf9827d3ea7653625629641345	https://distfiles.dereferenced.org/pkgconf/pkgconf-3.0.7.tar.xz
 libtool-2.6.2.tar.xz	2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e	https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz
 m4-1.4.21.tar.gz	38ae59f7a30bf9c108193cc5c25fbb06014f21e230c7ede2eff614f7b7c37ed8	https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.gz
+binutils-2.47.tar.xz	154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff	https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz

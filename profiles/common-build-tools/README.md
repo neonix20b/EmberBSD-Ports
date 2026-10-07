@@ -8,9 +8,13 @@ Meson and LLVM packages, installed extensions and consumers remain pending.
 This is not an installed Mesa stack.
 
 The [macOS cross-package path](cross/README.md) uses GCC16 and ordinary pkgsrc
-packaging. Pkgconf 3.0.7, GNU M4 1.4.21 and Libtool 2.6.2 pass package checks
+packaging. Pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and
+[Binutils 2.47nb1](binutils.md) pass package checks
 and [installed AArch64 VM acceptance](cross/validation.md). Cross package
 metadata, alternate-root updates and target script paths have regressions.
+Binutils includes a tested DWARF32/64 line-table repair. Its acceptance
+explicitly selects GNU as/ld; migration of the bootstrap GCC16 package's
+hardcoded base-tool paths remains pending.
 
 The profile owns full Python, Meson and
 [LLVM family recipes](llvm-family.md), based on

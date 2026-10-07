@@ -20,7 +20,8 @@ Prepare these separate directories, outside Git:
   mksh and digest. Use the exported `pkg_install-20260227nb1` recipe: it fixes
   alternate-root replacement and suppresses target deinstall scripts during
   cross updates. Its package database describes host executables only.
-- A target sysroot with headers, base libraries, the complete accepted
+- A target sysroot with headers, complete base libraries and development
+  files (including `libintl`), the complete accepted
   `gcc16-16.2.0nb1` package, its dependency files and target package database.
   Include base `/usr/bin/install-info` for packages shipping Info manuals.
 
@@ -48,6 +49,9 @@ EMBERBSD_CROSS_HOST_PREFIX=/absolute/host
 WRKOBJDIR=/absolute/work
 DISTDIR=/absolute/distfiles
 MAKE_JOBS=4
+# Optional when these host tools are already installed:
+TOOLS_PLATFORM.makeinfo=/absolute/host-texinfo/bin/makeinfo
+TOOLS_PLATFORM.msgfmt=/absolute/host-gettext/bin/msgfmt
 .include "/absolute/EmberBSD-Ports/profiles/common-build-tools/cross/mk.conf"
 .endif
 ```
@@ -64,6 +68,13 @@ packages. Add private paths for any required host tools through pkgsrc's tool
 configuration. The NetBSD target remains `/usr/pkg`. Cross `install` populates
 the private sysroot with package scripts disabled; actual `pkg_add` on the
 target runs installation scripts, including Info registration.
+
+Build-time C/C++ generators use `/usr/bin/cc` and `/usr/bin/c++` on macOS.
+Override `EMBERBSD_CROSS_BUILD_CC` and `EMBERBSD_CROSS_BUILD_CXX` with absolute
+host compiler paths when necessary. They reach upstream configure as
+`CC_FOR_BUILD` and `CXX_FOR_BUILD`; target wrappers still compile the package.
+Host tool dependencies read the host bootstrap MAKECONF, so interpreter and
+tool choices needed by those dependencies belong there as well.
 
 ## What the cross adaptation checks
 
@@ -90,6 +101,9 @@ Run `tests/cross-pkgsrc.sh` against a staged pkgconf package. It exercises real
 pkgsrc parsing, native dependency recursion, ELF metadata and failure cases.
 `tests/cross-tools.sh` checks tool composition, refusal of existing output,
 missing host tools and the constrained target Info utility selection.
+`tests/cross-generators.sh` checks native/cross Libtool auxiliary selection
+and executes C/C++ generators through the real configure environment. It
+also rejects missing compiler exports and invalid compiler paths.
 The separate `tests/pkg-add-sysroot.sh` compares original and repaired host
 package tools. It checks replacement, same-version reinstall, shared-directory
 ownership, partial-extraction rollback and native behavior.
@@ -104,6 +118,9 @@ Target acceptance scripts in this directory require a new output directory:
   registration through the installed package.
 - `run-libtool-tests.sh`: C11/C++20 shared and static consumers, exceptions,
   actual runtime linkage, libtoolize, shlibtool and uninstall.
+- `run-binutils-tests.sh`: GNU assembler/linker and archive consumers,
+  DWARF5/64, split debug information, stripping, C++ DSO exceptions,
+  GNU CTF and unresolved-symbol errors; see [Binutils](../binutils.md).
 
 Pkgconf builds its test binaries as upstream `noinst_PROGRAMS` during `all`.
 Copy the actual `WRKSRC/.libs/test-api-*` and `.libs/test-runner` ELF files;

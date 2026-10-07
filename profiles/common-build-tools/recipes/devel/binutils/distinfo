@@ -1,0 +1,16 @@
+$NetBSD: distinfo,v 1.51 2023/07/31 14:08:34 fcambus Exp $
+
+BLAKE2s (binutils-2.47.tar.xz) = f640974b84d053afe409ebca49ea494b19f818885461c66edec479bb8f1d1b24
+SHA512 (binutils-2.47.tar.xz) = 3126a1064374d8da40d4d70630c204ed1e75d542c447d53fca9778c7ceff095c28e9b445e15a313fef9729082d7966471ee6b5b715d479aa6d568528743e1d98
+Size (binutils-2.47.tar.xz) = 29034716 bytes
+SHA1 (patch-bfd_dwarf2.c) = cf3fb7a3759a64d88d0e4c523c5c0fee5d53b85b
+SHA1 (patch-include_safe-ctype.h) = 66e636f8200ff5e9b4bfa0a5aee13cd072a23887
+SHA1 (patch-ld_Makefile.am) = 712bcd04dde4b3685d6a88b22c24a1fc32b291e6
+SHA1 (patch-ld_Makefile.in) = 103950669718240b74b3c74f9920fc52aac30577
+SHA1 (patch-ld_configure.tgt) = 5542152695d66ca85bc514cc7eb56c27642967a9
+SHA1 (patch-ld_emulparams_aarch64nbsd.sh) = 6489e5996eefdb8ba66c73d7425443109d47e6a9
+SHA1 (patch-ld_emulparams_aarch64nbsdb.sh) = 9980f3ca8cb7cac1b56c71c482b691fa2f7659a1
+SHA1 (patch-ld_emulparams_armelf__nbsd__eabi.sh) = 464b0957f95a1a8ba6a92ee0091b929d9c980470
+SHA1 (patch-ld_emulparams_armelf__nbsd__eabihf.sh) = 972678f6bab6e910fe7ac29c6c06f1a438d308a0
+SHA1 (patch-ld_emulparams_armelfb__nbsd__eabi.sh) = 67a519cac8986ab2520861bbd1100782295637d2
+SHA1 (patch-ld_emulparams_armelfb__nbsd__eabihf.sh) = 6f58d6aa6d601544d9ad00a9ac4fdc704390a42c

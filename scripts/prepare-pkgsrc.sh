@@ -29,7 +29,7 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     exit 2
 }
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
             [ -f "$source/distinfo" ] || {
@@ -163,7 +163,7 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         # Replace only recipe paths inside this newly created export.
         rm -rf "$destination/$recipe"

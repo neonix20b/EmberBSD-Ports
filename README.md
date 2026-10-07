@@ -37,9 +37,13 @@ runtime behavior are validated.
   remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   [Mac cross packages](profiles/common-build-tools/cross/README.md) for
-  pkgconf 3.0.7, GNU M4 1.4.21 and Libtool 2.6.2 pass ordinary package checks
+  pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and
+  [Binutils 2.47nb1](profiles/common-build-tools/binutils.md) pass ordinary package checks
   and installed AArch64 VM consumers with GCC16. Cross metadata, package
-  replacement and rollback have regression checks. The profile also provides
+  replacement and rollback have regression checks. Binutils has a verified
+  DWARF32/64 line-table repair; GNU tools are selected explicitly during
+  acceptance, with GCC bootstrap-tool default migration still pending.
+  The profile also provides
   coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
   recipes with upstream lit, scoped native Clang/GCC16 defaults, strict
   common selection and host source contracts. Focused native macro/selection

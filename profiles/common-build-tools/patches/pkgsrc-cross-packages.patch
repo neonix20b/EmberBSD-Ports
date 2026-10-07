@@ -14,6 +14,27 @@ Native dependency selection and native ldd metadata remain unchanged.
      defined(_OPSYS_LDEMUL.${MACHINE_ARCH})
  _WRAP_EXTRA_ARGS.LD+=	-m ${_OPSYS_LDEMUL.${MACHINE_ARCH}}
  CWRAPPERS_APPEND.ld+=	-m ${_OPSYS_LDEMUL.${MACHINE_ARCH}}
+--- a/mk/configure/libtool-override.mk
++++ b/mk/configure/libtool-override.mk
+@@ -18,10 +18,15 @@
+ 
+ _OVERRIDE_PATH.libtool=		${LIBTOOL}
+ _OVERRIDE_PATH.shlibtool=	${SHLIBTOOL}
+-.if exists(${TOOLBASE}/share/libtool/config/depcomp)
+-_OVERRIDE_PATH.depcomp=		${TOOLBASE}/share/libtool/config/depcomp
++# Origin: EmberBSD (AI-assisted), use the selected cross Libtool auxiliary files.
++_DEPCOMP_BASE=	${TOOLBASE}/share/libtool
++.if !empty(USE_CROSS_COMPILE:M[yY][eE][sS])
++_DEPCOMP_BASE=	${TOOLBASE}/cross-${TARGET_MACHINE_PLATFORM:U${MACHINE_PLATFORM}}/share/libtool
++.endif
++.if exists(${_DEPCOMP_BASE}/config/depcomp)
++_OVERRIDE_PATH.depcomp=		${_DEPCOMP_BASE}/config/depcomp
+ .else
+-_OVERRIDE_PATH.depcomp=		${TOOLBASE}/share/libtool/build-aux/depcomp
++_OVERRIDE_PATH.depcomp=		${_DEPCOMP_BASE}/build-aux/depcomp
+ .endif
+ 
+ .for _script_ in libtool shlibtool depcomp
 --- a/mk/pkgformat/pkg/depends.mk
 +++ b/mk/pkgformat/pkg/depends.mk
 @@ -90,6 +90,13 @@
