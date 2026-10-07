@@ -1,0 +1,49 @@
+Origin: EmberBSD, AI-assisted; not submitted upstream.
+Applies to @serialport/bindings-cpp 13.0.1 as published on npm.
+The npm package ships JavaScript, so this patch targets dist, not absent TS sources.
+Keep existing Unix serial I/O and enumerate NetBSD dial-out character devices.
+Do not open devices, guess USB metadata, or claim that a node is an attached radio.
+Reference: https://man.netbsd.org/ucom.4
+
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -37,6 +37,9 @@
+         case 'win32':
+             debug('loading WindowsBinding');
+             return win32_1.WindowsBinding;
++        case 'netbsd':
++            debug('loading NetBSDBinding');
++            return { ...linux_1.LinuxBinding, list: require('./netbsd-list').netbsdList };
+         case 'darwin':
+             debug('loading DarwinBinding');
+             return darwin_1.DarwinBinding;
+--- /dev/null
++++ b/dist/netbsd-list.js
+@@ -0,0 +1,27 @@
++"use strict";
++// EmberBSD, AI-assisted. Enumerate device nodes without opening serial ports.
++// NetBSD nodes can exist without attached hardware; this is not USB detection.
++const fs = require('node:fs/promises');
++const path = require('node:path');
++async function netbsdList(directory = '/dev', io = fs) {
++    const names = (await io.readdir(directory)).filter(name =>
++        /^dty(?:U[0-9a-zA-Z]|[0-9a-f]{2})$/.test(name)).sort();
++    const ports = [];
++    for (const name of names) {
++        const device = path.join(directory, name);
++        let info;
++        try {
++            info = await io.lstat(device);
++        } catch (error) {
++            if (error.code === 'ENOENT') continue;
++            throw error;
++        }
++        if (info.isCharacterDevice()) {
++            ports.push({ path: device, manufacturer: undefined,
++                serialNumber: undefined, pnpId: undefined, locationId: undefined,
++                vendorId: undefined, productId: undefined });
++        }
++    }
++    return ports;
++}
++exports.netbsdList = netbsdList;

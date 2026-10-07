@@ -1,0 +1,21 @@
+Origin: EmberBSD, AI-assisted portability adaptation; not submitted upstream.
+Applies to OpenThread cb18e0f598059d733b3382b81437c4138195d1ea.
+Use NetBSD's standard curses implementation for readline instead of requiring
+an additional ncurses installation by library basename.
+
+--- a/src/posix/CMakeLists.txt
++++ b/src/posix/CMakeLists.txt
+@@ -63,7 +63,12 @@
+ if (READLINE)
+     message(STATUS "Readline: ${OT_READLINE}")
+ 
+-    find_library(NCURSES ncurses)
++    if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++        find_package(Curses REQUIRED)
++        set(NCURSES ${CURSES_LIBRARIES})
++    else()
++        find_library(NCURSES ncurses)
++    endif()
+     if (NOT NCURSES)
+         message(FATAL_ERROR "Failed to find ncurses")
+     endif()

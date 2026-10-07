@@ -1,0 +1,2 @@
+# archive sha256 upstream_url destination
+home-assistant-2026.9.4.tar.gz 2e8b7519622d24c82fe71f2956f8aef104cfca2e7485dd3039f85775e83dda0b https://codeload.github.com/home-assistant/core/tar.gz/refs/tags/2026.9.4 .

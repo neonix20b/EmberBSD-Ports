@@ -1,0 +1,6 @@
+# archive sha256 upstream_url destination
+ot-br-posix-2026.10.0.tar.gz 38bfb768e3732adfb032c315048b7f3639427547151fe1df6fbbbc28127154e8 https://codeload.github.com/openthread/ot-br-posix/tar.gz/refs/tags/v2026.10.0 .
+openthread-cb18e0f5.tar.gz 120e64e26a858779f2f6bc12ed806b20598a13bab0a96ee60865700fc1c01eca https://codeload.github.com/openthread/openthread/tar.gz/cb18e0f598059d733b3382b81437c4138195d1ea third_party/openthread/repo
+cpp-httplib-03cf43eb.tar.gz 6e049be7ab3ba6ae95067b70aa0b53d442f92935fde160aad521da3459c969d9 https://codeload.github.com/yhirose/cpp-httplib/tar.gz/03cf43ebaa55f27a2778bed870ea3549f7e84e2c third_party/cpp-httplib/repo
+mbedtls-e185d7fd.tar.gz 052dccf3a404dce25a467c6fe044b0c858d609ace8e883b59e9dfd479fdd4528 https://codeload.github.com/Mbed-TLS/mbedtls/tar.gz/e185d7fd85499c8ce5ca2a54f5cf8fe7dbe3f8df third_party/openthread/repo/third_party/mbedtls/repo
+mbedtls-framework-45799647.tar.gz c15bcc24fc43bdf325b0e04fa63270daf6e9488167b94b46547d8134efa9c906 https://codeload.github.com/Mbed-TLS/mbedtls-framework/tar.gz/457996474728cb8e968ed21953b72f74d2f536b2 third_party/openthread/repo/third_party/mbedtls/repo/framework

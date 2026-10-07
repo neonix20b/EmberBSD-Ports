@@ -1,0 +1,54 @@
+Origin: EmberBSD, AI-assisted; not submitted upstream.
+Applies to OpenThread cb18e0f598059d733b3382b81437c4138195d1ea.
+NetBSD does not provide Apple's IPV6_BOUND_IF. Use its RFC3542 sticky
+IPV6_PKTINFO for outgoing selection. The existing receive path already drops
+packets whose packet-info interface differs from mInfraIfIndex, checks hop
+limit 255 and a link-local source; the send path also supplies per-packet info.
+NetBSD sys/netinet6/in6.h and ip6_output.c define and implement this interface.
+
+--- a/src/posix/platform/infra_if.cpp
++++ b/src/posix/platform/infra_if.cpp
+@@ -139,6 +139,18 @@
+ 
+ const char InfraNetif::kLogModuleName[] = "InfraNetif";
+ 
++#if defined(__NetBSD__)
++static int BindIcmp6SocketToInterface(int aSocket, unsigned int aIfIndex)
++{
++    // NetBSD RFC 3542 packet information selects the outgoing interface.
++    // ReceiveIcmp6Message separately rejects packets from other interfaces.
++    struct in6_pktinfo packetInfo = {};
++
++    packetInfo.ipi6_ifindex = aIfIndex;
++    return setsockopt(aSocket, IPPROTO_IPV6, IPV6_PKTINFO, &packetInfo, sizeof(packetInfo));
++}
++#endif
++
+ int InfraNetif::CreateIcmp6Socket(const char *aInfraIfName)
+ {
+     int                 sock;
+@@ -190,7 +202,11 @@
+         unsigned int ifIndex = if_nametoindex(aInfraIfName);
+ 
+         VerifyOrDie(ifIndex != 0, OT_EXIT_INVALID_ARGUMENTS);
++#if defined(__NetBSD__)
++        rval = BindIcmp6SocketToInterface(sock, ifIndex);
++#else
+         rval = setsockopt(sock, IPPROTO_IPV6, IPV6_BOUND_IF, &ifIndex, sizeof(ifIndex));
++#endif
+     }
+ #endif // __linux__
+     VerifyOrDie(rval == 0, OT_EXIT_ERROR_ERRNO);
+@@ -835,8 +851,12 @@
+         // The ICMPv6 socket is bound to the interface by index, not by name.
+         if (mInfraIfIcmp6Socket != -1)
+         {
++#if defined(__NetBSD__)
++            VerifyOrDie(BindIcmp6SocketToInterface(mInfraIfIcmp6Socket, ifIndex) == 0, OT_EXIT_ERROR_ERRNO);
++#else
+             VerifyOrDie(setsockopt(mInfraIfIcmp6Socket, IPPROTO_IPV6, IPV6_BOUND_IF, &ifIndex, sizeof(ifIndex)) == 0,
+                         OT_EXIT_ERROR_ERRNO);
++#endif
+         }
+         SuccessOrDie(otBorderRoutingInit(gInstance, mInfraIfIndex, IsRunning()));
+ #endif
