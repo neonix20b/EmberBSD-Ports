@@ -16,7 +16,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  #include "trace.h"
  #include "hw/virtio/virtio.h"
  #include "hw/virtio/virtio-gpu.h"
-@@ -114,6 +116,284 @@
+@@ -114,6 +116,297 @@
      }
  }
  
@@ -51,7 +51,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
 +    }
 +}
 +
-+bool virtio_gpu_virgl_cmdq_allowed(VirtIOGPU *g)
++bool virtio_gpu_virgl_cmdq_handoff_allowed(VirtIOGPU *g)
 +{
 +    VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
 +
@@ -61,6 +61,19 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
 +    if (gl->classic_state != CL_RUNNING || gl->reset_requested ||
 +        gl->fault_latched || !gl->renderer_live) {
 +        virtio_gpu_virgl_schedule_lifecycle(g);
++        return false;
++    }
++    return !gl->renderer_call_depth;
++}
++
++bool virtio_gpu_virgl_cmdq_allowed(VirtIOGPU *g)
++{
++    VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
++
++    if (!gl->ember_classic_lifecycle) {
++        return true;
++    }
++    if (!virtio_gpu_virgl_cmdq_handoff_allowed(g)) {
 +        return false;
 +    }
 +    if (!g->processing_cmdq && !gl->renderer_call_depth &&
@@ -301,7 +314,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  #if VIRGL_RENDERER_CALLBACKS_VERSION >= 4
  static void *
  virgl_get_egl_display(G_GNUC_UNUSED void *cookie)
-@@ -208,6 +488,10 @@
+@@ -208,6 +501,10 @@
      VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
      struct virtio_gpu_virgl_hostmem_region *vmr;
  
@@ -312,7 +325,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      while ((vmr = QTAILQ_FIRST(&gl->unmap_done_list)) != NULL) {
          virtio_gpu_virgl_finish_unmap(g, vmr);
      }
-@@ -637,6 +921,14 @@
+@@ -637,6 +934,14 @@
      trace_virtio_gpu_cmd_ctx_create(cc.hdr.ctx_id,
                                      cc.debug_name);
  
@@ -327,7 +340,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      if (cc.context_init) {
          if (!virtio_gpu_context_init_enabled(g->parent_obj.conf)) {
              qemu_log_mask(LOG_GUEST_ERROR, "%s: context_init disabled",
-@@ -1004,6 +1296,19 @@
+@@ -1004,6 +1309,19 @@
      uint32_t max_ver, max_size;
      VIRTIO_GPU_FILL_CMD(gc);
  
@@ -347,7 +360,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      virgl_renderer_get_cap_set(gc.capset_id, &max_ver,
                                 &max_size);
      if (!max_size) {
-@@ -1335,13 +1640,51 @@
+@@ -1335,13 +1653,51 @@
  }
  #endif
  
@@ -400,7 +413,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      virgl_renderer_force_ctx_0();
      switch (cmd->cmd_hdr.type) {
      case VIRTIO_GPU_CMD_CTX_CREATE:
-@@ -1422,6 +1765,10 @@
+@@ -1422,6 +1778,10 @@
          break;
      }
  
@@ -411,7 +424,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      cmd->suspended = cmd_suspended;
  
      if (cmd_suspended || cmd->finished || cmd->deferred) {
-@@ -1445,6 +1792,10 @@
+@@ -1445,6 +1805,10 @@
                                              VIRGL_RENDERER_FENCE_FLAG_MERGEABLE,
                                              cmd->cmd_hdr.ring_idx,
                                              cmd->cmd_hdr.fence_id);
@@ -422,7 +435,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
          if (ret) {
              /*
               * The renderer context is gone (e.g. its render-server
-@@ -1468,6 +1819,23 @@
+@@ -1468,6 +1832,23 @@
      virgl_renderer_create_fence(cmd->cmd_hdr.fence_id, cmd->cmd_hdr.type);
  }
  
@@ -446,7 +459,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  static void virgl_write_fence(void *opaque, uint32_t fence)
  {
      VirtIOGPU *g = opaque;
-@@ -1542,7 +1910,23 @@
+@@ -1542,7 +1923,23 @@
      VirtIOGPU *g = opaque;
      VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
  
@@ -471,7 +484,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
          return;
      }
  
-@@ -1553,6 +1937,11 @@
+@@ -1553,6 +1950,11 @@
  
          QSLIST_REMOVE_HEAD(&async_fenceq, next);
  
@@ -483,7 +496,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
          /*
           * Delegate to the same completion logic the synchronous callbacks
           * use: virgl_write_fence() completes only global (non-ring) fenced
-@@ -1580,7 +1969,21 @@
+@@ -1580,7 +1982,21 @@
      struct virtio_gpu_virgl_context_fence *f;
      VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
  
@@ -506,7 +519,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      f->ctx_id = ctx_id;
      f->ring_idx = ring_idx;
      f->fence_id = fence_id;
-@@ -1639,7 +2042,7 @@
+@@ -1639,7 +2055,7 @@
                                     qctx);
  }
  
@@ -515,7 +528,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  #if VIRGL_VERSION_MAJOR >= 1
      .version             = 3,
  #else
-@@ -1654,11 +2057,16 @@
+@@ -1654,11 +2070,16 @@
  #endif
  };
  
@@ -532,7 +545,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      if (g->stats.requests) {
          fprintf(stderr, "stats: vq req %4d, %3d -- 3D %4d (%5d)\n",
                  g->stats.requests,
-@@ -1680,7 +2088,24 @@
+@@ -1680,7 +2101,24 @@
      VirtIOGPU *g = opaque;
      VirtIOGPUGL *gl = VIRTIO_GPU_GL(g);
  
@@ -557,7 +570,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      virtio_gpu_process_cmdq(g);
      if (!QTAILQ_EMPTY(&g->cmdq) || !QTAILQ_EMPTY(&g->fenceq)) {
          /*
-@@ -1741,12 +2166,62 @@
+@@ -1741,12 +2179,62 @@
      virtio_gpu_virgl_reset_async_fences(g);
  }
  
@@ -620,7 +633,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  #if VIRGL_RENDERER_CALLBACKS_VERSION >= 4
      if (qemu_egl_display) {
          virtio_gpu_3d_cbs.version = 4;
-@@ -1800,33 +2275,52 @@
+@@ -1800,33 +2288,52 @@
      }
  #endif
  
@@ -843,18 +856,19 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  #if VIRGL_VERSION_MAJOR >= 1
          qemu_bh_delete(gl->cmdq_resume_bh);
  
-@@ -198,6 +274,8 @@
+@@ -198,6 +274,9 @@
      VirtIOGPUClass *vgc = VIRTIO_GPU_CLASS(klass);
  
      vbc->gl_flushed = virtio_gpu_gl_flushed;
 +    vgc->cmdq_allowed = virtio_gpu_virgl_cmdq_allowed;
++    vgc->cmdq_handoff_allowed = virtio_gpu_virgl_cmdq_handoff_allowed;
 +    vgc->reset_resources = virtio_gpu_virgl_reset_resources;
      vgc->handle_ctrl = virtio_gpu_gl_handle_ctrl;
      vgc->process_cmd = virtio_gpu_virgl_process_cmd;
      vgc->update_cursor_data = virtio_gpu_gl_update_cursor_data;
 --- a/hw/display/virtio-gpu.c
 +++ b/hw/display/virtio-gpu.c
-@@ -1047,19 +1047,23 @@
+@@ -1047,19 +1047,24 @@
      struct virtio_gpu_ctrl_command *cmd;
      VirtIOGPUClass *vgc = VIRTIO_GPU_GET_CLASS(g);
  
@@ -874,13 +888,14 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  
          /* process command */
          vgc->process_cmd(g, cmd);
-+        if (vgc->cmdq_allowed && !vgc->cmdq_allowed(g)) {
++        /* Display block pauses admission, not this command's handoff. */
++        if (vgc->cmdq_handoff_allowed && !vgc->cmdq_handoff_allowed(g)) {
 +            break;
 +        }
  
          /*
           * A deferred command is owned by whoever deferred it, which responds
-@@ -1101,6 +1105,10 @@
+@@ -1101,6 +1106,10 @@
          }
      }
      g->processing_cmdq = false;
@@ -891,7 +906,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  }
  
  static void virtio_gpu_process_fenceq(VirtIOGPU *g)
-@@ -1615,6 +1623,10 @@
+@@ -1615,6 +1624,10 @@
      Error *local_err = NULL;
      int i = 0;
  
@@ -902,7 +917,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      QTAILQ_FOREACH_SAFE(res, &g->reslist, next, tmp) {
          resource_id = res->resource_id;
          vgc->resource_destroy(g, res, &local_err);
-@@ -1633,6 +1645,7 @@
+@@ -1633,6 +1646,7 @@
          dpy_gfx_replace_surface(g->parent_obj.scanout[i].con, NULL);
      }
  
@@ -920,16 +935,18 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      /* Set if process_cmd deferred completion; keep at cmdq head for resume. */
      bool suspended;
      /*
-@@ -241,6 +242,8 @@
+@@ -241,6 +242,10 @@
  struct VirtIOGPUClass {
      VirtIOGPUBaseClass parent;
  
 +    bool (*cmdq_allowed)(VirtIOGPU *g);
++    /* False retains the dispatched command for lifecycle revocation. */
++    bool (*cmdq_handoff_allowed)(VirtIOGPU *g);
 +    bool (*reset_resources)(VirtIOGPU *g);
      void (*handle_ctrl)(VirtIODevice *vdev, VirtQueue *vq);
      void (*process_cmd)(VirtIOGPU *g, struct virtio_gpu_ctrl_command *cmd);
      void (*update_cursor_data)(VirtIOGPU *g,
-@@ -252,6 +255,7 @@
+@@ -252,6 +257,7 @@
  };
  
  struct virtio_gpu_virgl_context_fence {
@@ -937,7 +954,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
      uint32_t ctx_id;
      uint32_t ring_idx;
      uint64_t fence_id;
-@@ -268,10 +272,28 @@
+@@ -268,10 +274,28 @@
  
  struct virtio_gpu_virgl_hostmem_region;
  
@@ -966,7 +983,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
  
      QEMUTimer *fence_poll;
      QEMUTimer *print_stats;
-@@ -338,6 +360,17 @@
+@@ -338,6 +362,18 @@
          }                                                               \
      } while (0)
  
@@ -975,6 +992,7 @@ Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
 +void virtio_gpu_virgl_request_reset(VirtIOGPU *g);
 +bool virtio_gpu_virgl_reset_resources(VirtIOGPU *g);
 +bool virtio_gpu_virgl_cmdq_allowed(VirtIOGPU *g);
++bool virtio_gpu_virgl_cmdq_handoff_allowed(VirtIOGPU *g);
 +void virtio_gpu_virgl_schedule_lifecycle(VirtIOGPU *g);
 +void virtio_gpu_virgl_lifecycle_realize(VirtIOGPU *g);
 +void virtio_gpu_virgl_lifecycle_unrealize(VirtIOGPU *g);

@@ -263,7 +263,7 @@ typedef QEMUBH QEMUTimer;
 static unsigned allocated_handles,deleted_handles,detaches,unmaps,cleanup_calls,renderer_calls,responses,freed_commands,dispatches,forced,query_polls;
 static bool native_live;
 static unsigned fail_count,check_count,expected_detaches;
-static bool premature,oom,inject_fault,inject_poll,inject_fence,reenter,init_fails,init_oom,invariant_child,block_child,vcpu,ordering_child,stats_requested,mismatch_child;
+static bool premature,oom,inject_fault,inject_display_block,inject_poll,inject_fence,reenter,init_fails,init_oom,invariant_child,block_child,vcpu,ordering_child,stats_requested,mismatch_child;
 static void check(bool ok,const char *msg){check_count++;if(!ok){fail_count++;fprintf(stderr,"FAIL %s\n",msg);}}
 static QEMUBH *new_handle(void(*fn)(void*),void *p){QEMUBH *h=calloc(1,sizeof(*h));assert(h);h->fn=fn;h->opaque=p;allocated_handles++;return h;}
 #define virtio_bh_io_new_guarded(d,f,p) new_handle(f,p)
@@ -285,7 +285,7 @@ typedef enum {RS_START,RS_INIT_FAILED,RS_INITED,RS_RESET} RenderState;
 #include "state.inc"
 #include "gl-shape.inc"
 struct virtio_gpu_virgl_hostmem_region {TAILQ_ENTRY(virtio_gpu_virgl_hostmem_region) next;};
-typedef struct {bool(*cmdq_allowed)(VirtIOGPU*);bool(*reset_resources)(VirtIOGPU*);void(*process_cmd)(VirtIOGPU*,struct virtio_gpu_ctrl_command*);void(*resource_destroy)(VirtIOGPU*,struct virtio_gpu_simple_resource*,Error**);} VirtIOGPUClass;
+typedef struct {bool(*cmdq_allowed)(VirtIOGPU*);bool(*cmdq_handoff_allowed)(VirtIOGPU*);bool(*reset_resources)(VirtIOGPU*);void(*process_cmd)(VirtIOGPU*,struct virtio_gpu_ctrl_command*);void(*resource_destroy)(VirtIOGPU*,struct virtio_gpu_simple_resource*,Error**);} VirtIOGPUClass;
 static VirtIOGPUClass klass;
 static void error_report(const char *s,...){fprintf(stderr,"diagnostic: %s\n",s);}
 #define virtio_gpu_stats_enabled(c) ((c).stats)
@@ -344,7 +344,7 @@ int virgl_renderer_context_create_with_flags(uint32_t id,uint32_t flags,uint32_t
 void virgl_renderer_get_cap_set(uint32_t id,uint32_t *ver,uint32_t *size){(void)id;renderer_calls++;*ver=1;*size=4;}
 void virgl_renderer_fill_caps(uint32_t id,uint32_t ver,void *caps){(void)id;(void)ver;(void)caps;renderer_calls++;}
 void *virgl_renderer_get_cursor_data(uint32_t id,uint32_t *w,uint32_t *h){(void)id;(void)w;(void)h;renderer_calls++;return NULL;}
-static void dispatch(VirtIOGPU *g,struct virtio_gpu_ctrl_command *c){dispatches++;if(inject_fault)virtio_gpu_virgl_request_fault(g,c,VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);}
+static void dispatch(VirtIOGPU *g,struct virtio_gpu_ctrl_command *c){dispatches++;if(inject_display_block)g->parent_obj.renderer_blocked=1;if(inject_fault)virtio_gpu_virgl_request_fault(g,c,VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);}
 #define STUB(n) static void n(VirtIOGPU *g,struct virtio_gpu_ctrl_command *c){dispatch(g,c);}
 STUB(virgl_cmd_context_destroy) STUB(virgl_cmd_create_resource_2d) STUB(virgl_cmd_create_resource_3d) STUB(virgl_cmd_submit_3d) STUB(virgl_cmd_transfer_to_host_2d) STUB(virgl_cmd_transfer_to_host_3d) STUB(virgl_cmd_transfer_from_host_3d) STUB(virgl_resource_attach_backing) STUB(virgl_resource_detach_backing) STUB(virgl_cmd_set_scanout) STUB(virgl_cmd_resource_flush) STUB(virgl_cmd_ctx_attach_resource) STUB(virgl_cmd_ctx_detach_resource) STUB(virgl_cmd_get_capset_info) STUB(virtio_gpu_get_display_info) STUB(virtio_gpu_get_edid) STUB(virgl_cmd_resource_create_blob) STUB(virgl_cmd_resource_unmap_blob) STUB(virgl_cmd_set_scanout_blob)
 static void virgl_cmd_resource_unref(VirtIOGPU *g,struct virtio_gpu_ctrl_command *c,bool *s){(void)s;dispatch(g,c);}
@@ -370,13 +370,43 @@ static void virtio_gpu_virgl_add_capset(GArray*,uint32_t);
 GArray *virtio_gpu_virgl_get_capsets(VirtIOGPU*);
 #include "functions.inc"
 static void noop(void *g){(void)g;}
-static void setup(VirtIOGPUGL *gl){memset(gl,0,sizeof(*gl));VirtIOGPU *g=&gl->parent_obj;TAILQ_INIT(&g->reslist);TAILQ_INIT(&g->cmdq);TAILQ_INIT(&g->fenceq);TAILQ_INIT(&g->dmabuf.bufs);g->parent_obj.conf.max_outputs=1;g->parent_obj.conf.stats=stats_requested;g->negotiated=true;g->parent_obj.conf.context=true;g->ctrl_bh=new_handle(noop,g);g->reset_bh=new_handle(virtio_gpu_reset_bh,g);gl->ember_classic_lifecycle=true;virtio_gpu_virgl_lifecycle_realize(g);active_g=g;expected_detaches=detaches=unmaps=responses=renderer_calls=dispatches=forced=query_polls=0;premature=oom=inject_fault=inject_poll=inject_fence=reenter=init_fails=init_oom=false;}
+static void setup(VirtIOGPUGL *gl){memset(gl,0,sizeof(*gl));VirtIOGPU *g=&gl->parent_obj;TAILQ_INIT(&g->reslist);TAILQ_INIT(&g->cmdq);TAILQ_INIT(&g->fenceq);TAILQ_INIT(&g->dmabuf.bufs);g->parent_obj.conf.max_outputs=1;g->parent_obj.conf.stats=stats_requested;g->negotiated=true;g->parent_obj.conf.context=true;g->ctrl_bh=new_handle(noop,g);g->reset_bh=new_handle(virtio_gpu_reset_bh,g);gl->ember_classic_lifecycle=true;virtio_gpu_virgl_lifecycle_realize(g);active_g=g;expected_detaches=detaches=unmaps=responses=renderer_calls=dispatches=forced=query_polls=0;premature=oom=inject_fault=inject_display_block=inject_poll=inject_fence=reenter=init_fails=init_oom=false;}
 static void teardown(VirtIOGPUGL *gl){virtio_gpu_virgl_lifecycle_unrealize(&gl->parent_obj);qemu_bh_delete(gl->parent_obj.ctrl_bh);qemu_bh_delete(gl->parent_obj.reset_bh);}
 static struct virtio_gpu_ctrl_command *command(VirtIOGPU *g,unsigned flags,uint64_t id,uint32_t ctx,bool fence){struct virtio_gpu_ctrl_command *c=calloc(1,sizeof(*c));c->cmd_hdr=(struct virtio_gpu_ctrl_hdr){.type=VIRTIO_GPU_CMD_SUBMIT_3D,.flags=flags,.fence_id=id,.ctx_id=ctx};c->header_valid=true;if(fence){TAILQ_INSERT_TAIL(&g->fenceq,c,next);g->inflight++;}else TAILQ_INSERT_TAIL(&g->cmdq,c,next);return c;}
 static void add_resources(VirtIOGPU *g){for(unsigned i=0;i<3;i++){struct virtio_gpu_virgl_resource *r=calloc(1,sizeof(*r));resources[i]=r;r->base.resource_id=i+1;r->base.dmabuf_fd=-1;r->classic_backing_managed=true;r->classic_backing_state=i==2?CLASSIC_BACKING_DETACHED_RETAINED:CLASSIC_BACKING_ATTACHED;r->classic_iov=calloc(1,sizeof(struct iovec));r->classic_iov_count=1;TAILQ_INSERT_TAIL(&g->reslist,&r->base,next);}expected_detaches=2;}
 static void reset_cases(void){VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;check(virtio_gpu_virgl_init(g)==0,"init");add_resources(g);command(g,1,4,0,true);command(g,0,0,0,false);g->parent_obj.renderer_blocked=1;virtio_gpu_gl_reset(g);check(detaches==2&&unmaps==3&&!premature,"all detach before all release");check(g->reset_finished&&responses==0&&g->inflight==0&&TAILQ_EMPTY(&g->cmdq),"reset drains before finished without response");check(renderer_calls==0&&gl.renderer_live,"blocked reset retains native resources");aio_bh_call(gl.lifecycle_bh);check(gl.classic_state==CL_REVOKED&&renderer_calls==0,"blocked lifecycle does not clean");g->parent_obj.renderer_blocked=0;virtio_gpu_gl_flushed(&g->parent_obj);aio_bh_call(gl.lifecycle_bh);check(gl.classic_state==CL_COLD&&!gl.renderer_live&&TAILQ_EMPTY(&g->reslist),"unblock cleanup before cold");uint64_t old=gl.generation;check(virtio_gpu_virgl_init(g)==0&&gl.generation==old+1,"fresh generation after cleanup");teardown(&gl);}
 static void fault_cases(void){VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;virtio_gpu_virgl_init(g);add_resources(g);command(g,1,1,0,true);command(g,0,0,0,false);oom=inject_poll=true;virtio_gpu_virgl_fence_poll(g);check(gl.fault_latched&&gl.classic_state==CL_FAULT_PENDING,"actual callback OOM latches without allocation");check(detaches==0&&responses==0,"OOM callback defers barrier");aio_bh_call(gl.lifecycle_bh);check(detaches==2&&unmaps==3&&!premature&&responses==2,"fault responds only after full revoke");check(gl.classic_state==CL_FAULTED&&!gl.renderer_live,"fault terminal after cleanup");teardown(&gl);
 for(unsigned fenced=0;fenced<2;fenced++){setup(&gl);g=&gl.parent_obj;virtio_gpu_virgl_init(g);struct virtio_gpu_ctrl_command *c=command(g,fenced,2,0,false);struct iovec iov={&c->cmd_hdr,sizeof(c->cmd_hdr)};c->elem=(VirtQueueElement){&iov,1};command(g,0,0,0,false);inject_fault=true;virtio_gpu_process_cmdq(g);check(dispatches==1&&TAILQ_FIRST(&g->cmdq)==c&&TAILQ_EMPTY(&g->fenceq)&&responses==0,"fault during actual handler retains cmdq owner, no replay");aio_bh_call(gl.lifecycle_bh);check(responses==2&&g->inflight==0,"fault drains both owners once");teardown(&gl);}}
+/* A display callback may block admission while the dispatched command owns
+ * a response or a newly created fence. The dispatch seam models that boundary;
+ * command dispatch, queue handoff and callback delivery remain actual bodies. */
+static void display_handoff_cases(void)
+{
+ for (unsigned flags=0;flags<=3;flags+=flags?2:1) {
+  VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;virtio_gpu_virgl_init(g);
+  struct virtio_gpu_ctrl_command *c=command(g,flags,2,7,false);
+  struct iovec v={&c->cmd_hdr,sizeof(c->cmd_hdr)};c->elem=(VirtQueueElement){&v,1};
+  inject_display_block=true;virtio_gpu_process_cmdq(g);
+  check(TAILQ_EMPTY(&g->cmdq),"display block after dispatch releases cmdq ownership");
+  check(flags?(g->inflight==1&&TAILQ_FIRST(&g->fenceq)==c&&responses==0):
+              (g->inflight==0&&TAILQ_EMPTY(&g->fenceq)&&responses==1),
+        "display block preserves completed response or fence ownership handoff");
+  /* Queue a different descriptor: admission must still stop before dispatch. */
+  struct virtio_gpu_ctrl_command *next=command(g,0,3,0,false);
+  struct iovec nextv={&next->cmd_hdr,sizeof(next->cmd_hdr)};next->elem=(VirtQueueElement){&nextv,1};
+  virtio_gpu_process_cmdq(g);
+  check(dispatches==1&&next==TAILQ_FIRST(&g->cmdq),
+        "display block stops the next command");
+  if(flags==1)virgl_write_async_fence(g,2);
+  if(flags)aio_bh_call(gl.async_fence_bh);
+  check(flags?responses==0:responses==1,"display block defers fence callback response");
+  inject_display_block=false;g->parent_obj.renderer_blocked=0;
+  virtio_gpu_process_cmdq(g);aio_bh_call(gl.async_fence_bh);
+  check(dispatches==2&&TAILQ_EMPTY(&g->cmdq)&&TAILQ_EMPTY(&g->fenceq)&&
+        g->inflight==0&&responses==2,"unblock completes each command once without replay");
+  teardown(&gl);
+ }
+}
 static void inbox_cases(void){VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;virtio_gpu_virgl_init(g);command(g,1,5,0,true);command(g,3,5,1,true);command(g,3,5,2,true);virgl_write_async_context_fence(g,1,0,5);aio_bh_call(gl.async_fence_bh);check(responses==1&&g->inflight==2,"context callback isolated from global and other context");virgl_write_async_fence(g,5);aio_bh_call(gl.async_fence_bh);check(responses==2&&g->inflight==1,"global callback excludes context");virgl_write_async_context_fence(g,2,0,5);SLIST_FIRST(&gl.async_fenceq)->generation--;aio_bh_call(gl.async_fence_bh);check(responses==2&&g->inflight==1,"stale generation cannot complete command");virgl_write_async_context_fence(g,2,0,5);g->parent_obj.renderer_blocked=1;aio_bh_call(gl.async_fence_bh);check(!SLIST_EMPTY(&gl.async_fenceq)&&responses==2,"display block retains success record");g->parent_obj.renderer_blocked=0;virtio_gpu_virgl_cmdq_allowed(g);aio_bh_call(gl.async_fence_bh);check(g->inflight==0&&responses==3,"unblock delivers retained record");teardown(&gl);
 setup(&gl);g=&gl.parent_obj;virtio_gpu_virgl_init(g);struct virtio_gpu_ctrl_command *c=command(g,1,9,0,false);struct iovec iov={&c->cmd_hdr,sizeof(c->cmd_hdr)};c->elem=(VirtQueueElement){&iov,1};inject_fence=reenter=true;virtio_gpu_process_cmdq(g);check(g->inflight==1&&responses==0&&gl.async_fence_bh->scheduled,"callback before fenceq handoff preserves wake");aio_bh_call(gl.async_fence_bh);check(g->inflight==0&&responses==1,"callback completes after handoff");teardown(&gl);}
 static void init_cases(void){VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;unsigned handles=allocated_handles;check(virtio_gpu_virgl_init(g)==0&&init_flags==VIRGL_RENDERER_NATIVE_SHARE_TEXTURE&&!gl.async_fence_enabled,"native-only producer flags");check(gl.fence_poll->scheduled,"empty queues poll starts");gl.fence_poll->scheduled=false;virtio_gpu_virgl_fence_poll(g);check(gl.fence_poll->scheduled&&query_polls==1,"empty queues poll rearms");virtio_gpu_gl_reset(g);aio_bh_call(gl.lifecycle_bh);qemu_egl_display=NULL;check(virtio_gpu_virgl_init(g)==0&&virtio_gpu_3d_cbs.version==3&&virtio_gpu_3d_cbs.get_egl_display==NULL,"callback defaults restored");check(allocated_handles==handles,"repeated init preserves handles");qemu_egl_display=(void*)1;teardown(&gl);
@@ -426,6 +456,6 @@ static void wake_cases(void){
 }
 static void child_case(int mode){VirtIOGPUGL gl;setup(&gl);VirtIOGPU *g=&gl.parent_obj;virtio_gpu_virgl_init(g);add_resources(g);command(g,1,1,0,true);if(mode==0){resources[2]->mr=(void*)1;invariant_child=true;virtio_gpu_gl_reset(g);}else if(mode==1){block_child=true;g->parent_obj.renderer_blocked=1;virtio_gpu_virgl_lifecycle_unrealize(g);}else if(mode==2){gl.renderer_call_depth=1;invariant_child=true;virtio_gpu_gl_reset(g);}else if(mode==3){ordering_child=true;virtio_gpu_gl_reset(g);}else{mismatch_child=true;virtio_gpu_gl_reset(g);} _exit(0);}
 static void invariant_cases(void){for(int i=0;i<4;i++){pid_t p=fork();assert(p>=0);if(!p)child_case(i==3?4:i);int s;waitpid(p,&s,0);check(WIFSIGNALED(s)&&WTERMSIG(s)==SIGABRT,"fail-stop before forbidden cleanup/response/device deletion");}}
-int main(void){klass=(VirtIOGPUClass){virtio_gpu_virgl_cmdq_allowed,virtio_gpu_virgl_reset_resources,virtio_gpu_virgl_process_cmd,virtio_gpu_virgl_resource_destroy};if(getenv("LIFECYCLE_NO_ABI")){VirtIOGPUGL gl;setup(&gl);Error *error=NULL;virtio_gpu_gl_device_realize(&gl.parent_obj,&error);check(error&&base_realizes==0,"old renderer rejects opt-in profile before advertisement");teardown(&gl);puts("old ABI rejected");return fail_count?1:0;}if(getenv("LIFECYCLE_ORDER_CHILD")){pid_t p=fork();assert(p>=0);if(!p)child_case(3);int status;waitpid(p,&status,0);check(WIFEXITED(status)&&WEXITSTATUS(status)==0,"second resource detach precedes any unmap (distinct forbidden-side-effect exit)");return fail_count?1:0;}reset_cases();fault_cases();inbox_cases();init_cases();policy_cases();ordering_cases();wake_cases();invariant_cases();printf("%u checks, %u failures\n",check_count,fail_count);return fail_count?1:0;}
+int main(void){klass=(VirtIOGPUClass){virtio_gpu_virgl_cmdq_allowed,virtio_gpu_virgl_cmdq_handoff_allowed,virtio_gpu_virgl_reset_resources,virtio_gpu_virgl_process_cmd,virtio_gpu_virgl_resource_destroy};if(getenv("LIFECYCLE_NO_ABI")){VirtIOGPUGL gl;setup(&gl);Error *error=NULL;virtio_gpu_gl_device_realize(&gl.parent_obj,&error);check(error&&base_realizes==0,"old renderer rejects opt-in profile before advertisement");teardown(&gl);puts("old ABI rejected");return fail_count?1:0;}if(getenv("LIFECYCLE_ORDER_CHILD")){pid_t p=fork();assert(p>=0);if(!p)child_case(3);int status;waitpid(p,&status,0);check(WIFEXITED(status)&&WEXITSTATUS(status)==0,"second resource detach precedes any unmap (distinct forbidden-side-effect exit)");return fail_count?1:0;}reset_cases();fault_cases();display_handoff_cases();inbox_cases();init_cases();policy_cases();ordering_cases();wake_cases();invariant_cases();printf("%u checks, %u failures\n",check_count,fail_count);return fail_count?1:0;}
 
 #endif

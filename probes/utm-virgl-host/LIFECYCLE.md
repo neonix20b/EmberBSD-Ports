@@ -118,7 +118,7 @@ Missing newly proposed APIs are not counted as baseline RED.
 
 | Contract | Plain, ASan/UBSan, NDEBUG result |
 |---|---|
-| QEMU lifecycle, queue/inbox ownership, policy and reset paths | 71 checks, zero failures |
+| QEMU lifecycle, queue/inbox ownership, policy and reset paths | 86 checks, zero failures |
 | Actual renderer init/poll/query scheduler and external EGL without GBM | 10 checks, zero failures |
 | The same external EGL path with GBM | 10 checks, zero failures |
 | Renderer built with ENABLE_VIDEO | 6 checks, zero failures |
@@ -128,13 +128,20 @@ The QEMU suite includes callback OOM during poll/init, fault during a handler,
 callback before fence ownership handoff, context/global isolation, cumulative
 out-of-order completion, u64 context fences, stale generations, both fault/reset
 orders, blocked reset/unrealize, full-resource precheck, repeated/failed/never-init
-lifetimes, callback-default restoration and a control kick across cleanup. A callback fault\nduring initial init also re-kicks the unread descriptor after CPU revoke, even\nwhen display block delays native cleanup.
+lifetimes, callback-default restoration and a control kick across cleanup. A callback fault
+during initial init also re-kicks the unread descriptor after CPU revoke, even
+when display block delays native cleanup.
+The command queue uses separate admission and post-dispatch handoff hooks.
+A display block stops the next command but permits current response/fence
+ownership handoff. A fault/reset still retains the current command for revoke.
+The dispatch seam raises display block for non-fenced, global-fenced and
+context-fenced commands; actual queue/callback bodies verify single completion.
 A separate compiled old-ABI branch rejects the opt-in property.
 
-Sixteen causal mutants fail behavioral assertions in all three modes: release
+Seventeen causal mutants fail behavioral assertions in all three modes: release
 per resource; skip second detach; lost OOM latch; absent generation comparison;
-THREAD_SYNC; prohibited-command gate; fault ownership handoff; cleanup under
-block; responses after reset; missing persistent rearm; public producer gate;
+THREAD_SYNC; prohibited-command gate; fault ownership handoff; display-block
+ownership handoff; cleanup under block; responses after reset; missing persistent rearm; public producer gate;
 missing resource precheck; blocked-unrealize deletion; stale callback defaults;
 early query return; and the former GBM-only external cleanup.
 Forbidden release/response/device deletion seams use a distinct exit status,

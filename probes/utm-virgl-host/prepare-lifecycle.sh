@@ -11,7 +11,7 @@ hash() { shasum -a 256 "$1" | awk '{print $1}'; }
 # Accepted preparer validates original archive, all raw inputs, full selected
 # overlay inventory, CREATE identity and C8c1 output before this delta.
 sh "$recipe/prepare-backing.sh" "$archive" "$inputs" "$work"
-[ "$(hash "$recipe/lifecycle-sources.tsv")" = 3d159c5687694b60e62c843d32f0e8f771ffd2ff9650660d661b60ac5c36c618 ] || { echo 'Lifecycle manifest mismatch' >&2;exit 1; }
+[ "$(hash "$recipe/lifecycle-sources.tsv")" = 79c1280553e988d0c41733284d4366857f14fe569ca383efabd947f5055e3bc1 ] || { echo 'Lifecycle manifest mismatch' >&2;exit 1; }
 mkdir -p "$work/renderer-extra-original"
 while IFS="$(printf '\t')" read -r kind path sum;do
  case "$kind" in ''|'#'*) continue;; original)

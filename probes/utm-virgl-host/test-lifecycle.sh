@@ -36,7 +36,7 @@ for mode in plain sanitized release;do
  run "$work/test-renderer-red" "$mode" 1 'FAIL empty-fence poll completes pending query'
  grep -Fq 'FAIL external EGL cleanup owns wrapper and GBM, never display' "$work/test-renderer-red/$mode.log"
  compile "$work/test-qemu" "$mode" "$recipe/tests/lifecycle.c"
- run "$work/test-qemu" "$mode" 0 '71 checks, 0 failures'
+ run "$work/test-qemu" "$mode" 0 '86 checks, 0 failures'
  for config in normal gbm video;do
   out=$work/renderer-$config
   if [ ! -d "$out" ];then mkdir "$out";cp "$work/test-renderer/"*.inc "$work/test-renderer/virgl-version.h" "$out/";fi
@@ -52,7 +52,7 @@ compile "$work/test-qemu" no-abi "$recipe/tests/lifecycle.c" -DLIFECYCLE_NO_ABI
 export LIFECYCLE_NO_ABI=1
 run "$work/test-qemu" no-abi 0 'old ABI rejected'
 unset LIFECYCLE_NO_ABI
-for mutant in release-per-resource lost-oom-latch stale-generation thread-sync command-guard fault-handoff cleanup-under-block reset-response poll-no-rearm producer-poll-gate resource-precheck blocked-unrealize callback-defaults skip-second-detach;do
+for mutant in release-per-resource lost-oom-latch stale-generation thread-sync command-guard display-handoff fault-handoff cleanup-under-block reset-response poll-no-rearm producer-poll-gate resource-precheck blocked-unrealize callback-defaults skip-second-detach;do
  out=$work/mutant-$mutant
  mkdir "$out";cp "$work/test-qemu/"*.inc "$work/test-qemu/virgl-version.h" "$out/"
  ruby "$recipe/tests/lifecycle-seams.rb" mutate "$out/functions.inc" "$mutant"

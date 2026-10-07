@@ -96,8 +96,10 @@ when 'thread-sync'
  replace_once(s,'flags &= VIRGL_RENDERER_NATIVE_SHARE_TEXTURE;', 'flags = (flags & VIRGL_RENDERER_NATIVE_SHARE_TEXTURE) | VIRGL_RENDERER_THREAD_SYNC;')
 when 'command-guard'
  replace_once(s,'!virtio_gpu_virgl_classic_command(cmd->cmd_hdr.type)', 'false')
+when 'display-handoff'
+ replace_once(s, 'if (vgc->cmdq_handoff_allowed && !vgc->cmdq_handoff_allowed(g))', 'if (vgc->cmdq_allowed && !vgc->cmdq_allowed(g))')
 when 'fault-handoff'
- replace_once(s,"        vgc->process_cmd(g, cmd);\n        if (vgc->cmdq_allowed && !vgc->cmdq_allowed(g)) {\n            break;\n        }", '        vgc->process_cmd(g, cmd);')
+ replace_once(s,"        vgc->process_cmd(g, cmd);\n        /* Display block pauses admission, not this command's handoff. */\n        if (vgc->cmdq_handoff_allowed && !vgc->cmdq_handoff_allowed(g)) {\n            break;\n        }", '        vgc->process_cmd(g, cmd);')
 when 'cleanup-under-block'
  replace_once(s,"    if (gl->renderer_live && g->parent_obj.renderer_blocked) {\n        return;\n    }", '    /* mutant: cleanup under block */')
 when 'reset-response'
