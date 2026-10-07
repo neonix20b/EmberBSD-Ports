@@ -31,7 +31,8 @@ runtime behavior are validated.
   coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
   recipes with upstream lit, scoped native Clang/GCC16 defaults, strict
   common selection and host source contracts. Focused native macro/selection
-  checks cover Python; native LLVM23/compiler-family checks, packages,
+  checks cover Python, LLVM family selection and real GCC16 config metadata;
+  native LLVM23/compiler-family checks, packages,
   installed extensions, ELF consumers and LLVM23/Mesa26 acceptance remain pending.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,

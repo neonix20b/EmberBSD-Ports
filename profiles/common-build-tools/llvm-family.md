@@ -23,10 +23,12 @@ alongside shared libraries. LLD retains COFF/Common/ELF/MachO/MinGW/Wasm archive
 All upstream normal/experimental backend options remain available and selected
 by default. SPIRV is now normal. The stack is not restricted to AArch64.
 
-PLIST candidates refresh actual source headers and Clang resource headers,
-preserve generated entries and add llvm_gtest support, libclang.a,
-clangAnalysisLifetimeSafety and LLVMDTLTO. They are informed by upstream install
-rules; native staging/check-files must identify generated/tool/archive changes.
+PLIST candidates refresh source/resource headers and restore the Config/Extension
+definitions and replacement Analysis/Clang Basic generated includes. A source-derived
+contract checks all 124 outputs in these directly related generation/install rules;
+the preceding PLIST fails on 17 missing entries. llvm_gtest support, libclang.a,
+clangAnalysisLifetimeSafety and LLVMDTLTO are declared. Other generated/tool/archive
+payloads still require native staging/check-files; this is not a complete staged PLIST.
 Missing or unexpected files remain failures; package checks are not weakened.
 
 Standalone Clang/LLD use matching installed LLVM CMake exports and check
@@ -118,9 +120,26 @@ exports. Accepted Python/Meson/GCC recipe bytes are compared without rerunning
 unrelated suites. Target/PLIST declarations are source contracts, not builds.
 The default source gate includes LLVM; python-source preserves its narrow scope.
 
+The generated-header gate is independently usable with the verified pristine tree:
+
+```sh
+sh profiles/common-build-tools/tests/llvm-generated-headers.sh \
+    /absolute/llvm-project-23.1.2.src \
+    profiles/common-build-tools/recipes /absolute/new-header-check
+```
+
+It reads actual Config configure outputs, Analysis tablegen, Extension generation,
+Clang Basic tablegen/diagnostic macros and binary-tree install declarations.
+Source-file existence alone cannot prove generated headers. config.h is excluded
+by upstream; Basic JSON outputs do not match its *.inc install rule. This named
+source contract does not execute CMake/TableGen or replace package-file checks.
+
 llvm-selection.sh parses the real exported version block with BSD make:
 four allowed paths and thirteen rejected consumers. Missing BSD make prints SKIP;
-full native recipe parsing is separate. clang-config.sh uses fixture metadata and
+all 17 cases now pass with native BSD make. A bounded native metadata check also
+generates the config with actual GCC16 and existing Clang21.1.8; it does not prove
+LLVM23 driver/link behavior. See [native evidence](native-evidence.md).
+Full native recipe parsing is separate. clang-config.sh uses fixture metadata and
 a real available Clang driver's traces, including causal no-config RED, C/C++, CRT
 search order, cross/SDK optout, static and no-default-library modes. Dummy CRT
 files are never linked. AppleClang21 is comparative evidence, not native LLVM23.

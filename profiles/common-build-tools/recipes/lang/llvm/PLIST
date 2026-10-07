@@ -547,6 +547,7 @@ include/llvm/Analysis/StructuralHash.h
 include/llvm/Analysis/SyntheticCountsUtils.h
 include/llvm/Analysis/TargetFolder.h
 include/llvm/Analysis/TargetLibraryInfo.h
+include/llvm/Analysis/TargetLibraryInfo.inc
 include/llvm/Analysis/TargetTransformInfo.h
 include/llvm/Analysis/TargetTransformInfoImpl.h
 include/llvm/Analysis/TensorSpec.h
@@ -959,6 +960,12 @@ include/llvm/CodeGen/XRayInstrumentation.h
 include/llvm/CodeGen/pch.h
 include/llvm/CodeGenTypes/LowLevelType.h
 include/llvm/CodeGenTypes/MachineValueType.h
+include/llvm/Config/AsmParsers.def
+include/llvm/Config/AsmPrinters.def
+include/llvm/Config/Disassemblers.def
+include/llvm/Config/TargetExegesis.def
+include/llvm/Config/TargetMCAs.def
+include/llvm/Config/Targets.def
 include/llvm/Config/Targets.h
 include/llvm/Config/abi-breaking.h
 include/llvm/Config/llvm-config.h
@@ -2018,6 +2025,7 @@ include/llvm/Support/ErrorHandling.h
 include/llvm/Support/ErrorOr.h
 include/llvm/Support/ExitCodes.h
 include/llvm/Support/ExponentialBackoff.h
+include/llvm/Support/Extension.def
 include/llvm/Support/ExtensibleRTTI.h
 include/llvm/Support/FileCollector.h
 include/llvm/Support/FileOutputBuffer.h

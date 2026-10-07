@@ -38,3 +38,26 @@ The removed workaround originated in pkgsrc `patch-Modules_faulthandler.c`,
 RCS revision1.1, 2025-10-08 07:13:08, author `adam`, described as a GCC15
 initializer workaround. Its original text and identifier remain in the pinned
 pkgsrc source and preceding Ports commit; no authorship is reassigned.
+
+## LLVM family selection and real GCC metadata
+
+On 2026-10-07, a second bounded NetBSD/AArch64 check used frozen Ports
+`cbf5c75c4a05f277a94d2b13a3dd9c8b432bafeb` and its exact recipe export.
+Native BSD make passed four prepared-family paths and thirteen refused paths
+using the production version selection block. Full package parsing remains pending.
+
+The production native-gcc-config.sh generated a private native-triple config
+from installed GCC16.2.0 and existing Clang21.1.8 metadata. It selected the
+three actual GCC C++ include directories, exact private CRT directory, private
+and runtime linker directories and runtime RPATH. The resulting config was
+not installed or activated, and no LLVM23 driver or native link was exercised.
+
+The wrapper returned 0. Log SHA256:
+`2a0f3a4e5c4809e36b56fa10bfe2e103410a5c7bfebe8c4eb5cb269792d0ab2e`.
+Receipt SHA256:
+`6411e3e2ce7bad8cfb91c786659ffc2fa9bcc174d6c708d84a925c30af79cffb`.
+The matching source archive SHA256 was
+`8df5b0398b9ec6d8d6e495ce105fed84c7ba9185d3f79cf0b7b4163b3f84cceb`.
+These checks do not accept the preceding incomplete generated-header PLIST,
+LLVM23 packages/check-files, CMake exports, wheel payload, CRT/ELF runtime,
+JIT, TinyGo or Mesa26. The source PLIST repair has its own causal regression.

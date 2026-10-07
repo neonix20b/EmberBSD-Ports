@@ -62,6 +62,11 @@ for project in llvm clang; do
         printf '%s\n' "$source/$project/$target" >> "$work/extract-list"
     done
 done
+# Include the directly related generation/install declarations for the PLIST gate.
+for input in llvm/include/llvm/Analysis/CMakeLists.txt clang/CMakeLists.txt \
+    clang/include/clang/Basic/CMakeLists.txt; do
+    printf '%s\n' "$source/$input" >> "$work/extract-list"
+done
 # All six payloads have safe pkgsrc patch paths; decompress the archive once.
 tar -xf "$distfiles/$archive" -C "$work/source" -T "$work/extract-list"
 for project in llvm clang; do
@@ -141,6 +146,8 @@ done
 grep -q 'lib/libclang.a' "$work/pkgsrc/lang/clang/PLIST"
 grep -q 'lib/libLLVMDTLTO.a' "$work/pkgsrc/lang/llvm/PLIST"
 ! grep -q '^bin/llvm-lit$' "$work/pkgsrc/lang/llvm/PLIST"
+sh "$profile/tests/llvm-generated-headers.sh" "$work/source/$source" \
+    "$work/pkgsrc" "$work/generated-headers"
 echo 'PASS: recipe shape/static payload declarations; native staging/check-files pending'
 sh "$profile/tests/llvm-selection.sh" "$work/pkgsrc" "$work/selection"
 sh "$profile/tests/clang-config.sh" "$profile/recipes/lang/clang/files/native-gcc-config.sh" "$work/config"
