@@ -20,6 +20,10 @@ The [common graphics profile](../common-graphics/README.md) composes these
 tools with canonical MesaLib/libdrm source recipes. It does not change this
 profile's exported package set or establish an installed graphics stack.
 
+This MAKECONF selects an installed native target compiler. For compilation
+on macOS, use the separate [GCC16 cross recipe](../development-toolchain/cross/README.md).
+Its build-host support is independent of this native pkgsrc selection policy.
+
 ## Prepare and select
 
 ```sh

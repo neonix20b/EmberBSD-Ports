@@ -20,6 +20,11 @@ replacement. These results do not establish GCC or common C++ ABI acceptance.
 The [bounded native build helper](tools/README.md) preserves build exit status
 and checks guest scratch reserves for the long package build.
 
+A [host cross-compiler recipe](cross/README.md) also builds GCC 16.2 on
+Apple Silicon macOS. Cross-built C11/C++20 programs pass on Zero 3W with
+its installed GCC16 runtime. This separates compilation from target
+execution; it does not yet cross-build installable pkgsrc packages.
+
 ## Source and preparation
 
 The base is pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`
