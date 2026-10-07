@@ -1,0 +1,356 @@
+# Pinned TinyLlama graph: all 7 signatures expose these 44 FLOAT32 buffers.
+# Shape [1, 1280, 4, 64]: sequence axis 1, four attention heads.
+llm_executor_metadata {
+  state_buffers {
+    prefill_input_name: "kv_cache_k_0"
+    prefill_output_name: "kv_cache_k_0"
+    decode_input_name: "kv_cache_k_0"
+    decode_output_name: "kv_cache_k_0"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_0"
+    prefill_output_name: "kv_cache_v_0"
+    decode_input_name: "kv_cache_v_0"
+    decode_output_name: "kv_cache_v_0"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_1"
+    prefill_output_name: "kv_cache_k_1"
+    decode_input_name: "kv_cache_k_1"
+    decode_output_name: "kv_cache_k_1"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_1"
+    prefill_output_name: "kv_cache_v_1"
+    decode_input_name: "kv_cache_v_1"
+    decode_output_name: "kv_cache_v_1"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_2"
+    prefill_output_name: "kv_cache_k_2"
+    decode_input_name: "kv_cache_k_2"
+    decode_output_name: "kv_cache_k_2"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_2"
+    prefill_output_name: "kv_cache_v_2"
+    decode_input_name: "kv_cache_v_2"
+    decode_output_name: "kv_cache_v_2"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_3"
+    prefill_output_name: "kv_cache_k_3"
+    decode_input_name: "kv_cache_k_3"
+    decode_output_name: "kv_cache_k_3"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_3"
+    prefill_output_name: "kv_cache_v_3"
+    decode_input_name: "kv_cache_v_3"
+    decode_output_name: "kv_cache_v_3"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_4"
+    prefill_output_name: "kv_cache_k_4"
+    decode_input_name: "kv_cache_k_4"
+    decode_output_name: "kv_cache_k_4"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_4"
+    prefill_output_name: "kv_cache_v_4"
+    decode_input_name: "kv_cache_v_4"
+    decode_output_name: "kv_cache_v_4"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_5"
+    prefill_output_name: "kv_cache_k_5"
+    decode_input_name: "kv_cache_k_5"
+    decode_output_name: "kv_cache_k_5"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_5"
+    prefill_output_name: "kv_cache_v_5"
+    decode_input_name: "kv_cache_v_5"
+    decode_output_name: "kv_cache_v_5"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_6"
+    prefill_output_name: "kv_cache_k_6"
+    decode_input_name: "kv_cache_k_6"
+    decode_output_name: "kv_cache_k_6"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_6"
+    prefill_output_name: "kv_cache_v_6"
+    decode_input_name: "kv_cache_v_6"
+    decode_output_name: "kv_cache_v_6"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_7"
+    prefill_output_name: "kv_cache_k_7"
+    decode_input_name: "kv_cache_k_7"
+    decode_output_name: "kv_cache_k_7"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_7"
+    prefill_output_name: "kv_cache_v_7"
+    decode_input_name: "kv_cache_v_7"
+    decode_output_name: "kv_cache_v_7"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_8"
+    prefill_output_name: "kv_cache_k_8"
+    decode_input_name: "kv_cache_k_8"
+    decode_output_name: "kv_cache_k_8"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_8"
+    prefill_output_name: "kv_cache_v_8"
+    decode_input_name: "kv_cache_v_8"
+    decode_output_name: "kv_cache_v_8"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_9"
+    prefill_output_name: "kv_cache_k_9"
+    decode_input_name: "kv_cache_k_9"
+    decode_output_name: "kv_cache_k_9"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_9"
+    prefill_output_name: "kv_cache_v_9"
+    decode_input_name: "kv_cache_v_9"
+    decode_output_name: "kv_cache_v_9"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_10"
+    prefill_output_name: "kv_cache_k_10"
+    decode_input_name: "kv_cache_k_10"
+    decode_output_name: "kv_cache_k_10"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_10"
+    prefill_output_name: "kv_cache_v_10"
+    decode_input_name: "kv_cache_v_10"
+    decode_output_name: "kv_cache_v_10"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_11"
+    prefill_output_name: "kv_cache_k_11"
+    decode_input_name: "kv_cache_k_11"
+    decode_output_name: "kv_cache_k_11"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_11"
+    prefill_output_name: "kv_cache_v_11"
+    decode_input_name: "kv_cache_v_11"
+    decode_output_name: "kv_cache_v_11"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_12"
+    prefill_output_name: "kv_cache_k_12"
+    decode_input_name: "kv_cache_k_12"
+    decode_output_name: "kv_cache_k_12"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_12"
+    prefill_output_name: "kv_cache_v_12"
+    decode_input_name: "kv_cache_v_12"
+    decode_output_name: "kv_cache_v_12"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_13"
+    prefill_output_name: "kv_cache_k_13"
+    decode_input_name: "kv_cache_k_13"
+    decode_output_name: "kv_cache_k_13"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_13"
+    prefill_output_name: "kv_cache_v_13"
+    decode_input_name: "kv_cache_v_13"
+    decode_output_name: "kv_cache_v_13"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_14"
+    prefill_output_name: "kv_cache_k_14"
+    decode_input_name: "kv_cache_k_14"
+    decode_output_name: "kv_cache_k_14"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_14"
+    prefill_output_name: "kv_cache_v_14"
+    decode_input_name: "kv_cache_v_14"
+    decode_output_name: "kv_cache_v_14"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_15"
+    prefill_output_name: "kv_cache_k_15"
+    decode_input_name: "kv_cache_k_15"
+    decode_output_name: "kv_cache_k_15"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_15"
+    prefill_output_name: "kv_cache_v_15"
+    decode_input_name: "kv_cache_v_15"
+    decode_output_name: "kv_cache_v_15"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_16"
+    prefill_output_name: "kv_cache_k_16"
+    decode_input_name: "kv_cache_k_16"
+    decode_output_name: "kv_cache_k_16"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_16"
+    prefill_output_name: "kv_cache_v_16"
+    decode_input_name: "kv_cache_v_16"
+    decode_output_name: "kv_cache_v_16"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_17"
+    prefill_output_name: "kv_cache_k_17"
+    decode_input_name: "kv_cache_k_17"
+    decode_output_name: "kv_cache_k_17"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_17"
+    prefill_output_name: "kv_cache_v_17"
+    decode_input_name: "kv_cache_v_17"
+    decode_output_name: "kv_cache_v_17"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_18"
+    prefill_output_name: "kv_cache_k_18"
+    decode_input_name: "kv_cache_k_18"
+    decode_output_name: "kv_cache_k_18"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_18"
+    prefill_output_name: "kv_cache_v_18"
+    decode_input_name: "kv_cache_v_18"
+    decode_output_name: "kv_cache_v_18"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_19"
+    prefill_output_name: "kv_cache_k_19"
+    decode_input_name: "kv_cache_k_19"
+    decode_output_name: "kv_cache_k_19"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_19"
+    prefill_output_name: "kv_cache_v_19"
+    decode_input_name: "kv_cache_v_19"
+    decode_output_name: "kv_cache_v_19"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_20"
+    prefill_output_name: "kv_cache_k_20"
+    decode_input_name: "kv_cache_k_20"
+    decode_output_name: "kv_cache_k_20"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_20"
+    prefill_output_name: "kv_cache_v_20"
+    decode_input_name: "kv_cache_v_20"
+    decode_output_name: "kv_cache_v_20"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_k_21"
+    prefill_output_name: "kv_cache_k_21"
+    decode_input_name: "kv_cache_k_21"
+    decode_output_name: "kv_cache_k_21"
+    type: TYPE_GLOBAL_KEY_CACHE
+    sequence_axis: 1
+  }
+  state_buffers {
+    prefill_input_name: "kv_cache_v_21"
+    prefill_output_name: "kv_cache_v_21"
+    decode_input_name: "kv_cache_v_21"
+    decode_output_name: "kv_cache_v_21"
+    type: TYPE_GLOBAL_VALUE_CACHE
+    sequence_axis: 1
+  }
+}

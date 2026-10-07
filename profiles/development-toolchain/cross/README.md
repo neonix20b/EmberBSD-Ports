@@ -29,11 +29,8 @@ Provide these absolute paths without whitespace:
    sysroot when creating the snapshot; never resolve them against the host.
 4. A host `TOOLDIR` produced by the fork's
    [cross-build path](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/cross-build.md).
-   Its static GMP/MPFR/MPC and GNU make bootstrap the compiler, and its
-   AArch64 binutils are copied into the compiler prefix. This is temporary
-   bootstrap support, not a downgrade of target dependencies. The in-tree
-   bootstrap currently contains older tools; qualifying current binutils
-   and rebuilding this prerequisite closure remains separate work.
+   GNU make builds the compiler, and its AArch64 binutils are copied into the
+   compiler prefix. Qualifying current binutils remains separate work.
 5. A new work directory with room for sources, objects and the compiler.
 
 Use native compilation only for stages whose missing cross support is
@@ -43,11 +40,36 @@ and startup objects must belong to the target. Equal CPU architecture does
 not make Darwin and NetBSD executables interchangeable.
 
 ```sh
-CROSS_JOBS=6 HOST_CC=cc HOST_CXX=c++ \
+HOST_CC=cc HOST_CXX=c++ \
     sh profiles/development-toolchain/cross/build.sh \
     /absolute/pkgsrc /absolute/gcc-16.2.0.tar.xz /absolute/sysroot \
     /absolute/os-build/tools /absolute/new-gcc-cross
 ```
+
+The five-argument command builds GMP 6.3.0, MPFR 4.2.2 and MPC 1.4.1 under
+`NEW_WORK/host-math`. It downloads missing pinned archives into
+`NEW_WORK/host-archives`. `EMBER_HOST_MATH_ARCHIVES` can name an existing cache
+containing `gmp-6.3.0.tar.xz`, `mpfr-4.2.2.tar.bz2` and `mpc-1.4.1.tar.xz`.
+Original URLs and SHA256 are in [host sources](host-sources.tsv) and the
+[shared manifest](../sources.tsv).
+
+For reuse, `host-math.sh ARCHIVE_DIRECTORY NETBSD_TOOLDIR NEW_WORK` prepares
+the libraries separately. Pass its `NEW_WORK/prefix` through
+`EMBER_HOST_MATH_PREFIX`, or as an optional argument immediately before the
+compiler's `NEW_WORK`. Do not reuse the fork's old GMP 6.2.1 host library.
+The helper verifies every archive before extraction, builds static libraries,
+and runs their upstream test suites. It also checks long GMP loops with and
+without signal delivery. Nothing is installed into a shared prefix. The GCC
+recipe verifies the selected library versions and reruns this host contract before
+compiler configuration. It records hashes of the three static libraries.
+
+GMP 6.2.1 uses the reserved Darwin `x18` register in ARM64 assembly. During a
+LiteRT build this caused intermittent compiler crashes in GMP/MPFR constant
+evaluation. The compiler's attempt to print a backtrace then failed in Apple
+libunwind. [Upstream identifies the ABI defect](https://gmplib.org/#STATUS);
+[the register repair](https://gmplib.org/list-archives/gmp-commit/2020-November/003062.html)
+is included in GMP 6.3.0. Updating the host library fixes the prerequisite;
+compiler retries and lower job counts are not used as a substitute.
 
 The recipe verifies the GCC SHA256 and recorded RCS-filtered patch hashes
 before extraction. It applies the source patches with zero fuzz. As in the
@@ -66,7 +88,9 @@ The recipe installs into `new-gcc-cross/toolchain` and records inputs and
 build logs in the work directory. It never writes `/usr/bin`, `/usr/pkg`,
 `/etc/mk.conf` or a board. Keep the work directory and sysroot at their
 recorded paths. `HOST_CC`/`HOST_CXX` name the existing host compilers;
-`CROSS_JOBS` controls concurrency. A failed stage returns nonzero.
+`CROSS_JOBS` optionally overrides concurrency. Both recipes default to the
+host's online CPU count from `getconf`, with `sysctl` as a fallback.
+A failed stage returns nonzero.
 
 ## Compile here, execute on EmberBSD
 
@@ -77,7 +101,9 @@ sh profiles/development-toolchain/cross/compile-tests.sh \
 
 This reuses the native C11 atomics/TLS and C++20 DSO test sources. It compiles
 C with and without LTO, and C++ with threads, TLS, strings and exceptions
-crossing a shared-library boundary. It checks dynamic dependencies for host
+crossing a shared-library boundary. A floating constant-evaluation regression
+includes `_Float32` limits and target long-double exponentiation.
+It checks dynamic dependencies for host
 path leakage. Compilation alone is not runtime acceptance.
 
 Copy the complete `new-tests` directory to a scratch directory on the target,
@@ -95,9 +121,29 @@ are rejected. It does not install packages or change login defaults.
 
 ## Validation boundary
 
-The host compiler build and cross C11/C++20 acceptance pass on Apple Silicon
-macOS and physical Orange Pi Zero 3W (Allwinner A733), respectively. The target
-runs the existing current EmberBSD kernel/libc and GCC16 nb1 runtime.
+On 2026-10-07, the rebuilt GCC 16.2.0 passed host compilation and target
+acceptance with GMP 6.3.0, MPFR 4.2.2 and MPC 1.4.1. That build explicitly used
+four jobs; the recipe's current default uses the detected host CPU count.
+GMP's upstream test groups
+had no failures. MPFR passed 195 tests with three skips; MPC passed all 75.
+The reserved-register regression established the following on Apple Silicon:
+
+| Host arithmetic implementation | Long-loop contract |
+| --- | --- |
+| Original GMP 6.2.1 ARM64 assembly | Four of four executions faulted |
+| Same library with generic upstream `add_n` | Four of four passed |
+| Same native `add_n`, only `x18` changed to `x17` | Six of six passed |
+| GMP 6.3.0 | Passed with and without periodic signals |
+
+The new static GMP archive contains no instructions using `x18`. The rebuilt
+compiler passes the floating constant regression and the original protobuf
+and RE2 compilation commands that exposed the failures.
+
+The cross C11/C++20 contracts passed on physical Orange Pi Zero 3W (Allwinner
+A733), NetBSD 11.0/AArch64, at 20:46 UTC on 2026-10-07. Execution took 0.18 s.
+The DSO contract confirmed actual loading of `/usr/pkg/gcc16/lib/libstdc++.so.7`
+and `/usr/pkg/gcc16/lib/libgcc_s.so.1` from the existing GCC16 nb1 runtime.
+The board's firmware and hardware revision were not requalified by this test.
 This covers the focused source scenarios, not the full upstream compiler
 suite, arbitrary Ports packages, a full GCC16-built OS or GPU acceleration.
 

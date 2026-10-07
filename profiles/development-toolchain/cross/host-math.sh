@@ -1,0 +1,81 @@
+#!/bin/sh
+# SPDX-License-Identifier: BSD-2-Clause
+# Origin: EmberBSD; AI-assisted, isolated current GCC host prerequisites.
+set -eu
+[ "$#" -eq 3 ] || {
+    echo 'Usage: host-math.sh ARCHIVE_DIRECTORY NETBSD_TOOLDIR NEW_WORK' >&2
+    exit 2
+}
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+archives=$1 tools=$2 work=$3
+for path in "$@"; do
+    case "$path" in /*) ;; *) echo 'Absolute paths required.' >&2; exit 2;; esac
+    case "$path" in *[!A-Za-z0-9_./-]*) echo 'Use paths without whitespace or shell metacharacters.' >&2; exit 2;; esac
+done
+if [ "${CROSS_JOBS+x}" = x ]; then
+    jobs=$CROSS_JOBS
+else
+    jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null) || {
+        echo 'Cannot detect host CPU count; set CROSS_JOBS explicitly.' >&2; exit 2;
+    }
+fi
+case "$jobs" in ''|*[!0-9]*) jobs=0;; esac
+[ "$jobs" -gt 0 ] 2>/dev/null || { echo 'CROSS_JOBS must be positive.' >&2; exit 2; }
+[ ! -e "$work" ] && [ ! -L "$work" ] || { echo 'NEW_WORK already exists.' >&2; exit 2; }
+[ -x "$tools/bin/nbgmake" ] || { echo 'Bootstrap GNU make missing.' >&2; exit 2; }
+mkdir -p "$archives"
+for item in gmp:6.3.0:tar.xz mpfr:4.2.2:tar.bz2 mpc:1.4.1:tar.xz; do
+    name=${item%%:*}; rest=${item#*:}; version=${rest%%:*}; suffix=${rest#*:}
+    archive=$archives/$name-$version.$suffix
+    expected=$(awk -F '\t' -v name="$name" -v version="$version" \
+        '$1 == name && $2 == version {print $4}' "$here/host-sources.tsv" "$here/../sources.tsv")
+    if [ ! -e "$archive" ]; then
+        url=$(awk -F '\t' -v name="$name" -v version="$version" \
+            '$1 == name && $2 == version {print $3}' "$here/host-sources.tsv" "$here/../sources.tsv")
+        [ -n "$url" ] || { echo 'Missing source URL.' >&2; exit 1; }
+        curl -fL "$url" -o "$archive.part"
+        [ "$(shasum -a 256 "$archive.part" | awk '{print $1}')" = "$expected" ] || {
+            echo "$name download SHA256 mismatch." >&2; exit 1;
+        }
+        mv "$archive.part" "$archive"
+    fi
+    [ -f "$archive" ] && [ -n "$expected" ] && \
+        [ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$expected" ] || {
+        echo "$name archive SHA256 mismatch or missing archive." >&2; exit 1;
+    }
+done
+mkdir -p "$work"
+work=$(CDPATH= cd -- "$work" && pwd -P)
+prefix=$work/prefix
+mkdir "$prefix"
+{
+    uname -srm
+    "${HOST_CC:-cc}" --version
+    printf 'jobs=%s\n' "$jobs"
+} > "$work/inputs.txt"
+unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH
+for item in gmp:6.3.0:tar.xz mpfr:4.2.2:tar.bz2 mpc:1.4.1:tar.xz; do
+    name=${item%%:*}; rest=${item#*:}; version=${rest%%:*}; suffix=${rest#*:}
+    archive=$archives/$name-$version.$suffix
+    mkdir "$work/$name-src" "$work/$name-build"
+    shasum -a 256 "$archive" >> "$work/inputs.txt"
+    tar -xf "$archive" --strip-components=1 -C "$work/$name-src"
+    (
+        cd "$work/$name-build"
+        set -- --prefix="$prefix" --disable-shared --enable-static
+        case "$name" in
+            mpfr) set -- "$@" --with-gmp="$prefix";;
+            mpc) set -- "$@" --with-gmp="$prefix" --with-mpfr="$prefix";;
+        esac
+        CC=${HOST_CC:-cc} CXX=${HOST_CXX:-c++} CFLAGS=-O2 CXXFLAGS=-O2 \
+            "$work/$name-src/configure" "$@" > "$work/$name-configure.log" 2>&1
+        "$tools/bin/nbgmake" -j"$jobs" > "$work/$name-build.log" 2>&1
+        "$tools/bin/nbgmake" -j"$jobs" check > "$work/$name-check.log" 2>&1
+        "$tools/bin/nbgmake" install > "$work/$name-install.log" 2>&1
+    )
+done
+${HOST_CC:-cc} -O2 -I"$prefix/include" "$here/tests/host-gmp.c" \
+    "$prefix/lib/libgmp.a" -o "$work/host-gmp"
+"$work/host-gmp"
+"$work/host-gmp" timer
+echo "GCC host prerequisites built and tested: $prefix"

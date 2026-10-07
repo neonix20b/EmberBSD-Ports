@@ -1,0 +1,87 @@
+Subject: Support baseline AArch64 CPU dispatch on NetBSD without cpuinfo
+Origin: EmberBSD Ports, developed with OpenAI Codex assistance
+Upstream: https://github.com/google/XNNPACK
+Revision: ae746db8255aa93704012a98b4b030eefd17357d
+Status: Local portability patch, not submitted upstream
+
+The pinned cpuinfo has no NetBSD backend and initialization always fails.
+Keep XNNPACK's real no-cpuinfo path and enable only AArch64 baseline SIMD:
+NEON, FMA, ARMv8 instructions and FP16 conversion. FP16 arithmetic, BF16,
+DotProd, I8MM, SVE and SME remain disabled regardless of compiled kernels.
+Cache topology and microarchitecture remain unknown, as upstream documents.
+Other platforms retain their existing cpuinfo configuration.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -376,7 +376,15 @@
+ ADD_COMPILE_DEFINITIONS("XNN_ENABLE_KLEIDIAI=$<BOOL:${XNNPACK_ENABLE_KLEIDIAI}>")
+ ADD_COMPILE_DEFINITIONS("XNN_ENABLE_WASM_REVECTORIZE=$<BOOL:${XNNPACK_ENABLE_WASM_REVECTORIZE}>")
+ 
+-IF(XNNPACK_TARGET_PROCESSOR MATCHES "Hexagon")
++# cpuinfo has no NetBSD backend. Use only the AArch64 architectural baseline.
++SET(XNNPACK_USE_CPUINFO ON)
++IF(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
++  IF(NOT XNNPACK_TARGET_PROCESSOR STREQUAL "arm64")
++    MESSAGE(FATAL_ERROR "NetBSD is currently supported only on AArch64")
++  ENDIF()
++  SET(XNNPACK_USE_CPUINFO OFF)
++ENDIF()
++IF(XNNPACK_TARGET_PROCESSOR MATCHES "Hexagon" OR NOT XNNPACK_USE_CPUINFO)
+   ADD_COMPILE_DEFINITIONS("XNN_ENABLE_CPUINFO=0")
+ ELSE()
+   ADD_COMPILE_DEFINITIONS("XNN_ENABLE_CPUINFO=1")
+@@ -407,7 +415,7 @@
+ # ---[ Build flags
+ IF(NOT CMAKE_SYSTEM_NAME)
+   MESSAGE(FATAL_ERROR "CMAKE_SYSTEM_NAME not defined")
+-ELSEIF(NOT CMAKE_SYSTEM_NAME MATCHES "^(Android|Darwin|iOS|Linux|Windows|CYGWIN|MSYS|QURT|Emscripten|Generic)$")
++ELSEIF(NOT CMAKE_SYSTEM_NAME MATCHES "^(Android|Darwin|iOS|Linux|NetBSD|Windows|CYGWIN|MSYS|QURT|Emscripten|Generic)$")
+   MESSAGE(FATAL_ERROR "Unrecognized CMAKE_SYSTEM_NAME value \"${CMAKE_SYSTEM_NAME}\"")
+ ENDIF()
+ IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
+@@ -443,7 +451,7 @@
+ 
+ # ---[ Download deps
+ IF(NOT XNNPACK_USE_SYSTEM_LIBS)
+-  IF(NOT DEFINED CPUINFO_SOURCE_DIR)
++  IF(XNNPACK_USE_CPUINFO AND NOT DEFINED CPUINFO_SOURCE_DIR)
+     MESSAGE(STATUS "Downloading cpuinfo to ${CMAKE_BINARY_DIR}/cpuinfo-source (define CPUINFO_SOURCE_DIR to avoid it)")
+     CONFIGURE_FILE(cmake/DownloadCpuinfo.cmake "${CMAKE_BINARY_DIR}/cpuinfo-download/CMakeLists.txt")
+     EXECUTE_PROCESS(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+@@ -1261,7 +1269,7 @@
+ ENDIF()
+ 
+ # ---[ Configure cpuinfo
+-IF(NOT TARGET cpuinfo)
++IF(XNNPACK_USE_CPUINFO AND NOT TARGET cpuinfo)
+   IF(NOT XNNPACK_USE_SYSTEM_LIBS)
+     SET(CPUINFO_BUILD_TOOLS OFF CACHE BOOL "")
+     SET(CPUINFO_BUILD_UNIT_TESTS OFF CACHE BOOL "")
+@@ -1281,7 +1289,7 @@
+     SET_PROPERTY(TARGET cpuinfo PROPERTY IMPORTED_IMPLIB "${CPUINFO_LIBRARY}")
+   ENDIF()
+ ENDIF()
+-IF(XNNPACK_BUILD_LIBRARY)
++IF(XNNPACK_BUILD_LIBRARY AND XNNPACK_USE_CPUINFO)
+   TARGET_LINK_LIBRARIES(xnnpack-hardware-config PRIVATE cpuinfo)
+   TARGET_LINK_LIBRARIES(XNNPACK PRIVATE cpuinfo)
+ ENDIF()
+--- a/src/configs/hardware-config.c
++++ b/src/configs/hardware-config.c
+@@ -206,6 +206,16 @@
+     return;
+   }
+   hardware_config.arch_flags = 0;
++#if XNN_ARCH_ARM64 && defined(__NetBSD__) && !XNN_ENABLE_CPUINFO
++  // NetBSD has no cpuinfo backend. AArch64 guarantees these baseline features,
++  // including FP16 conversion, but not FP16 arithmetic, DotProd or newer ISAs.
++  // Leave optional extensions, cache sizes and microarchitecture unknown.
++  set_arch_flag(xnn_arch_arm_vfpv3, true);
++  set_arch_flag(xnn_arch_arm_neon, true);
++  set_arch_flag(xnn_arch_arm_neon_fp16, true);
++  set_arch_flag(xnn_arch_arm_neon_fma, true);
++  set_arch_flag(xnn_arch_arm_neon_v8, true);
++#endif
+ #if (XNN_ARCH_ARM64 || XNN_ARCH_ARM) && XNN_ENABLE_CPUINFO
+ #if XNN_PLATFORM_WINDOWS
+   SYSTEM_INFO system_info;

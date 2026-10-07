@@ -10,6 +10,7 @@ for path in "$@"; do
 done
 [ ! -e "$out" ] && [ ! -L "$out" ] || { echo 'Output already exists.' >&2; exit 2; }
 source=$(CDPATH= cd -- "$(dirname -- "$0")/../tests" && pwd -P)
+cross_source=$(CDPATH= cd -- "$(dirname -- "$0")/tests" && pwd -P)
 cc=$prefix/bin/aarch64--netbsd-gcc
 cxx=$prefix/bin/aarch64--netbsd-g++
 [ "$("$cc" -dumpfullversion)" = 16.2.0 ]
@@ -24,6 +25,8 @@ set -- --sysroot="$sysroot" -B"$sysroot/usr/pkg/gcc16/lib/gcc/aarch64--netbsd/16
 set -- "$@" -isystem "$sysroot/usr/pkg/gcc16/include/c++" \
     -isystem "$sysroot/usr/pkg/gcc16/include/c++/aarch64--netbsd" \
     -isystem "$sysroot/usr/pkg/gcc16/include/c++/backward"
+"$cxx" "$@" -std=c++20 -O3 -Wall -Wextra -Werror \
+    -c "$cross_source/float-constexpr.cc" -o "$out/float-constexpr.o"
 "$cxx" "$@" -std=c++20 -O2 -Wall -Wextra -Werror -fPIC -shared \
     "$source/boundary.cc" -Wl,-soname,libboundary.so -o "$out/libboundary.so"
 "$cxx" "$@" -std=c++20 -O2 -Wall -Wextra -Werror -pthread \

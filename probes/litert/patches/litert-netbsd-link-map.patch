@@ -1,0 +1,11 @@
+--- a/litert/cc/internal/litert_shared_library.h
++++ b/litert/cc/internal/litert_shared_library.h
+@@ -32,7 +32,7 @@
+ #if !LITERT_WINDOWS_OS
+ #include <dlfcn.h>
+ 
+-#if defined(_GNU_SOURCE) && !defined(__ANDROID__) && !defined(__APPLE__)
++#if defined(__NetBSD__) || (defined(_GNU_SOURCE) && !defined(__ANDROID__) && !defined(__APPLE__))
+ #define LITERT_IMPLEMENT_SHARED_LIBRARY_INFO 1
+ #include <link.h>
+ #endif

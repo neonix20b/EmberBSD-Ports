@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Origin: EmberBSD; AI-assisted host cross-compiler recipe using Ports sources.
 set -eu
-[ "$#" -eq 5 ] || {
-    echo 'Usage: build.sh EXPORTED_PKGSRC GCC_ARCHIVE SYSROOT NETBSD_TOOLDIR NEW_WORK' >&2
+[ "$#" -eq 5 ] || [ "$#" -eq 6 ] || {
+    echo 'Usage: build.sh EXPORTED_PKGSRC GCC_ARCHIVE SYSROOT NETBSD_TOOLDIR [HOST_MATH_PREFIX] NEW_WORK' >&2
     exit 2
 }
 profile=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
@@ -11,12 +11,22 @@ recipe=$1/lang/gcc16
 archive=$2
 sysroot=$3
 tools=$4
-work=$5
+if [ "$#" -eq 6 ]; then
+    math=$5 work=$6
+else
+    math=${EMBER_HOST_MATH_PREFIX:-} work=$5
+fi
 for path in "$@"; do
     case "$path" in /*) ;; *) echo 'Absolute paths required.' >&2; exit 2;; esac
     case "$path" in *[!A-Za-z0-9_./-]*) echo 'Use paths without whitespace or shell metacharacters.' >&2; exit 2;; esac
 done
-jobs=${CROSS_JOBS:-4}
+if [ "${CROSS_JOBS+x}" = x ]; then
+    jobs=$CROSS_JOBS
+else
+    jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null) || {
+        echo 'Cannot detect host CPU count; set CROSS_JOBS explicitly.' >&2; exit 2;
+    }
+fi
 case "$jobs" in ''|*[!0-9]*) jobs=0;; esac
 [ "$jobs" -gt 0 ] 2>/dev/null || { echo 'CROSS_JOBS must be positive.' >&2; exit 2; }
 [ ! -e "$work" ] && [ ! -L "$work" ] || { echo 'NEW_WORK already exists.' >&2; exit 2; }
@@ -26,9 +36,28 @@ case "$jobs" in ''|*[!0-9]*) jobs=0;; esac
 }
 [ -d "$sysroot/usr/pkg/gcc16/include/c++" ] || exit 2
 [ -x "$tools/bin/nbgmake" ] || { echo 'Bootstrap GNU make missing.' >&2; exit 2; }
-for library in gmp mpfr mpc; do
-    [ -f "$tools/lib/lib$library.a" ] || { echo "Bootstrap lib$library.a missing." >&2; exit 2; }
-done
+check_math() {
+    case "$math" in /*) ;; *) echo 'Absolute host math prefix required.' >&2; exit 2;; esac
+    case "$math" in *[!A-Za-z0-9_./-]*) echo 'Use a simple host math prefix.' >&2; exit 2;; esac
+    for library in gmp mpfr mpc; do
+        [ -f "$math/lib/lib$library.a" ] || { echo "Host lib$library.a missing." >&2; exit 2; }
+    done
+    for pair in '__GNU_MP_VERSION:6' '__GNU_MP_VERSION_MINOR:3' '__GNU_MP_VERSION_PATCHLEVEL:0'; do
+        macro=${pair%:*}; version=${pair#*:}
+        actual=$(awk -v macro="$macro" '$1 == "#define" && $2 == macro {print $3}' "$math/include/gmp.h")
+        [ "$actual" = "$version" ] || { echo 'Host GMP 6.3.0 is required; use host-math.sh.' >&2; exit 2; }
+    done
+    for item in mpfr:MPFR:4:2:2 mpc:MPC:1:4:1; do
+        header=${item%%:*}; rest=${item#*:}; macro_prefix=${rest%%:*}; rest=${rest#*:}
+        major=${rest%%:*}; rest=${rest#*:}; minor=${rest%%:*}; patchlevel=${rest#*:}
+        for pair in "MAJOR:$major" "MINOR:$minor" "PATCHLEVEL:$patchlevel"; do
+            macro=${macro_prefix}_VERSION_${pair%:*}; version=${pair#*:}
+            actual=$(awk -v macro="$macro" '$1 == "#define" && $2 == macro {print $3}' "$math/include/$header.h")
+            [ "$actual" = "$version" ] || { echo "Host $header version mismatch; use host-math.sh." >&2; exit 2; }
+        done
+    done
+}
+[ -z "$math" ] || check_math
 expected=$(awk -F '\t' '$1 == "gcc" && $2 == "16.2.0" {print $4}' "$profile/sources.tsv")
 [ -n "$expected" ] && [ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$expected" ] || {
     echo 'GCC archive SHA256 mismatch.' >&2; exit 1;
@@ -50,6 +79,12 @@ printf '%s\n' "$patches" | grep -qx patch-gcc_cp_module.cc || {
 }
 mkdir -p "$work"
 work=$(CDPATH= cd -- "$work" && pwd -P)
+if [ -z "$math" ]; then
+    sh "$profile/cross/host-math.sh" "${EMBER_HOST_MATH_ARCHIVES:-$work/host-archives}" \
+        "$tools" "$work/host-math"
+    math=$work/host-math/prefix
+    check_math
+fi
 prefix=$work/toolchain
 mkdir "$work/src" "$work/build" "$prefix" "$prefix/bin"
 {
@@ -57,8 +92,13 @@ mkdir "$work/src" "$work/build" "$prefix" "$prefix/bin"
     shasum -a 256 "$archive" "$recipe/distinfo" "$recipe"/patches/patch-*
     "$tools/bin/nbgmake" --version
     "$tools/bin/aarch64--netbsd-ld" --version
-    printf 'sysroot=%s\nbootstrap=%s\n' "$sysroot" "$tools"
+    printf 'sysroot=%s\nbootstrap=%s\nhost_math=%s\njobs=%s\n' "$sysroot" "$tools" "$math" "$jobs"
+    shasum -a 256 "$math/lib/libgmp.a" "$math/lib/libmpfr.a" "$math/lib/libmpc.a"
 } > "$work/inputs.txt"
+${HOST_CC:-cc} -O2 -I"$math/include" "$profile/cross/tests/host-gmp.c" \
+    "$math/lib/libgmp.a" -o "$work/host-gmp"
+"$work/host-gmp" > "$work/host-gmp.log"
+"$work/host-gmp" timer >> "$work/host-gmp.log"
 tar -xf "$archive" --strip-components=1 -C "$work/src"
 for name in $patches; do
     # pkgsrc's native driver embeds its own install prefix as the target RPATH.
@@ -74,7 +114,7 @@ unset GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH CPATH CPLUS_INCLUDE_PATH C_INCL
 CC=${HOST_CC:-cc} CXX=${HOST_CXX:-c++} CFLAGS=-O2 CXXFLAGS=-O2 \
     ../src/configure --target=aarch64--netbsd --prefix="$prefix" \
     --with-sysroot="$sysroot" --with-gxx-include-dir="$sysroot/usr/pkg/gcc16/include/c++" \
-    --with-gmp="$tools" --with-mpfr="$tools" --with-mpc="$tools" \
+    --with-gmp="$math" --with-mpfr="$math" --with-mpc="$math" \
     --with-as="$prefix/bin/aarch64--netbsd-as" --with-ld="$prefix/bin/aarch64--netbsd-ld" \
     --enable-languages=c,c++ --disable-bootstrap --disable-multilib \
     --disable-nls --without-isl > "$work/configure.log" 2>&1

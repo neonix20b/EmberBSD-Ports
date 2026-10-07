@@ -1,0 +1,29 @@
+--- a/tflite/tools/cmake/modules/protobuf.cmake
++++ b/tflite/tools/cmake/modules/protobuf.cmake
+@@ -30,7 +30,12 @@
+ set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+ set(protobuf_INSTALL OFF CACHE BOOL "" FORCE)
+ set(protobuf_WITH_ZLIB OFF CACHE BOOL "" FORCE)
+-set(protobuf_BUILD_PROTOC_BINARIES ON CACHE BOOL "" FORCE)
++if(CMAKE_CROSSCOMPILING)
++  set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "" FORCE)
++  set(protobuf_BUILD_LIBPROTOC OFF CACHE BOOL "" FORCE)
++else()
++  set(protobuf_BUILD_PROTOC_BINARIES ON CACHE BOOL "" FORCE)
++endif()
+ 
+ OverridableFetchContent_GetProperties(protobuf)
+ if(NOT protobuf_POPULATED)
+@@ -47,4 +52,11 @@
+   add_subdirectory(${protobuf_SOURCE_DIR} ${protobuf_BINARY_DIR})
+ endif()
+ 
+-set(Protobuf_PROTOC_EXECUTABLE protoc CACHE INTERNAL "")
++if(CMAKE_CROSSCOMPILING)
++  if(NOT EXISTS "${EMBER_HOST_PROTOC}")
++    message(FATAL_ERROR "Cross compilation requires EMBER_HOST_PROTOC")
++  endif()
++  set(Protobuf_PROTOC_EXECUTABLE "${EMBER_HOST_PROTOC}" CACHE INTERNAL "" FORCE)
++else()
++  set(Protobuf_PROTOC_EXECUTABLE protoc CACHE INTERNAL "" FORCE)
++endif()

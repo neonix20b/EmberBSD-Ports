@@ -1,0 +1,31 @@
+--- a/litert/CMakeLists.txt
++++ b/litert/CMakeLists.txt
+@@ -254,10 +254,13 @@
+ add_subdirectory(core)
+ add_subdirectory(runtime)
+ add_subdirectory(compiler)
+-add_subdirectory(vendors)
++if(LITERT_ENABLE_NPU)
++  add_subdirectory(vendors)
++endif()
+ add_subdirectory(tools)
+ 
+-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../tensor/CMakeLists.txt")
++option(LITERT_BUILD_TENSOR "Build experimental tensor DSL and examples" ON)
++if(LITERT_BUILD_TENSOR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../tensor/CMakeLists.txt")
+   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../tensor"
+                    "${CMAKE_CURRENT_BINARY_DIR}/tensor")
+ endif()
+--- a/litert/runtime/CMakeLists.txt
++++ b/litert/runtime/CMakeLists.txt
+@@ -71,7 +71,9 @@
+ if(APPLE)
+   target_sources(litert_runtime PRIVATE metal_info.cc)
+ endif()
+-target_sources(litert_runtime PRIVATE open_cl_memory.cc open_cl_sync.cc)
++if(LITERT_ENABLE_GPU)
++  target_sources(litert_runtime PRIVATE open_cl_memory.cc open_cl_sync.cc)
++endif()
+ 
+ # Link Apple frameworks for Metal and OpenGL interop
+ if(APPLE)
