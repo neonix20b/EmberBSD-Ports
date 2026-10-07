@@ -1,0 +1,58 @@
+Origin: EmberBSD; AI-assisted GCC modules allocation repair packaging.
+GCC upstream ENOTSUP fix by Rainer Orth is accepted; the NetBSD
+EOPNOTSUPP extension is local. Original URL/hash is pinned in sources.tsv.
+The compiler changes, so bump its pkgsrc revision and retain the required
+higher gcc16-libs revision. Runtime code and GCC licensing are unchanged.
+
+--- a/lang/gcc16/Makefile
++++ b/lang/gcc16/Makefile
+@@ -5,7 +5,7 @@
+ ## When bumping the PKGREVISION of this package the PKGREVISION of
+ ## lang/gcc16-libs needs to be bumped to be at least 1 more than the
+ ## PKGREVISION of this package!
+-#PKGREVISION=	1
++PKGREVISION=	1
+ COMMENT=	The GNU Compiler Collection (GCC) - 16.0 Release Series
+ 
+ LANGS=		c
+--- a/lang/gcc16-libs/Makefile
++++ b/lang/gcc16-libs/Makefile
+@@ -9,7 +9,7 @@
+ ## The PKGREVISION of this package needs to be at least 1 more than the
+ ## PKGREVISION of the lang/gcc16 package so that with the dependence pattern
+ ## '{gcc16,gcc16-libs}>=16.1.*' pkg_add will choose gcc16-libs over gcc16.
+-PKGREVISION=	1
++PKGREVISION=	2
+ 
+ CATEGORIES=	lang
+ MASTER_SITES=	# empty
+--- a/lang/gcc16/distinfo
++++ b/lang/gcc16/distinfo
+@@ -1,3 +1,4 @@
+ $NetBSD: distinfo,v 1.4 2026/09/26 12:39:53 wiz Exp $
+ 
++SHA1 (patch-gcc_cp_module.cc) = 6215bbcde8e9c6ea44df9da284971f1a5706554c
+ SHA1 (patch-gcc_testsuite_gcc.dg_vect_tsvc_tsvc.h) = eb86527a4697d2d1ed34b22c8083796644888b68
+--- /dev/null
++++ b/lang/gcc16/patches/patch-gcc_cp_module.cc
+@@ -0,0 +1,20 @@
++$NetBSD$
++
++Origin: GCC upstream a94156b8ee7165c32f73f9cd11c9b8f3b8687d3b.
++Author: Rainer Orth, 2026-05-05; ENOTSUP fix accepted upstream.
++https://github.com/gcc-mirror/gcc/commit/a94156b8ee7165c32f73f9cd11c9b8f3b8687d3b
++EmberBSD AI-assisted backport and local NetBSD EOPNOTSUPP extension.
++NetBSD defines EOPNOTSUPP (45) separately from ENOTSUP (86). The local
++extension is not submitted or accepted upstream. Preserve GCC's GPLv3+.
++
++--- gcc/cp/module.cc.orig
+++++ gcc/cp/module.cc
++@@ -1912,7 +1912,7 @@ elf_out::create_mapping (unsigned ext, bool extending)
++     {
++ #ifdef HAVE_POSIX_FALLOCATE
++       int result = posix_fallocate (fd, offset, length);
++-      if (result != EINVAL)
+++      if (result != EINVAL && result != ENOTSUP && result != EOPNOTSUPP)
++ 	return result == 0;
++       /* Not supported by the underlying filesystem, fallback to ftruncate.  */
++ #endif

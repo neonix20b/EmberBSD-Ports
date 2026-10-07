@@ -12,7 +12,7 @@ expected=$(git -C "$root" ls-files --stage -- upstream/pkgsrc | awk '$1 == "1600
 git -C "$root/upstream/pkgsrc" archive -o "$work/base.tar" "$expected" \
     lang/gcc16 lang/gcc16-libs lang/gcc16-libjit math/mpfr math/mpcomplex devel/gmp devel/gtexinfo lang/tcl-expect
 tar -xf "$work/base.tar" -C "$work"
-for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch; do
+for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch gcc-modules-fallocate.patch; do
     patch -f -E -d "$work" -p1 -F 0 < "$root/profiles/development-toolchain/patches/$delta"
 done
 grep -q '16.2.0' "$work/lang/gcc16/version.mk"

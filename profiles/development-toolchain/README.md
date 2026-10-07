@@ -43,6 +43,11 @@ runtime ABI is renamed. Existing pkgsrc patches retain their authorship.
 GCC and its runtime retain upstream licenses and GCC Runtime Library Exception;
 the probe code is BSD-2-Clause.
 
+The [C++ modules allocation repair](modules-portability.md) prepares
+`gcc16-16.2.0nb1` with the accepted upstream `ENOTSUP` fix and a local NetBSD
+`EOPNOTSUPP` extension. Production-function source regressions pass; native
+frontend and repaired package validation remain pending.
+
 The [TSVC portability backport](testsuite-portability.md) applies GCC's accepted
 NetBSD allocator fix without changing the compiler or runtime. The exported
 recipe keeps every vectorization assertion and the strict test exit status.
@@ -66,7 +71,7 @@ These are language/optional-feature limits, not missing basic C/C++ semantics.
 
 Build only a committed Ports revision. Capture that commit, the pkgsrc pin,
 private MAKECONF, dependency versions, configure output, logs, and package hash.
-The intended package is `gcc16-16.2.0`, installed with pkg_tools at the recipe's
+The intended repaired package is `gcc16-16.2.0nb1`, installed with pkg_tools at the recipe's
 standard `/usr/pkg/gcc16` prefix. Base files are never overwritten.
 Use pkgsrc's DESTDIR/package staging; do not relocate GCC after configuration.
 
