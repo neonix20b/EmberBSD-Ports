@@ -86,12 +86,18 @@ input/output identity, coordinate, extraction and accepted-seam drift.
 
 ## Remaining gates
 
+The subsequent [checked wait stage](wait-errors.md) propagates GL/EGL/poll
+failures through the same barrier. Its final `qemu/wait` and `renderer-wait`
+outputs supersede this stage for that correction; this stage's hashes and
+baseline behavior remain unchanged.
+
 This patch only handles statuses which the renderer already returns. It does
 not make silent backend failure detectable. SUBMIT short-body/alignment and
 allocation handling, decoder length arithmetic/sticky context errors, explicit
 transfer validation/bounds, GL/EGL wait tri-state, query output failures and
-other context/attach errors remain open. In particular, WAIT_FAILED may still
-become completion in the renderer. This patch must not be treated as complete
+other context/attach errors remain open. In this stage alone, WAIT_FAILED may
+still become completion; use the subsequent wait stage for that source fix.
+This patch must not be treated as complete
 completion correctness or authorization to enable the profile.
 
 Full QEMU objects and linking, generated headers, paired video-disabled renderer,

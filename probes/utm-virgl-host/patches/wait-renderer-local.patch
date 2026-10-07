@@ -1,0 +1,225 @@
+--- a/src/virglrenderer.c
++++ b/src/virglrenderer.c
+@@ -1762,6 +1762,28 @@
+        !cbs->write_context_fence || !cbs->create_gl_context ||
+        !cbs->destroy_gl_context || !cbs->make_current)
+       return -EINVAL;
+-   return virgl_renderer_init(cookie, flags, cbs);
++   int ret = virgl_renderer_init(cookie, flags, cbs);
++   if (ret)
++      return ret;
++   ret = vrend_renderer_ember_classic_wait_init();
++   if (ret)
++      virgl_renderer_cleanup(cookie);
++   return ret;
+ #endif
+ }
++
++int virgl_renderer_ember_classic_wait_status_v1(void)
++{
++   if (!state.vrend_initialized)
++      return -EINVAL;
++   return vrend_renderer_ember_classic_wait_status();
++}
++
++int virgl_renderer_ember_classic_poll_v1(void)
++{
++   int ret = virgl_renderer_ember_classic_wait_status_v1();
++   if (ret)
++      return ret;
++   virgl_renderer_poll();
++   return virgl_renderer_ember_classic_wait_status_v1();
++}
+--- a/src/virglrenderer.h
++++ b/src/virglrenderer.h
+@@ -176,6 +176,10 @@
+ 
+ /* Paired downstream host ABI; requires a renderer built with video=false. */
+ #define VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI 1
++/* Checked polling and sticky wait failure; requires paired QEMU support. */
++#define VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI 1
++VIRGL_EXPORT int virgl_renderer_ember_classic_wait_status_v1(void);
++VIRGL_EXPORT int virgl_renderer_ember_classic_poll_v1(void);
+ VIRGL_EXPORT int virgl_renderer_ember_classic_init_v1(
+    void *cookie, int flags, struct virgl_renderer_callbacks *cbs);
+ 
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -405,6 +405,8 @@
+ #ifdef HAVE_EPOXY_EGL_H
+    bool use_egl_fence : 1;
+ #endif
++   bool ember_classic_wait : 1;
++   bool ember_wait_failed : 1;
+    bool native_share_texture : 1;
+    bool gbm_layout_feat : 1;
+ };
+@@ -7404,24 +7406,25 @@
+    }
+ }
+ 
+-static bool do_wait(struct vrend_fence *fence, bool can_block)
++static int do_wait(struct vrend_fence *fence, bool can_block)
+ {
+ #ifdef HAVE_EPOXY_EGL_H
+    if (vrend_state.use_egl_fence)
+       return virgl_egl_client_wait_fence(egl, fence->eglsyncobj, can_block);
+ #endif
+ 
+-   bool done = false;
+-   int timeout = can_block ? 1000000000 : 0;
++   const int timeout = can_block ? 1000000000 : 0;
+    do {
+       GLenum glret = glClientWaitSync(fence->glsyncobj, 0, timeout);
+-      if (glret == GL_WAIT_FAILED) {
++      if (glret == GL_ALREADY_SIGNALED || glret == GL_CONDITION_SATISFIED)
++         return 1;
++      if (glret != GL_TIMEOUT_EXPIRED) {
+          virgl_warn("Wait sync failed: illegal fence object %p\n", (void*) fence->glsyncobj);
++         return -EIO;
+       }
+-      done = glret != GL_TIMEOUT_EXPIRED;
+-   } while (!done && can_block);
++   } while (can_block);
+ 
+-   return done;
++   return 0;
+ }
+ 
+ static void vrend_renderer_check_queries(void);
+@@ -7969,6 +7972,8 @@
+    vrend_state.current_hw_ctx = NULL;
+ 
+    vrend_state.finishing = false;
++   vrend_state.ember_classic_wait = false;
++   vrend_state.ember_wait_failed = false;
+ }
+ 
+ static void vrend_destroy_sub_context(struct vrend_sub_context *sub)
+@@ -11872,6 +11877,9 @@
+ 
+    assert(!vrend_state.use_async_fence_cb);
+ 
++   if (vrend_state.ember_classic_wait && vrend_state.ember_wait_failed)
++      return;
++
+    list_inithead(&retired_fences);
+ 
+    if (vrend_state.sync_thread) {
+@@ -11898,7 +11906,17 @@
+       vrend_renderer_force_ctx_0();
+ 
+       list_for_each_entry_safe(struct vrend_fence, fence, &vrend_state.fence_list, fences) {
+-         if (do_wait(fence, /* can_block */ false)) {
++         int ret = do_wait(fence, /* can_block */ false);
++         if (ret < 0 && vrend_state.ember_classic_wait) {
++            vrend_state.ember_wait_failed = true;
++            /* Preserve the signaled prefix for cleanup; no callback from a
++             * poll that failed may escape as a successful completion. */
++            list_splice(&retired_fences, &vrend_state.fence_list);
++            return;
++         }
++         /* Preserve the legacy non-profile policy, including worker callers.
++          * Only the paired classic profile is qualified by this adaptation. */
++         if (ret != 0) {
+             list_del(&fence->fences);
+             list_addtail(&fence->fences, &retired_fences);
+          } else {
+@@ -14522,3 +14540,20 @@
+    return EINVAL;
+ }
+ #endif
++
++/* Paired, single-threaded classic wait policy. Cleared only by full cleanup. */
++int vrend_renderer_ember_classic_wait_init(void)
++{
++   if (vrend_state.sync_thread || vrend_state.use_async_fence_cb)
++      return -ENOTSUP;
++   vrend_state.ember_classic_wait = true;
++   vrend_state.ember_wait_failed = false;
++   return 0;
++}
++
++int vrend_renderer_ember_classic_wait_status(void)
++{
++   if (!vrend_state.ember_classic_wait)
++      return -EINVAL;
++   return vrend_state.ember_wait_failed ? -EIO : 0;
++}
+--- a/src/vrend/vrend_renderer.h
++++ b/src/vrend/vrend_renderer.h
+@@ -605,6 +605,8 @@
+ void vrend_renderer_prepare_reset(void);
+ void vrend_renderer_reset(void);
+ void vrend_renderer_poll(void);
++int vrend_renderer_ember_classic_wait_init(void);
++int vrend_renderer_ember_classic_wait_status(void);
+ int vrend_renderer_get_poll_fd(void);
+ 
+ unsigned vrend_context_has_debug_flag(const struct vrend_context *ctx,
+--- a/src/vrend/vrend_winsys_egl.c
++++ b/src/vrend/vrend_winsys_egl.c
+@@ -1025,16 +1025,20 @@
+    eglDestroySyncKHR(egl->egl_display, fence);
+ }
+ 
+-static bool client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking)
++static int client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking)
+ {
+    EGLint egl_result = eglClientWaitSyncKHR(egl->egl_display, fence, 0,
+                                             blocking ? EGL_FOREVER_KHR : 0);
+    if (egl_result == EGL_FALSE)
+       virgl_warn("Wait sync failed\n");
+-   return egl_result != EGL_TIMEOUT_EXPIRED_KHR;
++   if (egl_result == EGL_CONDITION_SATISFIED_KHR)
++      return 1;
++   if (egl_result == EGL_TIMEOUT_EXPIRED_KHR)
++      return 0;
++   return -EIO;
+ }
+ 
+-bool virgl_egl_client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking)
++int virgl_egl_client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking)
+ {
+ #ifndef _WIN32
+    /* attempt to poll the native fence fd instead of eglClientWaitSyncKHR() to
+@@ -1053,16 +1057,19 @@
+    };
+    do {
+       ret = poll(&pfd, 1, blocking ? -1 : 0);
+-      if (ret > 0 && (pfd.revents & (POLLERR | POLLNVAL))) {
+-         ret = -1;
+-         break;
+-      }
+-   } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
++   } while (blocking && ret == -1 && (errno == EINTR || errno == EAGAIN));
++   const int saved_errno = errno;
+    close(fd);
+ 
+-   if (ret < 0)
+-      virgl_warn("Wait sync failed\n");
+-   return ret != 0;
++   /* A nonblocking interruption is pending, never a completion. */
++   if (ret == 0 || (ret < 0 &&
++                   (saved_errno == EINTR || saved_errno == EAGAIN)))
++      return 0;
++   if (ret > 0 && (pfd.revents & POLLIN) &&
++       !(pfd.revents & (POLLERR | POLLNVAL | POLLHUP)))
++      return 1;
++   virgl_warn("Wait sync failed\n");
++   return -EIO;
+ #else
+    return client_wait_fence(egl, fence, blocking);
+ #endif
+--- a/src/vrend/vrend_winsys_egl.h
++++ b/src/vrend/vrend_winsys_egl.h
+@@ -95,7 +95,8 @@
+ bool virgl_egl_supports_fences(struct virgl_egl *egl);
+ EGLSyncKHR virgl_egl_fence_create(struct virgl_egl *egl);
+ void virgl_egl_fence_destroy(struct virgl_egl *egl, EGLSyncKHR fence);
+-bool virgl_egl_client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking);
++/* Returns 1 signaled, 0 pending, or -EIO; never convert blindly to bool. */
++int virgl_egl_client_wait_fence(struct virgl_egl *egl, EGLSyncKHR fence, bool blocking);
+ bool virgl_egl_export_signaled_fence(struct virgl_egl *egl, int *out_fd);
+ bool virgl_egl_export_fence(struct virgl_egl *egl, EGLSyncKHR fence, int *out_fd);
+ bool virgl_egl_different_gpu(struct virgl_egl *egl);

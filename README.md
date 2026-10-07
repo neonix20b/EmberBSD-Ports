@@ -140,6 +140,9 @@ runtime behavior are validated.
   [Reported command and fence errors](probes/utm-virgl-host/COMPLETION.md)
   enter that barrier before any failed command can receive success; 683
   source assertions pass in plain, sanitizer and NDEBUG runs.
+  [Checked GL/EGL waits](probes/utm-virgl-host/wait-errors.md) distinguish
+  pending, signaled and failed fences. Paired renderer/QEMU source checks
+  preserve ownership through a failed poll and reject the old host ABI.
   These are experimental source contracts. Complete host builds, installation,
   native reset/display lifetimes, remaining error paths and VirGL runtime
   remain unverified; the profile stays disabled.

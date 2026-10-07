@@ -1,5 +1,8 @@
 # Experimental UTM VirGL host IOV bounds backport
 
+For the latest paired source stage, follow [classic wait errors](wait-errors.md).
+It builds on the earlier stages below and keeps acceleration disabled.
+
 This probe prepares the accepted upstream IOV-size fix for the current
 UTM virglrenderer 1.3.0 dependency, at
 [`5d26f605`](https://github.com/utmapp/virglrenderer/commit/5d26f605f50f8e22002ec6db5fb775e1992d4e96).

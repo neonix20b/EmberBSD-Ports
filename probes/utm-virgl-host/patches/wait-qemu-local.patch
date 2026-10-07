@@ -1,0 +1,50 @@
+--- a/hw/display/virtio-gpu-gl.c
++++ b/hw/display/virtio-gpu-gl.c
+@@ -197,8 +197,10 @@
+ 
+     if (VIRTIO_GPU_GL(g)->ember_classic_lifecycle) {
+ #if !defined(VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI) || \
+-    VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI != 1
+-        error_setg(errp, "ember-classic-lifecycle requires downstream renderer ABI v1");
++    VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI != 1 || \
++    !defined(VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI) || \
++    VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI != 1
++        error_setg(errp, "ember-classic-lifecycle requires downstream lifecycle and wait ABI v1");
+         return;
+ #else
+         if (virtio_gpu_venus_enabled(g->parent_obj.conf) ||
+--- a/hw/display/virtio-gpu-virgl.c
++++ b/hw/display/virtio-gpu-virgl.c
+@@ -2132,7 +2132,20 @@
+         return;
+     }
+     gl->renderer_call_depth++;
+-    virgl_renderer_poll();
++    if (gl->ember_classic_lifecycle) {
++#if defined(VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI) && \
++    VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI == 1
++        int ret = virgl_renderer_ember_classic_poll_v1();
++#else
++        int ret = -ENOTSUP;
++#endif
++        if (ret) {
++            virtio_gpu_virgl_request_fault(g, NULL,
++                                         VIRTIO_GPU_RESP_ERR_UNSPEC);
++        }
++    } else {
++        virgl_renderer_poll();
++    }
+     gl->renderer_call_depth--;
+     if (gl->ember_classic_lifecycle) {
+         if (!virtio_gpu_virgl_cmdq_allowed(g)) {
+@@ -2316,7 +2329,9 @@
+ 
+     if (gl->ember_classic_lifecycle) {
+ #if defined(VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI) && \
+-    VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI == 1
++    VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI == 1 && \
++    defined(VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI) && \
++    VIRGL_RENDERER_EMBER_CLASSIC_WAIT_ABI == 1
+         flags &= VIRGL_RENDERER_NATIVE_SHARE_TEXTURE;
+         virtio_gpu_3d_cbs.write_fence = virgl_write_async_fence;
+         virtio_gpu_3d_cbs.write_context_fence = virgl_write_async_context_fence;
