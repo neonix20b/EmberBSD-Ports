@@ -12,6 +12,7 @@ cp "$root/scripts/prepare-pkgsrc.sh" "$work/source/scripts/"
 cp -R "$root/profiles/common-graphics" "$work/source/profiles/"
 ln -s "$root/.git" "$work/source/.git"
 ln -s "$root/upstream" "$work/source/upstream"
+ln -s "$root/profiles/common-media" "$work/source/profiles/common-media"
 ln -s "$root/profiles/common-build-tools" "$work/source/profiles/common-build-tools"
 ln -s "$root/profiles/development-toolchain" "$work/source/profiles/development-toolchain"
 ln -s "$root/probes" "$work/source/probes"
@@ -63,12 +64,12 @@ PATH="$work/bin:$PATH" TMPDIR="$work/tmp" GRAPHICS_FAIL_SOURCE="$pkg" \
 [ -z "$(find "$work/tmp" -name 'ember-pkgsrc.*')" ]
 # Only completed disposable source exports are removed; logs remain.
 rm -rf "$work/failed-export"
-for mode in default development-toolchain common-build-tools common-graphics plasma-mobile; do
+for mode in default development-toolchain common-build-tools common-graphics common-media plasma-mobile; do
     tree=$work/export
     if [ "$mode" = default ]; then sh "$script" "$tree" > "$work/$mode.log" 2>&1
     else sh "$script" "$tree" "$mode" > "$work/$mode.log" 2>&1; fi
     case "$mode" in
-        common-graphics|plasma-mobile)
+        common-graphics|common-media|plasma-mobile)
             for recipe in graphics/MesaLib x11/libdrm; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
             cmp "$profile/mk.conf" "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
             cmp "$profile/sources.tsv" "$tree/EMBERBSD-COMMON-GRAPHICS-SOURCES" ;;
@@ -76,14 +77,21 @@ for mode in default development-toolchain common-build-tools common-graphics pla
             for recipe in graphics/MesaLib x11/libdrm; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
-    case "$mode" in common-build-tools|common-graphics|plasma-mobile)
+    case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)
         for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
         cmp "$root/profiles/common-build-tools/mk.conf" "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF" ;;
     esac
-    case "$mode" in development-toolchain|common-build-tools|common-graphics|plasma-mobile)
+    case "$mode" in development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile)
         cmp "$root/profiles/development-toolchain/mk.conf" "$tree/EMBERBSD-DEVELOPMENT-MK.CONF" ;;
     esac
+    case "$mode" in
+        common-media|plasma-mobile)
+            diff -qr "$root/profiles/common-media/recipes/multimedia/ffmpeg9" "$tree/multimedia/ffmpeg9"
+            cmp "$root/profiles/common-media/mk.conf" "$tree/EMBERBSD-COMMON-MEDIA-MK.CONF" ;;
+        *) diff -qr "$root/upstream/pkgsrc/multimedia/ffmpeg9" "$tree/multimedia/ffmpeg9"; [ ! -e "$tree/EMBERBSD-COMMON-MEDIA-MK.CONF" ] ;;
+    esac
     if [ "$mode" = plasma-mobile ]; then
+
         while IFS="$(printf '\t')" read -r recipe archive sha url; do
             case "$recipe" in ''|'#'*) continue ;; esac
             diff -qr "$root/probes/plasma-mobile/toolkit/recipes/$recipe" "$tree/$recipe"
@@ -99,4 +107,4 @@ mkdir "$work/source/pkgsrc/graphics"
 if sh "$script" "$work/collision" common-graphics > "$work/collision.log" 2>&1; then exit 1; fi
 grep 'Upstream already has graphics' "$work/collision.log"
 rm -rf "$work/collision"
-echo 'PASS: canonical composition, three preserved sibling modes, preflight failures, namespace collision and tempfile cleanup'
+echo 'PASS: canonical composition, preserved sibling modes and the composed media profile, preflight failures, namespace collision and tempfile cleanup'

@@ -19,6 +19,7 @@ cat > "$work/mk.conf" <<MK
 .include "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF"
 .include "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
 .if exists("$tree/EMBERBSD-PLASMA-TOOLKIT-MK.CONF")
+.include "$tree/EMBERBSD-COMMON-MEDIA-MK.CONF"
 .include "$tree/EMBERBSD-PLASMA-TOOLKIT-MK.CONF"
 .endif
 MK

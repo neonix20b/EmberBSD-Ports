@@ -34,9 +34,9 @@ CONFIGURE_ARGS+=	-no-pulseaudio
 # For some reason ffmpeg support is conditional on pulseaudio OR apple
 # in src/multimedia/configure.cmake
 .if !empty(PKG_OPTIONS:Mpulseaudio) || ${OPSYS} == "Darwin"
-.include "../../multimedia/ffmpeg8/buildlink3.mk"
+.include "../../multimedia/ffmpeg9/buildlink3.mk"
 PLIST.ffmpeg=		yes
-.  if ${PKG_BUILD_OPTIONS.ffmpeg8:Mvaapi}
+.  if ${PKG_BUILD_OPTIONS.ffmpeg9:Mvaapi}
 PLIST.vaapi=		yes
 .  endif
 .  if ${OPSYS} != "Darwin"

@@ -33,11 +33,13 @@ Qt's common build and consumer files require GCC 16.2.
 
 For a later native build, a private MAKECONF includes the exported
 `EMBERBSD-COMMON-TOOLS-MK.CONF`, then
-`EMBERBSD-COMMON-GRAPHICS-MK.CONF` and finally
+`EMBERBSD-COMMON-GRAPHICS-MK.CONF`,
+`EMBERBSD-COMMON-MEDIA-MK.CONF` and finally
 `EMBERBSD-PLASMA-TOOLKIT-MK.CONF`. The latter selects GCC 16.2, one worker and
-release compiler flags without changing `/etc/mk.conf`. It refuses inherited
-FFmpeg8 consumers until their common FFmpeg9 integration is ready, requires
-the [common graphics source profile](../../../profiles/common-graphics/README.md)
+release compiler flags without changing `/etc/mk.conf`. The migrated
+Qt Multimedia/KFileMetadata recipes use the
+[common FFmpeg9 profile](../../../profiles/common-media/README.md).
+The toolkit requires the [common graphics source profile](../../../profiles/common-graphics/README.md)
 with Mesa26.2.4/libdrm2.4.134nb1 and disables native GL/GLU/DRM providers.
 Qtbase selects its EGL-device PLIST from the canonical package header;
 configuration, installed plugin contents and native check-files remain gates.
@@ -98,7 +100,7 @@ CMake VAAPI branch for six platform/metadata combinations. Target creation
 is recorded by the fixture; no native library or multimedia playback is
 claimed. The original non-Linux `va` branch calls an unavailable stub helper.
 
-`tests/dependencies.sh NEW_WORK` checks those pending dependency rejections
+`tests/dependencies.sh NEW_WORK` checks common-media selection, old-provider rejection
 and the Mesa version/built-in-library constraints through actual BSD make.
 `tests/export-lifecycle.sh NEW_WORK` performs successful and injected-failure
 exports, checking temporary-archive cleanup and preservation of a caller-owned

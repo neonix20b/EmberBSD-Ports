@@ -28,7 +28,8 @@ Include the exported files in a private native MAKECONF, in this order:
 ```make
 .include "/absolute/prepared-pkgsrc/EMBERBSD-COMMON-TOOLS-MK.CONF"
 .include "/absolute/prepared-pkgsrc/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
-# For Plasma only:
+# For Plasma, include media before the toolkit:
+.include "/absolute/prepared-pkgsrc/EMBERBSD-COMMON-MEDIA-MK.CONF"
 .include "/absolute/prepared-pkgsrc/EMBERBSD-PLASMA-TOOLKIT-MK.CONF"
 ```
 
@@ -144,6 +145,6 @@ plugins: exactly one Mesa/DRM/sharedLLVM/GCC16 runtime, no libglapi, old base
 GL3/EGL0/DRM3, build paths or loader overrides. NetBSD clients loading worker
 libraries need pthread at process startup. Real softpipe/llvmpipe/ORC lifecycle
 and graphics checks, matched-kernel KMS/input identity and VirGL sessions
-remain runtime gates. FFmpeg9 integration still blocks Qt Multimedia and
-KFileMetadata. Physical boards, full graphics acceleration and the complete
+remain runtime gates. The [common media profile](../common-media/README.md) prepares FFmpeg9 for
+Qt Multimedia/KFileMetadata; native packages and playback remain unaccepted. Physical boards, full graphics acceleration and the complete
 Mobile workflow remain unverified.

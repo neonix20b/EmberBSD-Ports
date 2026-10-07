@@ -4,12 +4,12 @@ set -eu
 umask 022
 
 [ "$#" -ge 1 ] && [ "$#" -le 2 ] || {
-    echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY [development-toolchain|common-build-tools|common-graphics|plasma-mobile]' >&2
+    echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY [development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile]' >&2
     exit 2
 }
 profile=${2:-}
 case "$profile" in
-    ''|development-toolchain|common-build-tools|common-graphics|plasma-mobile) ;;
+    ''|development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile) ;;
     *) echo 'Unknown profile.' >&2; exit 2 ;;
 esac
 destination=$1
@@ -28,7 +28,7 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     echo 'Initialize the pinned submodule with git submodule update --init upstream/pkgsrc.' >&2
     exit 2
 }
-if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = plasma-mobile ]; then
+if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
     for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
@@ -46,6 +46,10 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
             }
         done
     done
+fi
+if [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
+    media=$root/profiles/common-media
+    sh "$media/validate.sh"
 fi
 if [ "$profile" = plasma-mobile ]; then
     toolkit=$root/probes/plasma-mobile/toolkit
@@ -76,7 +80,7 @@ if [ "$profile" = plasma-mobile ]; then
         done
     done < "$toolkit/sources.tsv"
 fi
-if [ "$profile" = common-graphics ] || [ "$profile" = plasma-mobile ]; then
+if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
     graphics=$root/profiles/common-graphics
     awk -F '\t' '
         /^#/ || /^$/ { next }
@@ -144,7 +148,7 @@ for category in "$root"/pkgsrc/*; do
     cp -R "$category" "$destination/$name"
 done
 if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ] || \
-    [ "$profile" = common-graphics ] || [ "$profile" = plasma-mobile ]; then
+    [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
     for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch; do
         patch -f -E -d "$destination" -p1 -F 0 < \
             "$root/profiles/development-toolchain/patches/$delta"
@@ -152,7 +156,7 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
     cp "$root/profiles/development-toolchain/mk.conf" \
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi
-if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = plasma-mobile ]; then
+if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
     for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         # Replace only recipe paths inside this newly created export.
@@ -164,13 +168,20 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
     cp "$root/profiles/common-build-tools/mk.conf" \
         "$destination/EMBERBSD-COMMON-TOOLS-MK.CONF"
 fi
-if [ "$profile" = common-graphics ] || [ "$profile" = plasma-mobile ]; then
+if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
     for recipe in graphics/MesaLib x11/libdrm; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done
     cp "$graphics/mk.conf" "$destination/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
     cp "$graphics/sources.tsv" "$destination/EMBERBSD-COMMON-GRAPHICS-SOURCES"
+fi
+if [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
+    # Replace the existing 9.0.1 recipe in this newly created export.
+    rm -rf "$destination/multimedia/ffmpeg9"
+    cp -R "$media/recipes/multimedia/ffmpeg9" "$destination/multimedia/ffmpeg9"
+    cp "$media/mk.conf" "$destination/EMBERBSD-COMMON-MEDIA-MK.CONF"
+    cp "$media/sources.tsv" "$destination/EMBERBSD-COMMON-MEDIA-SOURCES"
 fi
 if [ "$profile" = plasma-mobile ]; then
     while IFS="$(printf '\t')" read -r recipe dist_archive sha url; do

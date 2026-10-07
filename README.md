@@ -113,7 +113,9 @@ runtime behavior are validated.
   application menu are checked. The complete mobile workflow still needs
   the common OpenGL stack and an enabled KWin shortcut backend.
   [Qt 6.12/KF6.30 source recipes](probes/plasma-mobile/toolkit/README.md)
-  pass source/export checks; their native package migration remains pending.
+  and the [shared FFmpeg9 recipe](profiles/common-media/README.md) pass
+  source/export checks. Native audio API/registration and host metadata
+  extraction checks pass; the native package migration remains pending.
 
 - [Openbox](probes/openbox/README.md) and
   [Enlightenment](probes/enlightenment/README.md): Openbox 3.6.1 and

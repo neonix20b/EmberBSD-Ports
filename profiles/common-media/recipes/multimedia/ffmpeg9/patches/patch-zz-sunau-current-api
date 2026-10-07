@@ -1,0 +1,108 @@
+$NetBSD$
+
+Adapt pkgsrc's Sun/NetBSD audio backend to the current FFmpeg internal
+format registration and channel-layout APIs. Based on upstream oss_dec.c
+and oss_enc.c in FFmpeg 9.0.2. AI-assisted EmberBSD work; not submitted upstream.
+
+--- libavdevice/sunau_dec.c.orig
++++ libavdevice/sunau_dec.c
+@@ -38,6 +38,7 @@
+ 
+ #include "avdevice.h"
+ #include "libavformat/internal.h"
++#include "libavformat/demux.h"
+ 
+ #include "sunau.h"
+ 
+@@ -59,7 +60,7 @@
+     st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
+     st->codecpar->codec_id = s->codec_id;
+     st->codecpar->sample_rate = s->sample_rate;
+-    st->codecpar->channels = s->channels;
++    st->codecpar->ch_layout.nb_channels = s->channels;
+ 
+     avpriv_set_pts_info(st, 64, 1, 1000000);  /* 64 bits pts in us */
+ 
+@@ -126,13 +127,13 @@
+     .category       = AV_CLASS_CATEGORY_DEVICE_AUDIO_INPUT,
+ };
+ 
+-AVInputFormat ff_sunau_demuxer = {
+-    .name           = "sunau",
+-    .long_name      = NULL_IF_CONFIG_SMALL("Sun/NetBSD audio capture"),
++const FFInputFormat ff_sunau_demuxer = {
++    .p.name           = "sunau",
++    .p.long_name      = NULL_IF_CONFIG_SMALL("Sun/NetBSD audio capture"),
+     .priv_data_size = sizeof(SunAudioData),
+     .read_header    = audio_read_header,
+     .read_packet    = audio_read_packet,
+     .read_close     = audio_read_close,
+-    .flags          = AVFMT_NOFILE,
+-    .priv_class     = &sunau_demuxer_class,
++    .p.flags          = AVFMT_NOFILE,
++    .p.priv_class     = &sunau_demuxer_class,
+ };
+--- libavdevice/sunau_enc.c.orig
++++ libavdevice/sunau_enc.c
+@@ -28,11 +28,13 @@
+ #include <sys/ioctl.h>
+ 
+ #include "libavutil/internal.h"
++#include "libavutil/opt.h"
+ 
+ #include "libavcodec/avcodec.h"
+ 
+ #include "avdevice.h"
+ #include "libavformat/internal.h"
++#include "libavformat/mux.h"
+ 
+ #include "sunau.h"
+ 
+@@ -43,7 +45,7 @@
+ 
+     st = s1->streams[0];
+     s->sample_rate = st->codecpar->sample_rate;
+-    s->channels = st->codecpar->channels;
++    s->channels = st->codecpar->ch_layout.nb_channels;
+     s->codec_id = st->codecpar->codec_id;
+     return ff_sunau_audio_open(s1, 1, s1->url) < 0 ? AVERROR(EIO) : 0;
+ }
+@@ -96,19 +98,19 @@
+     .category       = AV_CLASS_CATEGORY_DEVICE_AUDIO_OUTPUT,
+ };
+ 
+-AVOutputFormat ff_sunau_muxer = {
+-    .name           = "sunau",
+-    .long_name      = NULL_IF_CONFIG_SMALL("Sun/NetBSD audio playback"),
++const FFOutputFormat ff_sunau_muxer = {
++    .p.name           = "sunau",
++    .p.long_name      = NULL_IF_CONFIG_SMALL("Sun/NetBSD audio playback"),
+     .priv_data_size = sizeof(SunAudioData),
+     /* XXX: we may need to support higher precisions in the future, but
+        right now this is what the kernel can handle natively */
+     /* XXX: find better solution with "preinit" method, needed also in
+        other formats */
+-    .audio_codec    = AV_NE(AV_CODEC_ID_PCM_S16BE, AV_CODEC_ID_PCM_S16LE),
+-    .video_codec    = AV_CODEC_ID_NONE,
++    .p.audio_codec    = AV_NE(AV_CODEC_ID_PCM_S16BE, AV_CODEC_ID_PCM_S16LE),
++    .p.video_codec    = AV_CODEC_ID_NONE,
+     .write_header   = audio_write_header,
+     .write_packet   = audio_write_packet,
+     .write_trailer  = audio_write_trailer,
+-    .flags          = AVFMT_NOFILE,
+-    .priv_class     = &sunau_muxer_class,
++    .p.flags          = AVFMT_NOFILE,
++    .p.priv_class     = &sunau_muxer_class,
+ };
+--- libavdevice/alldevices.c.orig
++++ libavdevice/alldevices.c
+@@ -45,7 +45,9 @@
+ extern const FFInputFormat  ff_lavfi_demuxer;
+ extern const FFInputFormat  ff_openal_demuxer;
+ extern const FFInputFormat  ff_oss_demuxer;
++extern const FFInputFormat  ff_sunau_demuxer;
+ extern const FFOutputFormat ff_oss_muxer;
++extern const FFOutputFormat ff_sunau_muxer;
+ extern const FFInputFormat  ff_pulse_demuxer;
+ extern const FFOutputFormat ff_pulse_muxer;
+ extern const FFInputFormat  ff_sndio_demuxer;

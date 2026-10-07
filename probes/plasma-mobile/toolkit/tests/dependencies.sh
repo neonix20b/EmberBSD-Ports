@@ -9,20 +9,23 @@ work=$(CDPATH= cd -- "$1" && pwd)
 cp "$toolkit/mk.conf" "$work/toolkit.mk"
 cp "$toolkit/../../../profiles/common-graphics/mk.conf" "$work/graphics.mk"
 cp "$toolkit/../../../profiles/common-graphics/sources.tsv" "$work/EMBERBSD-COMMON-GRAPHICS-SOURCES"
+cp "$toolkit/../../../profiles/common-media/mk.conf" "$work/media.mk"
+cp "$toolkit/../../../profiles/common-media/sources.tsv" "$work/EMBERBSD-COMMON-MEDIA-SOURCES"
 printf '# source-check common-tools marker\n' > "$work/EMBERBSD-COMMON-TOOLS-MK.CONF"
 make=${BMAKE:-bmake}
 cat > "$work/Makefile" <<'MAKE'
 BSD_PKG_MK= yes
 .include "graphics.mk"
+.include "media.mk"
 .include "toolkit.mk"
 all:
 	@if test -n '${PKG_FAIL_REASON:U}'; then printf '%s\n' '${PKG_FAIL_REASON}'; exit 1; fi
 MAKE
-for recipe in multimedia/qt6-qtmultimedia sysutils/kf6-kfilemetadata multimedia/ffmpeg8; do
+for recipe in multimedia/ffmpeg multimedia/ffmpeg3 multimedia/ffmpeg8 multimedia/ffplay8; do
     if (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes PKGPATH="$recipe") > "$work/${recipe##*/}.log" 2>&1; then
         echo "Unprepared old media dependency accepted: $recipe" >&2; exit 1
     fi
-    grep -q 'FFmpeg 9 package integration' "$work/${recipe##*/}.log"
+    grep -q 'requires FFmpeg 9; migrate this consumer' "$work/${recipe##*/}.log"
 done
 if (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes PKGPATH=graphics/MesaLib DISTNAME=mesa-21.3.9) > "$work/mesa-old.log" 2>&1; then exit 1; fi
 grep -q 'rejects old Mesa recipes' "$work/mesa-old.log"
@@ -37,4 +40,9 @@ for variable in USE_BUILTIN.MesaLib USE_BUILTIN.glu USE_BUILTIN.libdrm; do
     value=$(cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes PKGPATH=x11/qt6-qtbase -V "$variable")
     [ "$value" = no ]
 done
-echo 'PASS: pending FFmpeg rejected; shared common Mesa/libdrm selection retained'
+for recipe in multimedia/qt6-qtmultimedia sysutils/kf6-kfilemetadata multimedia/ffmpeg9; do
+    (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes PKGPATH="$recipe" DISTNAME=ffmpeg-9.0.2)
+done
+if (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH=aarch64 PREFIX=/usr/pkg LOCALBASE=/usr/pkg EMBERBSD_COMMON_TOOLS=yes EMBERBSD_COMMON_MEDIA=no PKGPATH=multimedia/qt6-qtmultimedia) > "$work/missing-media.log" 2>&1; then exit 1; fi
+grep -q 'requires the common FFmpeg 9 media profile' "$work/missing-media.log"
+echo 'PASS: common media required, old FFmpeg rejected, migrated consumers accepted and Mesa/libdrm selection retained'

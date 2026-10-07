@@ -88,18 +88,18 @@ logs and completed packages; it is not a request for an automatic retry.
 ## Source integration still needed before step 5
 
 The toolkit is a source candidate, not a closed installable package set.
-The inherited Qt Multimedia and KFileMetadata recipes still refer to pkgsrc's
-FFmpeg 8. They must move together to the common FFmpeg 9 package integration;
-the [current media probe](../../media/README.md) does not yet provide that
-general-purpose package. Its deliberately limited codec configuration must
-not silently replace desktop multimedia functionality.
-The private toolkit MAKECONF therefore rejects these two consumer recipes
-and older FFmpeg packages until that integration is prepared. This blocker
-must be removed together with the actual recipe/buildlink/PLIST migration.
+The [common media profile](../../../profiles/common-media/README.md) now
+provides FFmpeg9.0.2 and migrates Qt Multimedia/KFileMetadata buildlinks.
+It preserves the general desktop codec options. Native Sun audio object and
+registration checks pass; host KFileMetadata extraction also passes with
+FFmpeg9. This does not accept the native package or full Qt multimedia plugin.
+Build/check/package the shared FFmpeg provider before both native consumers;
+verify playback, metadata extraction and the complete installed ELF closure.
 
 The [common graphics source profile](../../../profiles/common-graphics/README.md)
 now provides canonical Mesa26.2.4/libdrm2.4.134nb1 recipes with one EGL/GL ABI.
-Include common-tools, common-graphics and toolkit MAKECONF files in that order.
+Include common-tools, common-graphics, common-media and toolkit MAKECONF files
+in that order.
 This completes source preparation only. Build/package shared LLVM23 first,
 then libdrm and Mesa with upstream tests and strict check-files. Audit real
 installed symlink chains and ELF dependencies; rebuild GLU, libepoxy and

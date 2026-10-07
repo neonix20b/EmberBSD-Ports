@@ -28,7 +28,7 @@ DEPENDS+=	catdoc-[0-9]*:../../textproc/catdoc
 .include "../../devel/kf6-ki18n/buildlink3.mk"
 .include "../../graphics/exiv2/buildlink3.mk"
 .include "../../graphics/kdegraphics-mobipocket/buildlink3.mk"
-.include "../../multimedia/ffmpeg8/buildlink3.mk"
+.include "../../multimedia/ffmpeg9/buildlink3.mk"
 .include "../../print/poppler-qt6/buildlink3.mk"
 .include "../../textproc/ebook-tools/buildlink3.mk"
 .include "../../textproc/kf6-kcodecs/buildlink3.mk"
