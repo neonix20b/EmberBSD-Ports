@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "description": "EmberBSD Ports MIT-licensed CPU acceptance fixture: z = x + y",
+  "operator_codes": [{ "builtin_code": "ADD", "version": 1 }],
+  "subgraphs": [{
+    "name": "main",
+    "tensors": [
+      { "name": "x", "shape": [1, 4], "type": "FLOAT32", "buffer": 0 },
+      { "name": "y", "shape": [1, 4], "type": "FLOAT32", "buffer": 0 },
+      { "name": "z", "shape": [1, 4], "type": "FLOAT32", "buffer": 0 }
+    ],
+    "inputs": [0, 1],
+    "outputs": [2],
+    "operators": [{
+      "opcode_index": 0,
+      "inputs": [0, 1],
+      "outputs": [2],
+      "builtin_options_type": "AddOptions",
+      "builtin_options": { "fused_activation_function": "NONE" }
+    }]
+  }],
+  "buffers": [{}],
+  "signature_defs": [{
+    "signature_key": "serving_default",
+    "subgraph_index": 0,
+    "inputs": [{ "name": "x", "tensor_index": 0 }, { "name": "y", "tensor_index": 1 }],
+    "outputs": [{ "name": "z", "tensor_index": 2 }]
+  }]
+}

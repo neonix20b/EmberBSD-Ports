@@ -1,0 +1,45 @@
+--- a/runtime/components/model_resources_task.cc
++++ b/runtime/components/model_resources_task.cc
+@@ -98,8 +98,18 @@
+ 
+ absl::StatusOr<const proto::ExecutorMetadata*>
+ ModelResourcesTask::GetExecutorMetadata() {
+-  return absl::UnimplementedError(
+-      "GetExecutorMetadata is not implemented for Task model.");
++  if (executor_metadata_ == nullptr) {
++    ABSL_ASSIGN_OR_RETURN(
++        auto bytes, model_asset_bundle_resources_->GetFile("EXECUTOR_METADATA"));
++    auto metadata = std::make_unique<proto::ExecutorMetadata>();
++    if (!metadata->ParseFromString(std::string(bytes)) ||
++        !metadata->has_llm_executor_metadata()) {
++      return absl::InvalidArgumentError(
++          "Invalid EXECUTOR_METADATA in Task model");
++    }
++    executor_metadata_ = std::move(metadata);
++  }
++  return executor_metadata_.get();
+ }
+ 
+ }  // namespace litert::lm
+--- a/runtime/executor/llm_litert_compiled_model_executor.cc
++++ b/runtime/executor/llm_litert_compiled_model_executor.cc
+@@ -1882,6 +1882,9 @@
+   auto executor_metadata_or = resources.GetExecutorMetadata();
+   if (executor_metadata_or.ok()) {
+     executor_metadata = *executor_metadata_or;
++  } else if (!absl::IsNotFound(executor_metadata_or.status()) &&
++             !absl::IsUnimplemented(executor_metadata_or.status())) {
++    return executor_metadata_or.status();
+   }
+ 
+   absl::string_view prefill_signature_key = "";
+@@ -2245,6 +2248,9 @@
+   auto executor_metadata_or = resources.GetExecutorMetadata();
+   if (executor_metadata_or.ok()) {
+     executor_metadata = *executor_metadata_or;
++  } else if (!absl::IsNotFound(executor_metadata_or.status()) &&
++             !absl::IsUnimplemented(executor_metadata_or.status())) {
++    return executor_metadata_or.status();
+   }
+   ABSL_ASSIGN_OR_RETURN(
+       auto compilation_options,

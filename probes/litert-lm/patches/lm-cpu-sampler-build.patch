@@ -1,0 +1,55 @@
+--- a/runtime/components/sampler_factory.cc
++++ b/runtime/components/sampler_factory.cc
+@@ -45,6 +45,7 @@
+ namespace litert::lm {
+ namespace {
+ 
++#if !defined(LITERT_DISABLE_GPU)
+ // Common type definitions for sampler C APIs.
+ using LiteRtTopKSampler_Sampler = void;
+ using LiteRtTopKSampler_ActivationDataType = void;
+@@ -620,6 +621,8 @@
+   }
+ };
+ 
++#endif  // !defined(LITERT_DISABLE_GPU)
++
+ absl::StatusOr<std::unique_ptr<Sampler>> CreateCpuSampler(
+     int batch_size, int sequence_size,
+     proto::SamplerParameters sampler_params) {
+@@ -639,6 +642,7 @@
+   }
+ }
+ 
++#if !defined(LITERT_DISABLE_GPU)
+ absl::StatusOr<std::unique_ptr<Sampler>> CreateGpuSampler(
+     int batch_size, proto::SamplerParameters sampler_params,
+     const litert::Environment& env, int sequence_size, int vocab_size,
+@@ -746,6 +750,8 @@
+   return absl::UnavailableError("GPU sampler not available.");
+ }
+ 
++#endif  // !defined(LITERT_DISABLE_GPU)
++
+ }  // namespace
+ 
+ absl::StatusOr<std::unique_ptr<Sampler>> CreateSampler(
+@@ -756,6 +762,10 @@
+   int sequence_size_value = sequence_size.value_or(1);
+   switch (backend) {
+     case Backend::GPU: {
++#if defined(LITERT_DISABLE_GPU)
++      return absl::UnimplementedError(
++          "GPU sampling is disabled in this CPU-only build.");
++#else
+       RET_CHECK(env.has_value())
+           << "LiteRT environment is needed for GPU sampling.";
+       RET_CHECK(vocab_size.has_value())
+@@ -778,6 +788,7 @@
+              "or available at LD_LIBRARY_PATH on device. You can find the "
+              "shared library under prebuilt/";
+       ABSL_FALLTHROUGH_INTENDED;
++#endif  // defined(LITERT_DISABLE_GPU)
+     }
+     case Backend::CPU:
+       return CreateCpuSampler(batch_size, sequence_size_value, sampler_params);

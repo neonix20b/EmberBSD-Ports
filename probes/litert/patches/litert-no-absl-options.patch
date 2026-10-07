@@ -1,0 +1,37 @@
+Subject: Honor LITERT_NO_ABSL in the public runtime options wrapper
+Origin: EmberBSD Ports, developed with OpenAI Codex assistance
+Upstream: https://github.com/google-ai-edge/LiteRT/releases/tag/v2.2.0
+Status: Local compatibility patch, not submitted upstream
+
+Use the existing API vocabulary aliases for selected signature names.
+The default build retains the same Abseil types and inline signature.
+LITERT_NO_ABSL uses the supported C++20 standard-library aliases instead.
+No C API, runtime option representation or signature-selection behavior changes.
+
+--- a/litert/cc/options/litert_runtime_options.h
++++ b/litert/cc/options/litert_runtime_options.h
+@@ -19,10 +19,9 @@
+ #include <string>
+ #include <vector>
+ 
+-#include "absl/strings/string_view.h"  // from @com_google_absl
+-#include "absl/types/span.h"  // from @com_google_absl
+ #include "litert/c/litert_common.h"
+ #include "litert/c/options/litert_runtime_options.h"
++#include "litert/cc/litert_api_types.h"
+ #include "litert/cc/litert_expected.h"
+ #include "litert/cc/litert_macros.h"
+ 
+@@ -112,10 +111,10 @@
+   /// @param signature_keys The signature keys to select. Must be non-empty,
+   /// and each key must be non-empty and unique.
+   Expected<void> SetSelectedSignatures(
+-      absl::Span<const absl::string_view> signature_keys) {
++      Span<const StringView> signature_keys) {
+     std::vector<std::string> keys;
+     keys.reserve(signature_keys.size());
+-    for (absl::string_view key : signature_keys) {
++    for (StringView key : signature_keys) {
+       keys.emplace_back(key);
+     }
+     LITERT_RETURN_IF_ERROR(

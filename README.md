@@ -110,6 +110,13 @@ runtime behavior are validated.
   consumer checks on AArch64. They cover numerical inference, stream state,
   speech/silence and invalid inputs; explicit ORT worker affinity is checked
   separately. These are source probes, without microphone or accelerator validation.
+- [LiteRT and LiteRT-LM](probes/litert/README.md): LiteRT 2.2.0 provides a
+  shared C/C++ CPU runtime for `.tflite` models; LiteRT-LM 0.18.0 adds a
+  SentencePiece language-model engine. The macOS-to-AArch64 source profile
+  passes installed C/C++ numerical/error contracts and real TinyLlama text
+  generation on a physical A733 board. Explicit metadata preparation preserves
+  the model's weights and tokenizer. These are source builds, without GPU/NPU
+  validation; the profile records memory use and model limits.
 - [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
   upstream descriptor-zero and failure-cleanup fixes pass host/native software
   contracts; public core-count bounds pass 58 native production-extracted cases
