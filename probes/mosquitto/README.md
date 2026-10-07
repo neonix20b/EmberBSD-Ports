@@ -61,9 +61,29 @@ Override `MQTT_TEST_PORT`/`MQTT_TEST_TLS_PORT`
 if 28883/28884 are already occupied. Only the test's own broker process is
 stopped; a bind failure does not replace another service.
 
+The pinned pkgsrc already provides the current Mosquitto recipe and rc.d
+script; a duplicate recipe is unnecessary. Its original rc.d script also
+passes four native lifecycle cases with this candidate: start/status,
+authenticated MQTT, restart with a new process and restored retained data,
+and stop/stopped status. Run as an ordinary user:
+
+```sh
+sh probes/mosquitto/test-rc-service.sh /absolute/work/install \
+    /absolute/pinned-pkgsrc /absolute/new-rc-check
+```
+
+The check verifies the original script's SHA256, substitutes private package
+paths, and executes the actual NetBSD rc.subr. It neither installs an rc.d
+file nor edits system rc.conf. A system per-service override causes refusal;
+the default test listener is 127.0.0.1:28885 (`MQTT_RC_TEST_PORT` can change it).
+This verifies the service lifecycle, not package installation or boot ordering.
+`test-stopped-process.sh NEW_WORK` exercises the verifier's actual PID gate:
+a live owned process must fail even if a pidfile/status check says otherwise.
+It also accepts an already reaped process; native and host checks pass.
+
 These results do not yet establish the full upstream test suite, WebSockets,
 dynamic-security/SQLite plugin runtime, remote clients, long-duration load,
-or package/boot-service integration. Other smart-home projects are separate
+or package installation/boot-service integration. Other smart-home projects are separate
 ports; MQTT success does not establish their compatibility.
 
 ## Provenance
