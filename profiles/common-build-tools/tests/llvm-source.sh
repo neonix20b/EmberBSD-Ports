@@ -101,14 +101,15 @@ for recipe in lang/python314 devel/meson; do
     diff -r "$work/reference/profiles/common-build-tools/recipes/$recipe" "$work/pkgsrc/$recipe"
 done
 git -C "$root/upstream/pkgsrc" archive HEAD lang/gcc16 lang/gcc16-libs lang/gcc16-libjit \
-    math/mpcomplex devel/gtexinfo lang/tcl-expect | tar -xf - -C "$work/reference"
+    math/mpfr math/mpcomplex devel/gtexinfo lang/tcl-expect | tar -xf - -C "$work/reference"
 for patch in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch gcc-tsvc-netbsd.patch; do
     patch -f -N -E -F 0 -p1 -d "$work/reference" < \
         "$root/profiles/development-toolchain/patches/$patch" >> "$work/gcc-reference.log"
 done
-for recipe in lang/gcc16 lang/gcc16-libs lang/gcc16-libjit math/mpcomplex devel/gtexinfo lang/tcl-expect; do
+for recipe in lang/gcc16 lang/gcc16-libs lang/gcc16-libjit math/mpfr math/mpcomplex devel/gtexinfo lang/tcl-expect; do
     diff -r "$work/reference/$recipe" "$work/pkgsrc/$recipe"
 done
+cmp "$root/profiles/development-toolchain/mk.conf" "$work/pkgsrc/EMBERBSD-DEVELOPMENT-MK.CONF"
 if sh "$root/scripts/prepare-pkgsrc.sh" "$work/pkgsrc" common-build-tools > "$work/existing.log" 2>&1; then exit 1; fi
 if sh "$root/scripts/prepare-pkgsrc.sh" "$work/unknown" bad > "$work/unknown.log" 2>&1; then exit 1; fi
 [ ! -e "$work/unknown" ]

@@ -1,4 +1,5 @@
 component	version	url	sha256
+mpfr	4.2.2	https://www.mpfr.org/mpfr-4.2.2/mpfr-4.2.2.tar.bz2	9ad62c7dc910303cd384ff8f1f4767a655124980bb6d8650fe62c815a231bb7b
 gcc-tsvc-netbsd	19888932d149c9df18306544d5b0ad0e38f2a6fe	https://github.com/gcc-mirror/gcc/commit/19888932d149c9df18306544d5b0ad0e38f2a6fe.patch	8822366ad79bf69e665eeface4e07fe7eed232f8f90c20738ffcb6a86469127a
 gcc	16.2.0	https://gcc.gnu.org/pub/gcc/releases/gcc-16.2.0/gcc-16.2.0.tar.xz	e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e
 pkgsrc-gcc16-update	823a3b483b7ffeb73973f911458d6ba22c74efc4	https://github.com/NetBSD/pkgsrc/commit/823a3b483b7ffeb73973f911458d6ba22c74efc4.patch	bdaf9c376aebcbe5b9796b14295a8abb7499d596e3d24c1fb5576ff4dc3fb7d8

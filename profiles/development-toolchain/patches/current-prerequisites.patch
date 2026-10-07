@@ -259,6 +259,32 @@ diff -ruN a/devel/gtexinfo/patches/patch-util_texi2dvi b/devel/gtexinfo/patches/
 - 
 - # No failure shall remain unpunished.
 - set -e
+diff -ruN a/math/mpfr/Makefile b/math/mpfr/Makefile
+--- a/math/mpfr/Makefile
++++ b/math/mpfr/Makefile
+@@ -1,8 +1,8 @@
+ # $NetBSD: Makefile,v 1.48 2023/09/09 20:15:54 wiz Exp $
+ 
+-DISTNAME=	mpfr-4.2.1
++DISTNAME=	mpfr-4.2.2
+ CATEGORIES=	math
+-MASTER_SITES=	http://www.mpfr.org/${DISTNAME}/
++MASTER_SITES=	https://www.mpfr.org/${DISTNAME}/
+ EXTRACT_SUFX=	.tar.bz2
+ 
+ MAINTAINER=	pkgsrc-users@NetBSD.org
+diff -ruN a/math/mpfr/distinfo b/math/mpfr/distinfo
+--- a/math/mpfr/distinfo
++++ b/math/mpfr/distinfo
+@@ -1,5 +1,5 @@
+ $NetBSD: distinfo,v 1.35 2023/09/09 20:15:54 wiz Exp $
+ 
+-BLAKE2s (mpfr-4.2.1.tar.bz2) = 3d4adcc8e69386a962b2350a456a27a44d693fbe603cbbc954725887d88febc2
+-SHA512 (mpfr-4.2.1.tar.bz2) = c81842532ecc663348deb7400d911ad71933d3b525a2f9e5adcd04265c9c0fdd1f22eca229f482703ac7f222ef209fc9e339dd1fa47d72ae57f7f70b2336a76f
+-Size (mpfr-4.2.1.tar.bz2) = 1720899 bytes
++BLAKE2s (mpfr-4.2.2.tar.bz2) = 2b507bb26e95f69ed5df2fc1b5b07eb56f9d7bbdc7a86c9488246a01f586b211
++SHA512 (mpfr-4.2.2.tar.bz2) = 0176e50808dcc07afbf5bc3e38bf9b7b21918e5f194aa0bfd860d99b00c470630aef149776c4be814a61c44269c3a5b9a4b0b1c0fcd4c9feb1459d8466452da8
++Size (mpfr-4.2.2.tar.bz2) = 1753999 bytes
 diff -ruN a/math/mpcomplex/Makefile b/math/mpcomplex/Makefile
 --- a/math/mpcomplex/Makefile	2026-10-02 21:24:59.000000000 +0300
 +++ b/math/mpcomplex/Makefile	2026-10-06 23:01:43.371112394 +0300

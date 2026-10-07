@@ -27,8 +27,10 @@ The full original update is preserved in `patches/pkgsrc-gcc16.2.patch`.
 Original archive and patch URLs/SHA256 are in `sources.tsv`; GCC's SHA512
 and BLAKE2s remain in the resulting pkgsrc `distinfo`.
 
-The [bootstrap prerequisite delta](prerequisites.md) updates MPC to 1.4.1
-and Texinfo to 7.3, with verified archives and refreshed portability patches.
+The [bootstrap prerequisite delta](prerequisites.md) prepares MPFR 4.2.2,
+MPC 1.4.1 and Texinfo 7.3, with verified archives and portability patches.
+MPFR 4.2.2 is source-verified; native replacement, MPC consumer tests and
+the already built GCC candidate's dependency checks remain required.
 Texinfo's Perl XS dependency requires the pinned Perl 5.44.0 package and
 rebuild of any existing Perl modules before replacing an earlier Perl ABI.
 
