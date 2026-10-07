@@ -1,0 +1,43 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -503,6 +503,9 @@
+         PUBLIC
+             "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}>"
+             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
++    if (fftw3f_FOUND)
++        target_link_libraries(${lib} PRIVATE fftw::fftw)
++    endif()
+ endforeach()
+ 
+ # ---------------------------------------- SIMD extensions ----------------------------------------
+@@ -654,9 +657,9 @@
+     set_target_properties(${target}
+         PROPERTIES
+             PUBLIC_HEADER include/liquid.h)
+-    target_link_libraries(${target} c m)
++    target_link_libraries(${target} PRIVATE c m)
+     if (fftw3f_FOUND)
+-        target_link_libraries(${target} fftw3f)
++        target_link_libraries(${target} PRIVATE fftw::fftw)
+     endif()
+ endforeach()
+ 
+--- a/cmake/Findfftw3f.cmake
++++ b/cmake/Findfftw3f.cmake
+@@ -27,5 +27,5 @@
+ if (fftw3f_FOUND AND NOT TARGET fftw::fftw)
+     add_library(fftw::fftw IMPORTED SHARED)
+     set_property(TARGET fftw::fftw PROPERTY IMPORTED_LOCATION ${fftw3f_LIBRARY})
+-    target_include_directories(fftw::fftw INTERFACE ${fftw3f_LIBRARY})
++    target_include_directories(fftw::fftw INTERFACE ${fftw3f_INCLUDE_DIR})
+ endif()
+--- a/cmake/liquid.config.h.in
++++ b/cmake/liquid.config.h.in
+@@ -77,6 +77,6 @@
+ //#cmakedefine HAVE_STDLIB_H
+ //#cmakedefine HAVE_LIBC
+ //#cmakedefine SIZEOF_INT @SIZEOF_INT@
+-//#cmakedefine01 fftw3f_FOUND
++#cmakedefine01 fftw3f_FOUND
+ 
+ #endif // __CONFIG_H__

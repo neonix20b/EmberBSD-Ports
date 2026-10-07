@@ -38,6 +38,11 @@ runtime behavior are validated.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
+- [Signal processing and IMU estimation](probes/dsp/README.md): liquid-dsp 1.8.3,
+  FFTW 3.3.11, VOLK 3.3.0 and Fusion 1.3.3 pass 19 installed AArch64 VM cases.
+  They cover filtering, resampling, QPSK, spectra, generic/NEON vector kernels
+  and synthetic orientation/bias estimation. Ports preserves the common FFTW,
+  source adaptations and pkgsrc patch origins; physical SDR and IMU are unverified.
 - [Robotics and automotive developer tools](probes/robotics-tools/README.md):
   MCAP C++ 2.1.3, AprilTag 3.4.5, dbcppp 3.2.6, iso14229 0.11.0,
   Ceres 2.2.0, BehaviorTree.CPP 4.9.0 and libmodbus 3.2.0 source profiles.
