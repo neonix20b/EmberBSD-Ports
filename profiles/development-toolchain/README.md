@@ -195,7 +195,7 @@ and runtime file hashes stayed unchanged; global defaults were not changed.
 The installed old Qt 6.11 closure correctly fails the same identity check:
 it loads both candidate libstdc++.7 and base libstdc++.9. Its Qt/ICU/LLVM
 consumer rebuild remains required; a working isolated C++ probe cannot accept
-that mixed process. The ongoing strict upstream suite reports real failures;
+that mixed process. The completed strict upstream suite reports real failures;
 the complete profile has not passed its acceptance gate.
 
 The current AArch64 VM kernel starts processes with flush-to-zero and default

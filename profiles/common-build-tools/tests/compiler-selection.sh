@@ -49,9 +49,11 @@ cp "$work/tools.conf" "$work/graphics.conf"
 printf '.include "%s/EMBERBSD-COMMON-GRAPHICS-MK.CONF"\n' "$tree" >> "$work/graphics.conf"
 cp "$work/graphics.conf" "$work/media.conf"
 printf '.include "%s/EMBERBSD-COMMON-MEDIA-MK.CONF"\n' "$tree" >> "$work/media.conf"
-run() {
-    recipe=$1 conf=$2; shift 2
-    "$make" -r -m "$work/sys" -C "$tree/$recipe" MAKECONF="$work/$conf.conf" \
+# Propagate the same real-make/target boundary to pkg-build-options recursion.
+# The wrapper queries real dependency recipes, never supplies blanket options.
+cat > "$work/host-make" <<MAKE
+#!/bin/sh
+    exec "$make" -r -m "$work/sys" \
         OPSYS=NetBSD OS_VERSION=11.0 OPSYS_VERSION=110000 \
         NATIVE_OPSYS=NetBSD NATIVE_OS_VERSION=11.0 NATIVE_OPSYS_VERSION=110000 \
         LOWER_OPSYS=netbsd MACHINE_ARCH=aarch64 HOST_MACHINE_ARCH=aarch64 \
@@ -61,6 +63,12 @@ run() {
         PKG_BUILD_OPTIONS.gcc16='c++ always-libgcc' PKG_BUILD_OPTIONS.llvm=tests \
         PKG_BUILD_OPTIONS.MesaLib='llvm x11 wayland' \
         USE_BUILTIN.pthread=yes H_PTHREAD=/usr/include/pthread.h \
+        _MAKE="$work/host-make" "\$@"
+MAKE
+chmod +x "$work/host-make"
+run() {
+    recipe=$1 conf=$2; shift 2
+    MAKECONF="$work/$conf.conf" "$work/host-make" -C "$tree/$recipe" \
         -V 'compiler=${_GCC_PKGBASE}' -V 'use=${_USE_PKGSRC_GCC:tl}' \
         -V 'prefix=${_GCC_PREFIX}' -V 'runtime=${USE_PKGSRC_GCC_RUNTIME:tl}' \
         -V 'method=${BUILDLINK_DEPMETHOD.gcc16}' \
@@ -70,9 +78,36 @@ run() {
         -V 'gccdeps=${BUILDLINK_API_DEPENDS.gcc16}' \
         -V 'python=${_PYTHON_VERSION}' -V 'fail=${PKG_FAIL_REASON}' "$@"
 }
+diagnostics() {
+    log=$1 expected=${2:-}
+    if grep -E 'warning:|no system rules|stopped making|^bmake.*(fatal|error)' "$log"; then
+        echo "FAIL: unexpected make diagnostic in $log" >&2; return 1
+    fi
+    # Keep real host limitations visible; every other positive failure is fatal.
+    # Negative cases allow only their named policy and the known patch-floor error.
+    awk -v expected="$expected" '
+        /^fail=/ {
+            text=$0
+            while (match(text, /"[^"]*"/)) {
+                reason=substr(text, RSTART+1, RLENGTH-2)
+                text=substr(text, RSTART+RLENGTH)
+                if (reason ~ /^[^ ]+ requires a working dlopen\(\)\.$/ ||
+                    reason ~ /^License conditions for [^ ]+ could not be evaluated$/ ||
+                    reason ~ /^\[bsd.pkg.mk\] [^ ]+ uses X11, but \/usr\/X11R7 not found$/)
+                    continue
+                if (expected != "" && index(reason, expected)) continue
+                if (expected == "requires GCC_REQD=16.2" && reason == "Unable to satisfy dependency: gcc>=16.2.0, newest pkgsrc version is 16.2.0") continue
+                print "FAIL: unexpected package premise: " reason > "/dev/stderr"
+                failed=1
+            }
+        }
+        END { exit failed+0 }
+    ' "$log"
+}
 selected() {
     name=$1 recipe=$2 conf=$3; shift 3
     run "$recipe" "$conf" "$@" > "$work/$name.log" 2>&1
+    diagnostics "$work/$name.log"
     grep -qx 'compiler=gcc16' "$work/$name.log"
     grep -qx 'use=yes' "$work/$name.log"
     grep -qx 'prefix=/usr/pkg/gcc16/' "$work/$name.log"
@@ -97,12 +132,14 @@ selected distributed-chain devel/zlib tools 'PKGSRC_COMPILER=distcc gcc'
 selected lower-recipe-floor devel/zlib tools 'GCC_REQD=12 16.2'
 # Absence retains real dependency selection, without inventing executable paths.
 run textproc/icu tools PKG_INFO=/usr/bin/false > "$work/missing-package.log" 2>&1
+diagnostics "$work/missing-package.log"
 grep '^deps=.*gcc16>=16.2:../../lang/gcc16' "$work/missing-package.log" >/dev/null
 grep 'prefix=/usr/pkg/_GCC_SUBPREFIX_not_found/' "$work/missing-package.log" >/dev/null
 echo 'PASS: missing installed compiler stays an unresolved real package dependency'
 rejected() {
     name=$1 reason=$2; shift 2
     run devel/zlib tools "$@" > "$work/$name.log" 2>&1
+    diagnostics "$work/$name.log" "$reason"
     grep -F "$reason" "$work/$name.log" >/dev/null
     echo "PASS: incompatible policy rejected $name"
 }
@@ -127,11 +164,13 @@ grep 'require native package builds' "$work/cross.log" >/dev/null
 for recipe in lang/gcc16 math/mpfr math/mpcomplex devel/gtexinfo; do
     name=${recipe##*/}
     run "$recipe" bootstrap > "$work/bootstrap-$name.log" 2>&1
+    diagnostics "$work/bootstrap-$name.log"
     grep -qx 'use=no' "$work/bootstrap-$name.log"
     if grep '^deps=.*gcc16[><=-].*:../../lang/gcc16' "$work/bootstrap-$name.log"; then exit 1; fi
     echo "PASS: native GCC12 bootstrap boundary $recipe"
 done
 run devel/zlib plain > "$work/plain.log" 2>&1
+diagnostics "$work/plain.log"
 grep -qx 'use=no' "$work/plain.log"
 if grep '^deps=.*gcc16[><=-]' "$work/plain.log"; then exit 1; fi
 # The real exporter, run by the caller, must include the unchanged profile bytes.
