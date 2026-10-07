@@ -22,7 +22,8 @@ export DYLD_FRAMEWORK_PATH="$frameworks"
     "$recipe/native-smoke.c" -L"$work/prefix/lib" -lvirglrenderer -lepoxy -o "$work/native-smoke"
 shasum -a 256 "$frameworks/EGL.framework/EGL" "$frameworks/GLESv2.framework/GLESv2" \
     "$work/prefix/lib/libvirglrenderer.1.dylib" "$work/prefix/lib/libepoxy.0.dylib" \
-    "$recipe/native-smoke.c" "$recipe/native-decoder.h" "$work/native-smoke" > "$work/native-inputs-sha256.txt"
+    "$recipe/native-smoke.c" "$recipe/native-decoder.h" "$recipe/native-clear.h" \
+    "$work/native-smoke" > "$work/native-inputs-sha256.txt"
 otool -L "$work/native-smoke" > "$work/native-linked-libraries.txt"
 # Keep failure status and diagnostic log. Lack of GPU access is not PASS/SKIP.
 DYLD_PRINT_LIBRARIES=1 "$work/native-smoke" "$work/prefix/lib" "$frameworks" > "$work/native-smoke.log" 2>&1 || { cat "$work/native-smoke.log" >&2; exit 1; }

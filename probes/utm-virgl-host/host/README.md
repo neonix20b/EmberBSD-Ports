@@ -110,6 +110,13 @@ the checked polling API, and cleans up. It verifies rejection of live reinit,
 conservation of created contexts and continued usability of the caller's EGL
 context/display. This is direct renderer API execution, without a guest VM.
 
+The same cycle creates a context and submits actual classic surface/framebuffer/
+CLEAR commands for that texture. Red and green alternate between cycles. CPU
+backing is replaced with `0xa5` before readback; all 256 RGBA pixels must match
+the selected clear color exactly. The context then detaches the resource and is
+destroyed before the caller releases its IOV/texture. This checks decoded GPU
+commands through Metal, not shader drawing or guest Mesa rendering.
+
 Each cycle also submits six command buffers through the complete decoder with
 real EGL contexts. Before the decoder fix, missing payload, truncation after a
 valid command and an absent maximum-size payload returned success: three failures
