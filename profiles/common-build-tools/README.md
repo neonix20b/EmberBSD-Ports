@@ -62,6 +62,11 @@ runtime dependency, including C-only consumers. The public
 and pkgsrc RPATH select the complete package's own runtime. `no` disables
 that separate provider; it does not select the base GCC12 runtime.
 Native compile/link/runtime checks must verify the actual loaded libraries.
+The [native selection fixture](tests/native-compiler-selection/README.md) passes
+on physical Orange Pi Zero 3W: actual pkgsrc wrappers compile and package C/C++,
+and the installed consumer loads the selected GCC16 runtime. The
+[compiler validation](../development-toolchain/native-validation.md) records
+current math dependencies, focused LTO checks and remaining compiler limits.
 This source selection does not change `/usr/bin/cc`, `/etc/mk.conf`, running
 old GUI programs or the image's user-facing defaults. Consumer migration
 and fresh-image acceptance remain separate gates.
@@ -84,6 +89,9 @@ with declared target and installed-package receipts. It checks ordinary C/C++
 consumers, LLVM/graphics/media composition, policy overrides and native GCC12
 bootstrap boundaries. It does not execute a target compiler or accept native
 packages. Missing BSD make fails this gate.
+
+Use the separate native fixture after installing the documented prerequisites;
+it exercises real target compilation and removes only its own test package.
 
 ## Patch decisions
 

@@ -1,12 +1,13 @@
 # Common development toolchain (candidate)
 
 This profile builds GCC 16.2.0 for native EmberBSD/NetBSD 11 AArch64.
-The candidate package builds and installs in the AArch64 VM and passes native
-C11/C++20 thread, TLS, shared-library and runtime-identity probes. It is the
+The candidate package builds in the AArch64 VM and runs there and on physical
+Orange Pi Zero 3W, passing C11/C++20 thread, TLS, shared-library and runtime-identity probes. It is the
 compiler foundation for a reproducible distribution development environment.
 The common build-tools MAKECONF selects it for new package consumers after
-bootstrap. Full upstream tests, native selection/consumer acceptance and
-image integration remain gates; user-facing system defaults are unchanged.
+bootstrap; actual native pkgsrc wrapper and installed-consumer checks pass on
+Zero 3W. Full upstream tests, shared consumer migration and image integration
+remain gates; user-facing system defaults are unchanged.
 
 On the AArch64 NetBSD 11 VM, the native prerequisites are now validated:
 MPC 1.4.1 (75 tests), Texinfo 7.3 (required XS plus Info/HTML output),
@@ -30,8 +31,8 @@ and BLAKE2s remain in the resulting pkgsrc `distinfo`.
 
 The [bootstrap prerequisite delta](prerequisites.md) prepares MPFR 4.2.2,
 MPC 1.4.1 and Texinfo 7.3, with verified archives and portability patches.
-MPFR 4.2.2 is source-verified; native replacement, MPC consumer tests and
-the already built GCC candidate's dependency checks remain required.
+MPFR 4.2.2, MPC arithmetic tests and the unchanged GCC package's dependency
+checks pass on Zero 3W; see the [native validation](native-validation.md).
 Texinfo's Perl XS dependency requires the pinned Perl 5.44.0 package and
 rebuild of any existing Perl modules before replacing an earlier Perl ABI.
 
@@ -217,16 +218,18 @@ register bits against a zero-extended narrow load. The failing executable
 uses the libc helper; the passing variant contains a normalizing libgcc
 helper. The [OS CAS repair](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/aarch64-outlined-cas.md)
 passes 850 native production checks and that unchanged upstream test linked
-explicitly to the corrected objects. The installed libc remains unchanged;
-its replacement and acceptance are still required. Other LTO and
+explicitly to the corrected objects. On physical Zero 3W the complete corrected
+libc is installed, and the original atomic/binary128 LTO cases pass with and
+without the linker plugin through normal system-library resolution. The VM
+libc remains unchanged. Other LTO and
 target/configuration failures remain under investigation. These findings do not invalidate the
 completed package build or justify rebuilding the same sources unchanged.
-Preserve unmodified test results; native consumer acceptance and
-user-facing image defaults remain deferred.
+Preserve unmodified test results; acceptance of the complete shared consumer
+closure and user-facing image defaults remain deferred.
 
 Source validation covers pinned archives, the upstream update, all 23 GCC
 source patches without fuzz, native prerequisite fixes, and negative checker
-fixtures for duplicate or foreign runtimes. Physical-board compiler testing,
-self-hosting, current-binutils validation, common consumer repairs, native
-common selection and release-image integration are not established by this
-VM result. The source MAKECONF policy alone does not close those gates.
+fixtures for duplicate or foreign runtimes. The separate
+[Zero 3W validation](native-validation.md) confirms the installed dependency
+set and actual common pkgsrc selection. Self-hosting, current-binutils validation,
+common consumer repairs and release-image integration remain unaccepted.

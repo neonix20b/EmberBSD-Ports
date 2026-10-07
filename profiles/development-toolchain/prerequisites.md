@@ -34,12 +34,12 @@ sh profiles/development-toolchain/tests/source-profile.sh \
     /absolute/verified-distfiles/mpfr-4.2.2.tar.bz2
 ```
 
-Native MPFR configure/build/upstream tests, staging/check-files and installed
-GMP/MPFR identity remain required. MPC 1.4.1 must repeat its upstream arithmetic
-tests against the replacement MPFR. Check the already built GCC16's linked
-MPFR identity and focused arithmetic/compiler consumers after package
-replacement; source preparation does not accept that native dependency set
-or require rebuilding GCC. Replace the common MPFR package coherently.
+On physical Zero 3W, native MPFR configure/build/tests, staging/check-files,
+package installation and installed GMP/MPFR identity pass: 195 tests pass and
+three inherited decimal/_Float128 cases skip. The unchanged MPC 1.4.1 package
+passes all 75 upstream arithmetic tests against MPFR 4.2.2. The already built
+GCC16 package passes its dependency and focused compiler/runtime checks without
+rebuilding GCC. See the [native evidence and limits](native-validation.md).
 
 The private profile `mk.conf` requires `mpfr>=4.2.2` for buildlink consumers
 so an installed 4.2.1 cannot satisfy the selected common dependency policy.
@@ -64,7 +64,8 @@ No earlier MPC package was installed on the preparation host. The recipe
 adds the new `lib/pkgconfig/mpc.pc` file. Its inherited Solaris complex-number
 workaround is refreshed for `_MPC_HAVE_COMPLEX_H` and `DOUBLE_COMPLEX`.
 MPC still requires GMP >=5.0 and MPFR >=4.1; this profile selects MPFR 4.2.2
-above. Native arithmetic tests and dependency identity remain required.
+above. Native arithmetic tests and dependency identity pass on Zero 3W, as
+described in the linked native validation.
 
 ## Texinfo 7.3
 
@@ -129,5 +130,6 @@ Remove this exception when a stable Expect supporting Tcl 9 passes the
 NetBSD PTY/spawn tests and DejaGNU/GCC test driver checks. This is a bounded
 compiler-test dependency, not the release development-runtime selection.
 
-These recipe adaptations and archive checks are source preparation only.
-They are not evidence of a passed native GCC build or complete test suite.
+Source preparation and native validation are separate evidence levels.
+The named native prerequisite checks do not establish a passed complete GCC
+test suite or the common C++ consumer migration.

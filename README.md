@@ -23,12 +23,13 @@ runtime behavior are validated.
   native package and tests verified; the Examples C controller exchanges
   typed commands and telemetry with ROS 2 Jazzy, including reconnect checks.
 - [Common development toolchain](profiles/development-toolchain/README.md):
-  GCC 16.2.0 builds and installs as an AArch64 VM candidate, passing native
-  C11/C++20 threads, TLS and shared-library runtime checks. The full upstream
+  GCC 16.2.0 builds in the AArch64 VM and runs there and on physical Zero 3W,
+  passing C11/C++20 threads, TLS and shared-library runtime checks. The full upstream
   suite exposes platform compatibility failures; a tested upstream backport
   repairs TSVC allocation on NetBSD. The common package MAKECONF now selects
-  the prepared compiler after native-GCC bootstrap. Remaining repairs, native
-  consumer acceptance, the common Qt/LLVM rebuild and image/default integration
+  the prepared compiler after native-GCC bootstrap; actual pkgsrc wrapper and
+  installed-consumer checks pass on Zero 3W with current MPFR/MPC/libxml2.
+  C++ modules repair, the common Qt/LLVM rebuild and image/default integration
   remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
