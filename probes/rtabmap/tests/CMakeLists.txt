@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.20)
+project(rtabmap_installed_contract LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(Eigen3 5.0.1 EXACT REQUIRED CONFIG PATHS "${EIGEN_PREFIX}/share/eigen3/cmake" NO_DEFAULT_PATH)
+find_package(OpenCV 5.0.0 EXACT REQUIRED COMPONENTS core imgproc imgcodecs features calib geometry video photo stitching videoio
+    PATHS "${OPENCV_PREFIX}/lib/cmake/opencv5" NO_DEFAULT_PATH)
+find_package(PCL 1.15.1 EXACT REQUIRED CONFIG PATHS "${PCL_PREFIX}/share/pcl-1.15" NO_DEFAULT_PATH)
+find_package(GTSAM 4.3.0 EXACT REQUIRED CONFIG PATHS "${GTSAM_PREFIX}/lib/cmake/GTSAM" NO_DEFAULT_PATH)
+set(SQLite3_INCLUDE_DIR "${SQLITE_PREFIX}/include")
+set(SQLite3_LIBRARY "${SQLITE_PREFIX}/lib/libsqlite3.so")
+find_package(SQLite3 3.53.4 EXACT REQUIRED)
+find_package(RTABMap 0.23.8 EXACT REQUIRED COMPONENTS core utilite
+    PATHS "${PROBE_PREFIX}/lib/rtabmap-0.23" NO_DEFAULT_PATH)
+add_executable(rtabmap-contract contract.cpp)
+target_link_libraries(rtabmap-contract PRIVATE rtabmap::core SQLite::SQLite3)
+enable_testing()
+add_test(NAME persisted-map-localization COMMAND rtabmap-contract "${CMAKE_CURRENT_BINARY_DIR}/map.db")
+set_tests_properties(persisted-map-localization PROPERTIES TIMEOUT 180)

@@ -94,7 +94,7 @@ network listeners, startup services or login sessions.
 ## Add OpenCV videoio after media acceptance
 
 ```sh
-sh probes/media/build-videoio.sh "$work"
+EIGEN_PREFIX=/absolute/common-foundations/install sh probes/media/build-videoio.sh "$work"
 VIDEOIO=ON sh probes/media/test.sh "$work"
 ```
 
@@ -104,8 +104,8 @@ NetBSD AArch64 CPU-baseline patch from
 [robotics-foundations](../robotics-foundations/PROVENANCE.md) and the accepted
 upstream FFmpeg 9 compatibility series. A second local patch enables the
 existing POSIX filesystem implementation on NetBSD; GStreamer capture calls it.
-It builds core, imgproc, imgcodecs and
-videoio with required flann/geometry dependencies into the same prefix.
+It builds the union of media and robotics OpenCV modules into the same prefix,
+using common Eigen 5.0.1 and existing system PNG/JPEG development libraries.
 No second FFmpeg or GStreamer is installed.
 The V4L camera backend is explicitly disabled. OpenCV 5.0.0 auto-detects
 NetBSD's `sys/videoio.h` but its V4L source then fails on Linux-only integer
@@ -128,6 +128,8 @@ Verified on 2026-10-07 in a disposable QEMU/HVF AArch64 VM with one vCPU,
 `b4f718dabd085ed117a24f84d8558e4a43091dc0`. Native GCC 12.5.0, CMake 4.3.3,
 Meson 1.11.1, Ninja 1.13.2, GNU make 4.4.1, Python 3.13.14 and GLib 2.88.1.
 
+The original smaller media configuration was validated as follows; these
+results do not validate the prepared shared robotics configuration below.
 The three media source builds and OpenCV installation completed. The final
 installed suite passed **5/5 tests in 0.58 seconds**, including the explicit
 filesystem regression, both OpenCV backends and tail-truncation regressions.
@@ -147,3 +149,29 @@ GPU/NPU acceleration, sustained throughput or support on a particular board.
 The full upstream FFmpeg, GStreamer and OpenCV suites are not run by this probe.
 System package migration must account for every existing consumer before
 replacing a desktop's shared library stack.
+
+## Prepared shared OpenCV configuration
+
+The current `build-videoio.sh` source recipe expands that same provider to
+`core,imgproc,imgcodecs,features,geometry,stereo,calib,video,stitching,photo,videoio`
+and required dependencies. It requires `EIGEN_PREFIX` pointing to common
+Eigen 5.0.1 and existing PNG/JPEG development libraries, with bundled codec
+builds disabled. It uses `JOBS=1` and imposes no address-space limit by default.
+An explicit positive `BUILD_AS_KIB` requests a verified soft limit; the
+inherited hard limit is preserved.
+
+The explicit stereo export preserves the OpenCV 5 module required by the
+adapted ORB-SLAM3 consumer.
+
+```sh
+EIGEN_PREFIX=/var/tmp/ember-robotics-foundations/install \
+sh probes/media/build-videoio.sh "$work"
+VIDEOIO=ON sh probes/media/test.sh "$work"
+```
+
+An additional image-codecs contract checks exact 16-bit PNG depth, bounded RGB
+JPEG error and malformed input rejection. The expanded configuration is **not
+natively validated yet**. The earlier 5/5 result and footprint describe the
+smaller original profile. Rebuild the current FFmpeg/GStreamer recipes if their
+private installation was removed, then revalidate media, foundations and ORB
+against this provider. No second OpenCV installation is part of the target stack.

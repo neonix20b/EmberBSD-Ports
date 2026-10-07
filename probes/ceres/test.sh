@@ -12,10 +12,15 @@ prefix=$work/install
 [ ! -e "$work/test-build" ] || { echo 'Consumer build already exists; preserve it and use a new path.' >&2; exit 2; }
 CXX=$(cat "$work/logs/cxx.txt")
 [ -x "$CXX" ] || { echo 'The recorded C++ compiler is missing.' >&2; exit 2; }
+if [ -f "$work/logs/eigen-prefix.txt" ]; then
+    eigen_prefix=$(cat "$work/logs/eigen-prefix.txt")
+else
+    eigen_prefix=$prefix
+fi
 LD_LIBRARY_PATH=$prefix/lib
 export LD_LIBRARY_PATH
 cmake -S "$recipe/tests" -B "$work/test-build" -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release -DPROBE_PREFIX="$prefix" \
+    -DCMAKE_BUILD_TYPE=Release -DPROBE_PREFIX="$prefix" -DEIGEN_PREFIX="$eigen_prefix" \
     -DCMAKE_CXX_COMPILER="$CXX" \
     -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF \
     > "$work/logs/consumer-configure.log" 2>&1 || { cat "$work/logs/consumer-configure.log" >&2; exit 1; }

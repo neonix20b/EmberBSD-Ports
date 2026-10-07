@@ -15,10 +15,20 @@ fi
 jobs=${JOBS:-1}
 case "$jobs" in ''|0|*[!0-9]*) echo 'JOBS must be positive.' >&2; exit 2 ;; esac
 [ "$jobs" -gt 0 ] 2>/dev/null || { echo 'JOBS must be positive.' >&2; exit 2; }
+eigen_prefix=${EIGEN_PREFIX:-$work/install}
+if [ "${EIGEN_PREFIX+x}" = x ]; then
+    case "$EIGEN_PREFIX" in /*) ;; *) echo 'Use an absolute Eigen prefix.' >&2; exit 2 ;; esac
+    case "$EIGEN_PREFIX" in *[!a-zA-Z0-9_./-]*) echo 'Use a simple Eigen prefix.' >&2; exit 2 ;; esac
+    [ -f "$EIGEN_PREFIX/share/eigen3/cmake/Eigen3Config.cmake" ] &&
+        grep -F 'set(PACKAGE_VERSION "5.0.1")' "$EIGEN_PREFIX/share/eigen3/cmake/Eigen3ConfigVersion.cmake" >/dev/null || {
+        echo 'Common Eigen 5.0.1 required.' >&2; exit 2;
+    }
+fi
 recipe=$(CDPATH= cd "$(dirname "$0")" && pwd)
 mkdir "$work"
 mkdir "$work/src" "$work/archives" "$work/logs"
 prefix=$work/install
+printf '%s\n' "$eigen_prefix" > "$work/logs/eigen-prefix.txt"
 hash()
 {
     if command -v sha256 >/dev/null 2>&1; then sha256 -q "$1";
@@ -26,6 +36,8 @@ hash()
 }
 # Check all archives before extracting any, including cached archives.
 while read -r name expected url; do
+    # A shared Eigen prefix supplies its own pinned headers and metadata.
+    if [ "${EIGEN_PREFIX+x}" = x ] && [ "$name" = eigen-5.0.1.tar.gz ]; then continue; fi
     if [ "$#" = 2 ]; then
         cp "$2/$name" "$work/archives/$name"
     else
@@ -64,17 +76,19 @@ run()
         exit "$status"
     fi
 }
+if [ "${EIGEN_PREFIX+x}" != x ]; then
 run eigen-configure cmake -S "$work/src/eigen-5.0.1" -B "$work/eigen-build" -G Ninja \
     -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
     -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON \
     -DEIGEN_BUILD_TESTING=OFF -DEIGEN_BUILD_DOC=OFF -DEIGEN_BUILD_BLAS=OFF \
     -DEIGEN_BUILD_LAPACK=OFF -DEIGEN_BUILD_DEMOS=OFF
 run eigen-install cmake --install "$work/eigen-build"
+fi
 run ceres-eigen5-patch patch -d "$work/src/ceres-solver-2.2.0" -p1 < "$recipe/patches/ceres-eigen5.patch"
 run ceres-configure cmake -S "$work/src/ceres-solver-2.2.0" -B "$work/ceres-build" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_INSTALL_PREFIX="$prefix" \
-    -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_PREFIX_PATH="$prefix" \
-    -DEigen3_DIR="$prefix/share/eigen3/cmake" \
+    -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_PREFIX_PATH="$prefix;$eigen_prefix" \
+    -DEigen3_DIR="$eigen_prefix/share/eigen3/cmake" \
     -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF \
     -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON -DEXPORT_BUILD_DIR=OFF \
     -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF \
@@ -88,5 +102,10 @@ mkdir -p "$licenses/eigen"
 cp "$recipe/sources.tsv" "$recipe/PROVENANCE.md" "$prefix/share/ceres-probe/"
 cp -R "$recipe/patches" "$prefix/share/ceres-probe/"
 cp "$work/src/ceres-solver-2.2.0/LICENSE" "$licenses/Ceres-LICENSE"
-cp "$work/src/eigen-5.0.1"/COPYING* "$licenses/eigen/"
+if [ "${EIGEN_PREFIX+x}" != x ]; then
+    cp "$work/src/eigen-5.0.1"/COPYING* "$licenses/eigen/"
+elif [ -d "$eigen_prefix/share/robotics-foundations/licenses/eigen" ]; then
+    cp "$eigen_prefix/share/robotics-foundations/licenses/eigen/"COPYING* "$licenses/eigen/"
+fi
+cp "$work/logs/eigen-prefix.txt" "$prefix/share/ceres-probe/"
 echo "Installed in $prefix; run test.sh to verify the installed consumers."

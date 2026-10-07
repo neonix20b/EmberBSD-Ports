@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.18)
+project(ember_ruckig_contract LANGUAGES CXX)
+if(NOT IS_ABSOLUTE "${PROBE_PREFIX}")
+  message(FATAL_ERROR "PROBE_PREFIX must be an absolute installed prefix")
+endif()
+find_package(ruckig 0.19.4 EXACT CONFIG REQUIRED
+  PATHS "${PROBE_PREFIX}/lib/cmake/ruckig" NO_DEFAULT_PATH)
+add_executable(ruckig-contract contract.cpp)
+target_compile_features(ruckig-contract PRIVATE cxx_std_20)
+target_compile_options(ruckig-contract PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(ruckig-contract PRIVATE ruckig::ruckig)
+enable_testing()
+foreach(case analytic online invalid)
+  add_test(NAME ruckig-${case} COMMAND ruckig-contract ${case})
+  set_tests_properties(ruckig-${case} PROPERTIES TIMEOUT 15)
+endforeach()

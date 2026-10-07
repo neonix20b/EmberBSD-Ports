@@ -1,0 +1,3 @@
+libiio-1.0.0 patches/libiio-portability.patch 5d7d4a2f748bb18306269ba1e06144c3df56c852cd38a7c666e990a70639ea0f
+libiio-1.0.0 patches/iiod-emu-loopback.patch 63af2e5db2c1a349ed8983163415338cb3da99964821c39dd2963436d2c1a1bc
+SoapyPlutoSDR-soapy-plutosdr-0.2.2 patches/pluto-explicit-context.patch 4dc3609a86bb1d60509de668bb6815dd325fb9623a44be498c39523ef2c7740f

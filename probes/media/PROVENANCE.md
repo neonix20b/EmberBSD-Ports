@@ -97,3 +97,27 @@ paths and removal of its own fixture tree, then the GStreamer file workflow
 that originally failed. Lock contention and cache policy are not independently
 tested by this probe. This local, AI-assisted adaptation is Apache-2.0 like
 the modified OpenCV files; it has not been submitted or accepted upstream.
+
+## Shared robotics configuration (source preparation)
+
+The same OpenCV 5.0.0 provider now includes the union of media and robotics:
+`core,imgproc,imgcodecs,features,geometry,stereo,calib,video,stitching,photo,videoio`
+and required upstream module dependencies. `EIGEN_PREFIX` selects the existing
+Eigen 5.0.1 installation. PNG and JPEG use existing system development libraries;
+`BUILD_PNG=OFF` and `BUILD_JPEG=OFF` prevent new private codec providers.
+The archive and all three existing portability patches are unchanged.
+
+ORB-SLAM3 uses the explicit stereo export after the OpenCV 5 module split.
+OpenVINS uses video/KLT. RTAB-Map core uses stitching exposure compensation,
+photo exposure fusion, video tracking, videoio camera classes, and imgcodecs
+PNG depth/JPEG RGB database compression. Qt, highgui, V4L and hardware backends
+remain outside this selected profile. The image-codecs consumer checks exact
+16-bit PNG depth, bounded JPEG error and malformed input rejection.
+
+This expanded configuration has not yet been built or validated natively.
+The earlier 5/5 result and footprint apply only to the original smaller media
+configuration. Revalidate media, foundations and ORB consumers before replacing
+the old foundations OpenCV files. Preserve its Eigen and gpsd installation.
+No address-space limit is imposed by default. An explicit positive
+`BUILD_AS_KIB` sets and verifies only a soft limit; the inherited hard limit
+is preserved. `JOBS=1` is the default. No VM-wide resource setting is changed.

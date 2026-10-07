@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.22)
+project(osqp_source_selection LANGUAGES C)
+# Source-selection fixture only: it never compiles or claims to cross-build.
+# Execute the actual upstream source-list logic for its NetBSD branch.
+set(CMAKE_SYSTEM_NAME NetBSD)
+set(IS_MAC OFF)
+set(IS_LINUX OFF)
+set(IS_WINDOWS OFF)
+set(OSQP_ENABLE_INTERRUPT ON)
+set(OSQP_ENABLE_PROFILING OFF)
+set(OSQP_CODEGEN OFF)
+set(OSQP_ENABLE_DERIVATIVES OFF)
+add_library(OSQPLIB OBJECT)
+add_subdirectory("${OSQP_SOURCE}/src" selected-sources)
+get_target_property(sources OSQPLIB SOURCES)
+if(NOT "${sources}" MATCHES "/interrupt_unix[.]c")
+    message(FATAL_ERROR "NetBSD interrupt enabled but POSIX listener missing")
+endif()
+message(STATUS "NetBSD source selection includes the real POSIX listener")

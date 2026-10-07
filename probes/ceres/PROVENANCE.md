@@ -33,3 +33,15 @@ accepted change.
 The probe recipes, patch and consumer tests were written for EmberBSD with AI
 assistance and are MIT licensed; see [LICENSE](LICENSE). Upstream authorship
 and licenses remain unchanged.
+
+## External Eigen mode
+
+The optional `EIGEN_PREFIX` mode reuses exact Eigen 5.0.1 from the common
+installation and skips downloading, extracting or reinstalling Eigen. The
+build records its selected prefix, and the consumer passes that prefix to
+CMake explicitly. Existing common foundations Eigen license notices are copied
+when that provider is used; other providers retain their own license inventory.
+Standalone mode still verifies and installs the pinned Eigen archive.
+This recipe selection change is local AI-assisted work, with host input guards
+checked. Its native regression remains pending; the prior native evidence
+covers the standalone installation.

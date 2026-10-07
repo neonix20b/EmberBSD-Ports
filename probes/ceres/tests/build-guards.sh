@@ -15,6 +15,9 @@ grep -q 'Work path already exists' "$scratch/existing.log"
 if JOBS=0 sh "$recipe/build.sh" "$scratch/jobs" > "$scratch/jobs.log" 2>&1; then exit 1; fi
 grep -q 'JOBS must be positive' "$scratch/jobs.log"
 [ ! -e "$scratch/jobs" ]
+if EIGEN_PREFIX="$scratch/missing-eigen" sh "$recipe/build.sh" "$scratch/external" > "$scratch/external.log" 2>&1; then exit 1; fi
+grep -q 'Common Eigen 5.0.1 required' "$scratch/external.log"
+[ ! -e "$scratch/external" ]
 while read -r name expected url; do printf 'corrupt\n' > "$scratch/cache/$name"; done < "$recipe/sources.tsv"
 if sh "$recipe/build.sh" "$scratch/corrupt" "$scratch/cache" > "$scratch/corrupt.log" 2>&1; then exit 1; fi
 grep -q 'Checksum mismatch' "$scratch/corrupt.log"

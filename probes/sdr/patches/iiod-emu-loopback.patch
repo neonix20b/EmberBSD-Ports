@@ -1,0 +1,79 @@
+--- iiod-emu/network.c
++++ iiod-emu/network.c
+@@ -192,7 +192,7 @@
+ 
+ #endif /* _WIN32 */
+ 
+-emu_socket emu_socket_listen(uint16_t port, int backlog)
++emu_socket emu_socket_listen(uint16_t port, int backlog, bool loopback)
+ {
+ 	struct sockaddr_in addr;
+ 	emu_socket sock;
+@@ -201,7 +201,7 @@
+ 	/* Not a designated initializer: s_addr is a macro on Windows. */
+ 	memset(&addr, 0, sizeof(addr));
+ 	addr.sin_family = AF_INET;
+-	addr.sin_addr.s_addr = INADDR_ANY;
++	addr.sin_addr.s_addr = htonl(loopback ? INADDR_LOOPBACK : INADDR_ANY);
+ 	addr.sin_port = htons(port);
+ 
+ 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+--- iiod-emu/network.h
++++ iiod-emu/network.h
+@@ -33,7 +33,7 @@
+ void emu_network_deinit(void);
+ 
+ /* Create a non-blocking TCP socket bound to <port> and start listening. */
+-emu_socket emu_socket_listen(uint16_t port, int backlog);
++emu_socket emu_socket_listen(uint16_t port, int backlog, bool loopback);
+ 
+ /*
+  * Wait until <sock> has a connection to accept, or <timeout_ms> elapses. Returns
+--- iiod-emu/iiod-emu.c
++++ iiod-emu/iiod-emu.c
+@@ -105,6 +105,7 @@
+ static const struct option options[] = {
+ 	{ "help", no_argument, NULL, 'h' },
+ 	{ "port", required_argument, NULL, 'p' },
++	{ "loopback", no_argument, NULL, 'L' },
+ 	{ NULL, 0, NULL, 0 },
+ };
+ 
+@@ -135,6 +136,7 @@
+ 	       "\n"
+ 	       "Options:\n"
+ 	       "\t-h, --help\t\tDisplay this help message\n"
++	       "\t-L, --loopback\t\tBind only to IPv4 loopback\n"
+ 	       "\t-p, --port <port>\tPort to listen on (default: %d)\n",
+ 			DEFAULT_PORT);
+ }
+@@ -295,6 +297,7 @@
+ 	struct iiod_emu emu = { 0 };
+ 	emu_socket srv = EMU_INVALID_SOCKET;
+ 	uint16_t port = DEFAULT_PORT;
++	bool loopback = false;
+ 	int ret = EXIT_FAILURE;
+ 	char err_str[256];
+ 	const char *uri;
+@@ -307,8 +310,11 @@
+ 	 */
+ 	setvbuf(stdout, NULL, _IONBF, 0);
+ 
+-	while ((c = getopt_long(argc, argv, "+hp:", options, NULL)) != -1) {
++	while ((c = getopt_long(argc, argv, "+hLp:", options, NULL)) != -1) {
+ 		switch (c) {
++		case 'L':
++			loopback = true;
++			break;
+ 		case 'h':
+ 			usage();
+ 			return EXIT_SUCCESS;
+@@ -374,7 +380,7 @@
+ 				emu.xml_len, (unsigned int)IIOD_MAX_XML_PAYLOAD);
+ 	}
+ 
+-	srv = emu_socket_listen(port, BACKLOG);
++	srv = emu_socket_listen(port, BACKLOG, loopback);
+ 	if (srv == EMU_INVALID_SOCKET)
+ 		goto out_free_xml;
+ 
