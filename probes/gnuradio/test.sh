@@ -12,9 +12,11 @@ fftw=$(cat "$work/fftw-prefix.txt")
 volk=$(cat "$work/volk-prefix.txt")
 cmake=${CMAKE:-cmake}
 ctest=${CTEST:-ctest}
-build_as_kib=${BUILD_AS_KIB:-1572864}
-case "$build_as_kib" in ''|0|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
-ulimit -v "$build_as_kib"
+if [ "${BUILD_AS_KIB+x}" = x ]; then
+    case "$BUILD_AS_KIB" in ''|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
+    [ "$BUILD_AS_KIB" -gt 0 ] 2>/dev/null || exit 2
+    ulimit -S -v "$BUILD_AS_KIB"
+fi
 LD_LIBRARY_PATH="$prefix/lib:$volk/lib:$fftw/lib:/usr/pkg/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 GR_PREFS_PATH=$work/test-state/prefs
 GR_CACHE_PATH=$work/test-state/cache

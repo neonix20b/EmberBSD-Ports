@@ -18,10 +18,12 @@ esac
 jobs=${JOBS:-1}
 case "$jobs" in ''|0|*[!0-9]*) echo 'JOBS must be positive.' >&2; exit 2 ;; esac
 [ "$jobs" -gt 0 ] 2>/dev/null || exit 2
-build_as_kib=${BUILD_AS_KIB:-1572864}
-case "$build_as_kib" in ''|0|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
-ulimit -v "$build_as_kib"
-export BUILD_AS_KIB=$build_as_kib
+if [ "${BUILD_AS_KIB+x}" = x ]; then
+    case "$BUILD_AS_KIB" in ''|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
+    [ "$BUILD_AS_KIB" -gt 0 ] 2>/dev/null || exit 2
+    ulimit -S -v "$BUILD_AS_KIB"
+    export BUILD_AS_KIB
+fi
 recipe=$(CDPATH= cd "$(dirname "$0")" && pwd)
 cmake=${CMAKE:-cmake}
 python=${PYTHON_EXECUTABLE:-python3}
@@ -86,7 +88,7 @@ done < "$recipe/patches.tsv"
 { uname -a; "$cmake" --version; ninja --version; "$python" --version;
   pkg-config --modversion fftw3f volk fmt gmp;
   printf 'FFTW_PREFIX=%s\nVOLK_PREFIX=%s\n' "$FFTW_PREFIX" "$VOLK_PREFIX";
-  printf 'BUILD_AS_KIB=%s\n' "$build_as_kib";
+  printf 'BUILD_AS_KIB=%s\n' "${BUILD_AS_KIB:-inherited}";
 } > "$work/logs/tools.txt"
 printf '%s\n' "$FFTW_PREFIX" > "$work/fftw-prefix.txt"
 printf '%s\n' "$VOLK_PREFIX" > "$work/volk-prefix.txt"

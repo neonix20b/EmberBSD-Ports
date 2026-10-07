@@ -11,10 +11,12 @@ case "$work" in *[!a-zA-Z0-9_./-]*) echo 'Use a simple path.' >&2; exit 2 ;; esa
 jobs=${JOBS:-1}
 case "$jobs" in ''|0|*[!0-9]*) echo 'JOBS must be positive.' >&2; exit 2 ;; esac
 [ "$jobs" -gt 0 ] 2>/dev/null || exit 2
-build_as_kib=${BUILD_AS_KIB:-1572864}
-case "$build_as_kib" in ''|0|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
-ulimit -v "$build_as_kib"
-printf 'BUILD_AS_KIB=%s\n' "$build_as_kib" > "$work/logs/build-limits.txt"
+if [ "${BUILD_AS_KIB+x}" = x ]; then
+    case "$BUILD_AS_KIB" in ''|*[!0-9]*) echo 'BUILD_AS_KIB must be positive.' >&2; exit 2 ;; esac
+    [ "$BUILD_AS_KIB" -gt 0 ] 2>/dev/null || exit 2
+    ulimit -S -v "$BUILD_AS_KIB"
+fi
+printf 'BUILD_AS_KIB=%s\n' "${BUILD_AS_KIB:-inherited}" > "$work/logs/build-limits.txt"
 recipe=$(CDPATH= cd "$(dirname "$0")" && pwd)
 cmake=${CMAKE:-cmake}
 prefix=$work/install

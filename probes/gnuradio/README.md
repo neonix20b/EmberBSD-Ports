@@ -38,9 +38,10 @@ For an offline build, supply a cache containing both archives from
 hashes are verified before extraction or patching. Work must be new. Logs remain
 under `WORK/logs` and the installation under `WORK/install`.
 
-Build and test helpers default to `BUILD_AS_KIB=1572864`, a per-process address
-space limit of 1.5 GiB enforced with NetBSD `/bin/sh` `ulimit -v`. Keep `JOBS=1`
-on the tested 4 GiB VM. Override the limit explicitly for a different host.
+Build and test helpers impose no additional memory ceiling by default. An
+explicit positive `BUILD_AS_KIB` sets only the soft per-process address-space
+limit through NetBSD `/bin/sh` `ulimit -S -v`; the hard limit is preserved.
+Use `JOBS=1` when sharing the tested VM with other builds.
 Source extraction ignores archive timestamps so host/VM clock differences do
 not cause Ninja to regenerate repeatedly.
 
