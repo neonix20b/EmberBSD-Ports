@@ -71,3 +71,11 @@ for upstream's inspection script; it did not install or select an older
 interpreter for the common stack. Package registration, a booted matched
 EMBERGPU kernel, DRM identity/permissions, Mesa26/LLVM23 and an accelerated
 Wayland session are not established by this result.
+
+The same cross-built libdrm subsequently passed hash, drmsl and actual PCI
+device enumeration in an isolated QEMU 11.1.2/HVF VM booting the complete
+`EMBERGPU` kernel at `c6aba7d1e240`. GCC16 also cross-built the existing
+Examples GEM/PRIME probe, which passed malformed requests and 32 process
+lifetime cycles. The [kernel receipt](https://github.com/apovalixin/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
+records this separate serial-only boot. It does not establish a visible
+console, accelerated rendering, the UTM desktop or package registration.
