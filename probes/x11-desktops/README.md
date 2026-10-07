@@ -46,6 +46,19 @@ Finally, applications close through keyboard input and the desktop exits
 through its own control command. The launcher must return success and
 remove its X server. X11 requests have external deadlines.
 
+For Xfce, the check also navigates directories in Thunar, saves and
+reopens a Mousepad document, edits it again, and launches a terminal
+through the panel menu and Application Finder. Both terminal and editor
+files must contain exact expected text. The [Xfce validation](../xfce/VALIDATION.md)
+records the tested component versions and boundaries.
+
+`x11-input` waits for the named window's focus, including GTK input-only
+children. Its `focus` action waits without sending a key; both initial
+terminal windows must be ready before typing. `key Control_L s` supports
+an explicit modifier. `--current key Escape` sends to an existing GTK
+popup grab without an EWMH focus change. Text input fails if focus leaves
+the target. Failure captures are limited to the owned isolated display.
+
 The [existing lifecycle helpers](../enlightenment/tests/process-scope/README.md)
 are reused with an `EMBERBSD_X11_SESSION` marker. Cleanup checks exact
 process identity before signalling. The test controller has no marker and
@@ -54,11 +67,12 @@ sandbox. A program that rewrites its environment can escape the marker.
 
 ## Verified scope
 
-On 2026-10-07, Openbox 3.6.1, awesomeWM 4.3 and Enlightenment 0.27.1/EFL 1.28.1 passed
+On 2026-10-07, Openbox 3.6.1, awesomeWM 4.3, Enlightenment 0.27.1/EFL 1.28.1
+and Xfce 4.20 passed
 the complete test on NetBSD 11/AArch64 in UTM, using Xvfb 1024x640x24 and
 software rendering. Each session exited with status zero. Openbox's seven
-upstream binary-search tests also passed. The Xfce source recipe and private
-profile are prepared; its native build/runtime validation remains pending.
+upstream binary-search tests also passed. Xfce additionally passed the
+file-manager, graphical editor and menu-launch workflow described above.
 
 The keyboard evidence is XTEST input into real applications. It does not
 validate a physical keyboard, touchscreen, screen keyboard or VNC viewer.

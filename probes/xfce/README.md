@@ -9,6 +9,8 @@ versions, original source URLs and the limits of the profile.
 All components install into one private prefix. The recipe preserves
 the active desktop and does not register a login session. Source
 preparation alone is not evidence that the desktop runs on EmberBSD.
+The complete X11 application workflow now passes on NetBSD 11/AArch64
+in UTM; [native validation](VALIDATION.md) records the scope and boundaries.
 
 ## Requirements
 
@@ -29,9 +31,9 @@ pkgsrc development libraries and tools:
   A D-Bus session bus, X11 utilities, fonts and icon themes are needed at
   runtime. A minimal clean-machine dependency installation is unverified.
 
-The inspected NetBSD 11/aarch64 VM has GCC 12.5.0, GTK3 3.24.52,
-GLib 2.88.1 and Perl 5.44.0. It lacks libwnck, libyaml and Xfce development
-tools; this recipe supplies their selected source releases. Existing
+The validated NetBSD 11/aarch64 VM uses the GCC 16.2.0 candidate for this
+build, GTK3 3.24.52, GLib 2.88.1 and Perl 5.44.0. The recipe supplies
+libwnck, libyaml and Xfce development tools from selected source releases. Existing
 matching libwnck/libyaml versions are reused; a version conflict stops
 the build instead of installing a parallel copy.
 
@@ -54,7 +56,9 @@ and contain only letters, digits, `_`, `.`, `/` and `-`. A second argument
 accepts a directory containing the original archives from
 [sources.tsv](sources.tsv). Every archive is checked before extraction.
 `CC` and `CXX` accept executable paths; `CFLAGS`, `CXXFLAGS`, `CPPFLAGS`
-and `LDFLAGS` allow compiler flags. The default is `JOBS=1`.
+and `LDFLAGS` allow compiler flags. The compiler defaults are
+`/usr/pkg/gcc16/bin/gcc` and `/usr/pkg/gcc16/bin/g++`; the recipe does not
+silently fall back to the base compiler. The default is `JOBS=1`.
 
 The same recipe supports limited build windows or repeating a failed
 component without rebuilding successful dependencies:
@@ -71,6 +75,9 @@ directory. The per-component builder can repeat a component after a
 failure. Logs, sources, build directories and installs remain below the
 work path. The YAML parser's upstream `make check` runs after its build.
 Do not claim application support from configuration or compilation alone.
+The session's `--with-xsession-prefix` explicitly uses the private prefix;
+upstream otherwise installs its display-manager entry under `/usr`,
+independently of `--prefix`.
 
 ## Profile and session boundary
 
@@ -99,3 +106,32 @@ no `libintl.so.8` is loaded alongside native `libintl.so.1`. Record VM
 and board results separately. Hardware power control, suspend, screen
 locking, touch and a display-manager login session remain outside this
 profile's validation boundary.
+
+Run the complete check after building:
+
+```sh
+sh ../x11-desktops/test-runtime.sh xfce /absolute/xfce/install /absolute/xfce-runtime
+```
+
+Besides the shared WM/terminal checks, it verifies Thunar directory
+navigation, Mousepad save/quit/reopen/edit, and a real terminal launched
+through the panel menu and Application Finder. The controller checks exact
+saved bytes and normal session exit. [SESSION.md](SESSION.md) explains
+the private configuration and excluded system actions.
+
+## Installed C library check
+
+After installing libwnck, run its small native C consumer outside a desktop
+session and without loader overrides:
+
+```sh
+sh tests/check-libwnck.sh /absolute/xfce/install /absolute/new-wnck-check
+```
+
+The check uses the installed GCC 16 candidate by default (`CC` overrides
+its executable path). It exercises libwnck's actual GObject API, records
+the loaded DSOs, verifies the selected prefix, and rejects duplicate GCC
+or C++ runtime families. It needs no X server. This narrow C API result
+does not accept the common C++ runtime migration: existing GTK dependencies
+can still pull in the base runtime. The executable's RPATH alone does not
+prove which transitive libraries were loaded.

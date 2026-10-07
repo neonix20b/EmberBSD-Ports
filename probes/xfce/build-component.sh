@@ -27,8 +27,8 @@ build=$work/build/$component
 jobs=${JOBS:-1}
 case "$jobs" in ''|0|*[!0-9]*) echo 'JOBS must be positive.' >&2; exit 2 ;; esac
 [ "$jobs" -gt 0 ] 2>/dev/null || { echo 'JOBS must be positive.' >&2; exit 2; }
-CC=${CC:-/usr/bin/cc}
-CXX=${CXX:-/usr/bin/c++}
+CC=${CC:-/usr/pkg/gcc16/bin/gcc}
+CXX=${CXX:-/usr/pkg/gcc16/bin/g++}
 PYTHON=${PYTHON:-/usr/pkg/bin/python3.13}
 for tool in "$CC" "$CXX" "$PYTHON" gmake meson ninja pkg-config msgfmt xsltproc patch; do
     command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 2; }
@@ -138,7 +138,8 @@ xfdesktop)
 xfwm4)
     autotools --enable-compositor --enable-startup-notification --disable-debug ;;
 xfce4-session)
-    autotools --enable-x11 --disable-wayland --disable-polkit --disable-debug ;;
+    autotools --enable-x11 --disable-wayland --disable-polkit --disable-debug \
+        --with-xsession-prefix="$prefix" ;;
 xfce4-appfinder)
     autotools --disable-debug ;;
 mousepad)

@@ -85,8 +85,10 @@ runtime behavior are validated.
   same X11 window/input/save/exit workflow pass. Patches correct startup
   pthread linkage, Lua 5.4 version reporting and the WM selection name.
 - [Xfce](probes/xfce/README.md): pinned 4.20 components, libwnck 43.3 and
-  Mousepad 0.7.0 have a source recipe and isolated session profile.
-  Archive and profile checks pass; native build and runtime remain pending.
+  Mousepad 0.7.0 build and run in an isolated NetBSD 11/AArch64 UTM session.
+  [Native checks](probes/xfce/VALIDATION.md) cover Thunar navigation,
+  Mousepad save/reopen/edit, menu application launch, X11 window/input
+  behavior and clean exit. Hardware input and GPU acceleration are unverified.
 
 The graphical entries remain experimental probes,
 not installable packages or phone images. Each recipe records its tested

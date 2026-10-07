@@ -9,6 +9,11 @@ desktop=$1
 prefix=$2
 work=$3
 case "$desktop" in openbox|awesome|enlightenment|xfce) ;; *) exit 2 ;; esac
+if [ "$desktop" = xfce ]; then
+    # GUI assertions use the upstream English window titles.
+    LC_ALL=C
+    export LC_ALL
+fi
 for path in "$work" "$prefix"; do
     case "$path" in /*) ;; *) exit 2 ;; esac
     case "$path" in *[!a-zA-Z0-9_./-]*) exit 2 ;; esac
@@ -22,6 +27,7 @@ export PATH LD_LIBRARY_PATH
 result=$(mktemp -d "$work/contract.XXXXXX")
 launcher=
 client=
+owned_display=false
 cleanup()
 {
     cleanup_error=0
@@ -60,6 +66,11 @@ finish()
     status=$?
     trap - EXIT
     trap '' HUP INT TERM
+    if [ "$status" -ne 0 ] && [ "$owned_display" = true ]; then
+        timeout --foreground -k 1 5 xwininfo -root -tree > "$result/failure-windows.txt" 2>&1 || true
+        timeout --foreground -k 1 5 xprop -root _NET_ACTIVE_WINDOW > "$result/failure-focus.txt" 2>&1 || true
+        timeout --foreground -k 1 5 xwd -root -silent -out "$result/failure-screen.xwd" 2>/dev/null || true
+    fi
     cleanup || { [ "$status" -ne 0 ] || status=1; }
     exit "$status"
 }
@@ -86,6 +97,7 @@ done
 DISPLAY=$(cat "$session/display")
 DBUS_SESSION_BUS_ADDRESS=$(cat "$session/runtime/bus-address")
 export DISPLAY DBUS_SESSION_BUS_ADDRESS
+owned_display=true
 XDG_CONFIG_HOME=$session/config
 XDG_CACHE_HOME=$session/cache
 XDG_DATA_HOME=$session/data
@@ -123,6 +135,10 @@ input()
 {
     timeout --foreground -k 1 20 "$result/x11-input" "$@"
 }
+# Both newly mapped clients can initially request focus. Wait for both
+# before typing, otherwise the second can steal the first one's input.
+input EmberBSD-terminal focus
+input EmberBSD-editor focus
 text="EmberBSD $desktop keyboard and saved file"
 input EmberBSD-editor text "i$text"
 input EmberBSD-editor key Escape
@@ -141,6 +157,14 @@ printf 'second window works\n' > "$result/terminal-expected.txt"
 cmp "$result/expected.txt" "$result/edited.txt"
 cmp "$result/terminal-expected.txt" "$result/terminal.txt"
 echo 'PASS: focus switched between two real applications; XTEST input saved exact text'
+if [ "$desktop" = xfce ]; then
+    sh "$recipe/../xfce/tests/check-applications.sh" "$prefix" "$result" "$session" \
+        > "$result/xfce-applications.log" 2>&1 || {
+        cat "$result/xfce-applications.log" >&2
+        exit 1
+    }
+    cat "$result/xfce-applications.log"
+fi
 timeout --foreground -k 1 5 xwininfo -root -tree > "$result/windows.txt"
 timeout --foreground -k 1 5 xwd -root -silent -out "$result/screen.xwd"
 input EmberBSD-editor text ':q'

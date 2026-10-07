@@ -63,7 +63,11 @@ Python scripts receive the selected interpreter path during preparation:
 `xfce4-dev-tools/scripts/xdt-gen-visibility` and
 `xfce4-settings/dialogs/mime-settings/helpers/xfce4-compose-mail`.
 The first is required by the upstream build; the latter remains an
-optional mail helper. Project-owned helpers are shell scripts.
+optional mail helper. Project-owned helpers use shell and C.
+
+The session configure option `--with-xsession-prefix` selects the same
+private prefix as its binaries. Upstream defaults this independent setting
+to `/usr`; selecting it explicitly avoids installing a system login entry.
 
 `native-pkg-config.sh` follows the repository's Enlightenment/Openbox
 probes and chooses `/usr/lib/libintl.so.1`, the ABI used by installed
@@ -83,6 +87,13 @@ builder copies each component's `COPYING*`, `LICENSE*`, `License` and `AUTHORS*`
 files unchanged into `share/xfce-probe/provenance/COMPONENT`. Original
 headers remain authoritative for individual files and subcomponents.
 
-Preparation, build and runtime evidence are separate. At preparation
-time, archive inspection and shell syntax were checked. Native compilation
-and the application workflow require independent validation.
+Preparation, build and runtime evidence are separate.
+[Native validation](VALIDATION.md) records the completed build and actual
+application workflow on NetBSD 11/AArch64; it does not establish phone or
+hardware-accelerated graphics support.
+
+`tests/wnck-consumer.c` is an AI-assisted EmberBSD C helper under the
+BSD-2-Clause license indicated in its source. It invokes the installed
+library's GObject type API and enumerates actual loaded objects with
+NetBSD's `dl_iterate_phdr`. Its companion shell check keeps C API success
+separate from the shared toolchain's stricter C++ migration acceptance.

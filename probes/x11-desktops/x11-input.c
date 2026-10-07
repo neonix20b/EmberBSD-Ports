@@ -43,23 +43,50 @@ find_window(Window window, const char *title, unsigned int depth)
 	return found;
 }
 
-static void
-send_key(KeySym symbol, int shifted)
+/* GTK focuses an input-only child of its managed top-level window. */
+static int
+focus_belongs_to(Window focus, Window target)
 {
-	KeyCode code, shift;
+	Window root, parent, *children = NULL;
+	unsigned int count;
+	int depth;
+
+	for (depth = 0; depth < 64 && focus != None && focus != PointerRoot; depth++) {
+		if (focus == target)
+			return 1;
+		if (!XQueryTree(display, focus, &root, &parent, &children, &count))
+			return 0;
+		if (children != NULL)
+			XFree(children);
+		focus = parent;
+	}
+	return 0;
+}
+
+static void
+send_key(KeySym symbol, int shifted, KeySym modifier)
+{
+	KeyCode code, shift, modifier_code = 0;
 
 	code = XKeysymToKeycode(display, symbol);
 	shift = XKeysymToKeycode(display, XK_Shift_L);
-	if (code == 0 || (shifted && shift == 0)) {
+	if (modifier != NoSymbol)
+		modifier_code = XKeysymToKeycode(display, modifier);
+	if (code == 0 || (shifted && shift == 0) ||
+	    (modifier != NoSymbol && modifier_code == 0)) {
 		fputs("Key is not mapped\n", stderr);
 		exit(1);
 	}
+	if (modifier_code != 0)
+		XTestFakeKeyEvent(display, modifier_code, True, CurrentTime);
 	if (shifted)
 		XTestFakeKeyEvent(display, shift, True, CurrentTime);
 	XTestFakeKeyEvent(display, code, True, CurrentTime);
 	XTestFakeKeyEvent(display, code, False, CurrentTime);
 	if (shifted)
 		XTestFakeKeyEvent(display, shift, False, CurrentTime);
+	if (modifier_code != 0)
+		XTestFakeKeyEvent(display, modifier_code, False, CurrentTime);
 	XSync(display, False);
 }
 
@@ -70,16 +97,28 @@ main(int argc, char **argv)
 	int attempt, revert, event_base, error_base, major, minor;
 	int shifted, min, max, per, index;
 	XEvent event;
-	KeySym symbol, *map;
+	KeySym symbol, *map, modifier = NoSymbol;
 	const unsigned char *text;
 
-	if (argc != 4 || (strcmp(argv[2], "text") != 0 &&
-	    strcmp(argv[2], "key") != 0))
+	if (argc < 3 || argc > 5)
 		return 2;
+	if (!((argc == 3 && strcmp(argv[2], "focus") == 0) ||
+	    (argc == 4 && strcmp(argv[2], "text") == 0) ||
+	    (argc >= 4 && strcmp(argv[2], "key") == 0)))
+		return 2;
+	if (argc == 5) {
+		modifier = XStringToKeysym(argv[3]);
+		if (modifier != XK_Control_L && modifier != XK_Alt_L &&
+		    modifier != XK_Shift_L && modifier != XK_Super_L)
+			return 2;
+	}
 	display = XOpenDisplay(NULL);
 	if (display == NULL || !XTestQueryExtension(display, &event_base,
 	    &error_base, &major, &minor))
 		return 1;
+	/* GTK popup menus own a keyboard grab, not an EWMH-managed window. */
+	if (strcmp(argv[1], "--current") == 0 && strcmp(argv[2], "key") == 0)
+		goto input;
 	for (attempt = 0; attempt < 100 && window == None; attempt++) {
 		window = find_window(DefaultRootWindow(display), argv[1], 0);
 		if (window == None)
@@ -101,21 +140,43 @@ main(int argc, char **argv)
 	XFlush(display);
 	for (attempt = 0; attempt < 50; attempt++) {
 		XGetInputFocus(display, &focus, &revert);
-		if (focus == window)
+		if (focus_belongs_to(focus, window))
 			break;
 		pause_poll();
 	}
 	if (attempt == 50) {
-		fputs("WM did not focus target\n", stderr);
+		fprintf(stderr, "WM did not focus target 0x%lx; actual focus 0x%lx\n",
+		    window, focus);
+		for (attempt = 0; attempt < 8 && focus != None &&
+		    focus != PointerRoot; attempt++) {
+			Window root, parent, *children = NULL;
+			unsigned int count;
+			if (!XQueryTree(display, focus, &root, &parent, &children, &count))
+				break;
+			if (children != NULL)
+				XFree(children);
+			fprintf(stderr, "Focus ancestor: 0x%lx\n", parent);
+			focus = parent;
+		}
 		return 1;
 	}
+input:
+	if (strcmp(argv[2], "focus") == 0) {
+		XCloseDisplay(display);
+		return 0;
+	}
 	if (strcmp(argv[2], "key") == 0) {
-		symbol = XStringToKeysym(argv[3]);
+		symbol = XStringToKeysym(argv[argc - 1]);
 		if (symbol == NoSymbol)
 			return 2;
-		send_key(symbol, 0);
+		send_key(symbol, 0, modifier);
 	} else {
 		for (text = (unsigned char *)argv[3]; *text != '\0'; text++) {
+			XGetInputFocus(display, &focus, &revert);
+			if (!focus_belongs_to(focus, window)) {
+				fputs("Target lost focus during text input\n", stderr);
+				return 1;
+			}
 			symbol = *text;
 			shifted = 0;
 			if (*text < 32 || *text > 126) {
@@ -139,7 +200,7 @@ main(int argc, char **argv)
 			XFree(map);
 			if (index == max - min + 1)
 				return 1;
-			send_key(symbol, shifted);
+			send_key(symbol, shifted, NoSymbol);
 		}
 	}
 	XCloseDisplay(display);
