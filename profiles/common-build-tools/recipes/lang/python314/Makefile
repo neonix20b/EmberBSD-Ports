@@ -25,7 +25,7 @@ USE_LANGUAGES=		c c++
 USE_TOOLS+=		gmake pkg-config
 GNU_CONFIGURE=		yes
 CONFIGURE_ARGS+=	--enable-shared
-CONFIGURE_ARGS+=	--with-openssl=${BUILDLINK_PREFIX.openssl}
+CONFIGURE_ARGS+=	--with-openssl=${_CROSS_DESTDIR}${BUILDLINK_PREFIX.openssl}
 CONFIGURE_ARGS+=	--with-system-expat
 CONFIGURE_ARGS+=	--without-ensurepip
 CONFIGURE_ENV+=		OPT=${CFLAGS:M*:Q}
@@ -50,9 +50,32 @@ CONFIGURE_ARGS+=	ac_cv_header_uuid_h=false
 .endif
 
 .if ${USE_CROSS_COMPILE:tl} == yes
+.  if ${OPSYS} == "NetBSD" && ${MACHINE_ARCH} == "aarch64"
+# NetBSD/AArch64 reports evbarm through uname(3), also used by sysconfig.
+MAKE_ENV+=		PYTHON_BUILD_DETAILS_PLATFORM=netbsd-${OS_VERSION}-evbarm
+.  endif
+# Installed extension consumers use target paths. Keep CONFIG_ARGS as the
+# original build receipt, and rewrite only the generated installed inputs.
+SUBST_CLASSES+=		target-sysconfig target-makefile
+SUBST_STAGE.target-sysconfig=	post-build
+SUBST_FILES.target-sysconfig=	build/lib.*/_sysconfigdata_*.py
+SUBST_FILES.target-sysconfig+=	build/lib.*/_sysconfig_vars_*.json
+SUBST_STAGE.target-makefile=	post-install
+SUBST_FILES.target-makefile=	${DESTDIR}${PREFIX}/lib/python${PY_VER_SUFFIX}/config-${PY_VER_SUFFIX}/Makefile
+.  for stage in target-sysconfig target-makefile
+SUBST_FILTER_CMD.${stage}=	${AWK} -v sysroot=${_CROSS_DESTDIR:Q} -f ${FILESDIR}/target-paths.awk
+.  endfor
+.  if defined(EMBERBSD_CROSS_BUILD_PYTHON)
+# Origin: EmberBSD (AI-assisted), reuse a matching host interpreter.
+.    if empty(EMBERBSD_CROSS_BUILD_PYTHON:M/*) || !exists(${EMBERBSD_CROSS_BUILD_PYTHON})
+PKG_FAIL_REASON+= "EMBERBSD_CROSS_BUILD_PYTHON must name an existing absolute host interpreter"
+.    endif
+CONFIGURE_ARGS+=	--with-build-python=${EMBERBSD_CROSS_BUILD_PYTHON:Q}
+.  else
 TOOL_DEPENDS+=		${PKGNAME}:../../${PKGPATH}
 CONFIGURE_ARGS+=	\
 	--with-build-python=${TOOLBASE:Q}/bin/python${PY_VER_SUFFIX}
+.  endif
 CONFIGURE_ARGS+=	MACHDEP=${PY_PLATNAME}
 CONFIGURE_ARGS+=	\
 	_PYTHON_HOST_PLATFORM=${LOWER_OPSYS}-${MACHINE_GNU_ARCH}

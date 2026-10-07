@@ -1625,9 +1625,6 @@ lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zoomheight.pyo
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy.py
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy.pyc
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy.pyo
-lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy_user.py
-lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy_user.pyc
-lib/python${PY_VER_SUFFIX}/idlelib/idle_test/test_zzdummy_user.pyo
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/tkinter_testing_utils.py
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/tkinter_testing_utils.pyc
 lib/python${PY_VER_SUFFIX}/idlelib/idle_test/tkinter_testing_utils.pyo

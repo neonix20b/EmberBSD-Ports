@@ -43,13 +43,15 @@ runtime behavior are validated.
   replacement and rollback have regression checks. Binutils has a verified
   DWARF32/64 line-table repair; GNU tools are selected explicitly during
   acceptance, with GCC bootstrap-tool default migration still pending.
-  The profile also provides
-  coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
+  [Python 3.14.8](profiles/common-build-tools/python.md) also cross-builds and
+  passes installed C/C++ embedding, extension loading and 21 upstream suites
+  on the AArch64 VM. The profile also provides
+  coherent Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
   recipes with upstream lit, scoped native Clang/GCC16 defaults, strict
   common selection and host source contracts. Focused native macro/selection
   checks cover Python, LLVM family selection and real GCC16 config metadata;
-  native LLVM23/compiler-family checks, packages,
-  installed extensions, ELF consumers and LLVM23/Mesa26 acceptance remain pending.
+  native LLVM23/compiler-family checks, remaining packages,
+  ELF/JIT consumers and LLVM23/Mesa26 acceptance remain pending.
 - [Common graphics source packages](profiles/common-graphics/README.md):
   canonical MesaLib 26.2.4nb1 and adapted libdrm 2.4.134nb1 compose the common
   GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.

@@ -2,10 +2,11 @@
 
 This profile prepares one common Python 3.14.8, Meson 1.12.1 and matching
 LLVM/Clang/LLD 23.1.2 with upstream lit for the
-GCC 16 / LLVM 23 / Mesa 26 dependency closure. Source preparation, host
-contracts and focused native macro/selection checks pass. Complete Python,
-Meson and LLVM packages, installed extensions and consumers remain pending.
-This is not an installed Mesa stack.
+GCC 16 / LLVM 23 / Mesa 26 dependency closure. The [Python package](python.md)
+cross-builds on macOS and passes installed AArch64 VM consumers and 21 selected
+upstream suites. Complete Meson/LLVM packages and their consumers remain pending.
+Source preparation, host contracts and focused native macro/selection checks
+pass. This is not an installed Mesa stack.
 
 The [macOS cross-package path](cross/README.md) uses GCC16 and ordinary pkgsrc
 packaging. Pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and
@@ -130,15 +131,21 @@ these adaptations have not been submitted or accepted upstream.
 | `Modules_faulthandler.c` | Drop the inherited manual-count workaround after eight actual native GCC16 initializer variants and pointer rejection pass; retain the upstream array-derived count. |
 | `Modules_readline.c` | Retain selected readline portability; editline is not accepted here. |
 | `Modules_socketmodule.c` | Retain conditional SunOS declaration. |
-| `configure` | Retain packaging/UUID hunks; remove blanket cross-validation bypass. |
+| `Misc_python-config.in` | Include the shared-library search directory for installed embedding, matching the shell script. |
+| `Lib_test_test__sysconfig.py` | Check retained pkgsrc `.so` naming and actual loader acceptance on NetBSD; keep tagged-priority coverage. |
+| `configure` / `configure.ac` | Retain packaging/UUID hunks; recognize NetBSD/AArch64 in both cross-host checks, preserving unknown-host rejection. |
+| `Tools_build_generate-build-details.py` | Describe the target NetBSD platform, version, ABI, loader suffixes and installed static library. |
 
 The Python PLIST adds the two upstream test modules `test_capi/test_slice`
 and `test_free_threading/test_context`, each with source and optimization
-levels 0/1. Buildlink's config directory matches the installed
+levels 0/1, and removes the obsolete `idle_test/test_zzdummy_user` entries.
+Buildlink's config directory matches the installed
 `config-3.14` directory. No generic libpython SONAME alias is created.
 The recipe uses upstream's shipped `configure`, without autoreconf;
-`configure.ac` is unchanged. Regeneration needs a separate synchronized
-source/generated patch review. NetBSD still selects pkgsrc libuuid instead
+the new cross-host cases are also maintained in `configure.ac`. Regeneration
+of the inherited pkgsrc changes still needs a separate synchronized review.
+The [Python cross recipe](python.md) explains the host interpreter, OpenSSL
+sysroot and installed metadata adaptations. NetBSD still selects pkgsrc libuuid instead
 of its system's UUIDv4-only interface.
 
 | Meson patch | Decision and reason |
@@ -226,9 +233,6 @@ for the bounded result; this is not a native Python package acceptance.
 Use staged packages and normal pkgsrc checks; do not bypass missing files,
 WRKREF, RPATH, checksum, dependency or upstream test failures.
 
-- Python: package/check-files, sysconfig/config script/pkg-config agreement,
-  installed `_ctypes`/libffi, OpenSSL, libuuid, readline and PyREPL/terminfo.cdb;
-  extension compile/import and embedded interpreter with the selected runtime.
 - Meson: installed CLI/upstream tests, explicit native/cross LLVM selection,
   real installed shared-library fixture with transitive PREFIX dependencies,
   build-path/X-padding removal, intended install_rpath and clean execution.

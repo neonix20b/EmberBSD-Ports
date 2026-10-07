@@ -8,8 +8,8 @@ complete `gcc16-16.2.0nb1` package. No desktop was required.
 
 This is VM execution evidence for the named packages. The first three used
 a bootstrap GCC12.5 kernel; Binutils used the GCC16/DWARF5 kernel built from
-EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`. These results do not claim
-a complete GCC16-built userland, LLVM23/Python314 package acceptance or
+EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`; Python used the same kernel.
+These results do not claim a complete GCC16-built userland, LLVM23 package acceptance or
 execution of these new packages on a board.
 
 | Package | Checks completed |
@@ -18,6 +18,7 @@ execution of these new packages on a board.
 | GNU M4 1.4.21 | Mac cross build and pkgsrc package checks; target installation and Info registration; 242 upstream manual examples with seven unsupported `changeword` cases skipped; stack-overflow check passed. |
 | Libtool 2.6.2 | Verified original source, maintained/generated patch equivalence; cross package checks and installation; C11/C++20 shared/static consumers, exceptions through a DSO, selected GCC16 runtime, libtoolize, shlibtool and uninstall. |
 | Binutils 2.47nb1 | Mac cross build, full package checks and target installation/integrity; GNU as/ld and archive consumers, DWARF5/64 source lookup, split debug data and stripping, C++20 DSO exceptions, GNU CTF, translated diagnostics and unresolved-symbol errors. |
+| Python 3.14.8 | Mac cross build, package checks and target installation/integrity; config-tool and pkg-config C++ embedding, C extensions with ordinary/tagged/stable-ABI filenames, selected runtime and consistent build-details; all 21 selected upstream suites, 5,615 tests run, 478 skipped by upstream conditions. |
 
 Package SHA256 values identify the actual VM inputs:
 
@@ -26,6 +27,7 @@ pkgconf-3.0.7.tgz     351af223d73169baba9a277208e8d7a6e7682984f5151c32ee7f18432b
 m4-1.4.21.tgz        026972df19145afe7806e6d0eec3450edfd0d542b26789e3652a34491a9c198c
 libtool-base-2.6.2.tgz 0862a6c6ab789dd880c017da93ac72fe1f0cb59e19460c9f0b6fb9148a8776e6
 binutils-2.47nb1.tgz b07db836b965be43f8f9304c3e22fef385e500ad32ed14ad75beaa6bad5098af
+python314-3.14.8.tgz 672b7237f0524304a040961c63e4a00b373ad1b249a09e7ef3ba4387809f5e87
 ```
 
 The original-source hashes and URLs are in [sources.tsv](../sources.tsv).
@@ -41,6 +43,18 @@ DWARF32 line table. The same object fails with the saved original addr2line
 and resolves correctly with nb1. A matching CU64/line64 control is unchanged.
 All six installed acceptance groups passed, including both line-table
 formats and the GNU nm diagnostic loaded from its installed catalog.
+
+Python uses the normal target loader, without library-path overrides. Its
+upstream cases exercise TLS, ctypes/libffi, SQLite, UUID, decimal, readline,
+compression, process/thread handling, imports, virtual environments and REPL.
+The [port](../python.md) fixes cross-host selection, OpenSSL discovery,
+installed target metadata and embedding flags. The original loader order and
+extension package names are preserved. One NetBSD test assertion explicitly
+checks that retained packaging convention; the rest of the selected tests
+keep their upstream behavior.
+Source/export, host-version rejection and a synthetic target-version metadata
+regression pass. SQLite and zstd dependencies also cross-build with explicit
+target identity and execute through their Python consumers.
 
 The cross regression uses actual pkgsrc parsing and package metadata. It
 covers native host dependency selection, missing inspection tools and target

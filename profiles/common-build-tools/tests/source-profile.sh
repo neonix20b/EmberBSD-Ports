@@ -86,18 +86,24 @@ for pair in 'lang/python314 python-patched' 'devel/meson meson-patched'; do
         echo 'FAIL: repeated patch accepted' >&2; exit 1
     fi
 done
-! grep -q 'false && test "$cross_compiling"' "$work/python-patched/configure"
+if grep -q 'false && test "$cross_compiling"' "$work/python-patched/configure"; then
+    echo 'Python cross-host validation was disabled' >&2; exit 1
+fi
 grep -q '^PY3LIBRARY=$' "$work/python-patched/Makefile.pre.in"
 grep -q -- '-o 0 -o 1 $(COMPILEALL_OPTS)' "$work/python-patched/Makefile.pre.in"
-! grep -q -- '-o 0 -o 1 -o 2 $(COMPILEALL_OPTS)' "$work/python-patched/Makefile.pre.in"
+if grep -q -- '-o 0 -o 1 -o 2 $(COMPILEALL_OPTS)' "$work/python-patched/Makefile.pre.in"; then
+    echo 'Unexpected optimization level 2 in installed bytecode' >&2; exit 1
+fi
 for module in test_capi/test_slice test_free_threading/test_context; do
     [ -f "$work/python-pristine/Lib/test/$module.py" ]
     for ext in py pyc pyo; do
         grep -Fqx "lib/python\${PY_VER_SUFFIX}/test/$module.$ext" "$profile/recipes/lang/python314/PLIST"
     done
 done
-cmp "$work/python-pristine/configure.ac" "$work/python-patched/configure.ac"
+sh "$profile/tests/python-cross-configure.sh" "$work/python-pristine" \
+    "$work/python-patched" "$work/python-cross-cases"
 cmp "$work/python-pristine/Modules/faulthandler.c" "$work/python-patched/Modules/faulthandler.c"
+cmp "$work/python-pristine/Python/dynload_shlib.c" "$work/python-patched/Python/dynload_shlib.c"
 if [ "$scope" = all ]; then
     cmp "$root/upstream/pkgsrc/devel/meson/PLIST" "$profile/recipes/devel/meson/PLIST"
     # The dropped ELF depfixer patch must leave this upstream implementation exact.
@@ -113,7 +119,9 @@ for recipe in lang/python314 devel/meson; do
 done
 if [ "$scope" = python-source ]; then
     [ ! -e "$work/pkgsrc/lang/python314/patches/patch-Modules_faulthandler.c" ]
-    ! grep -q 'patch-Modules_faulthandler.c' "$work/pkgsrc/lang/python314/distinfo"
+    if grep -q 'patch-Modules_faulthandler.c' "$work/pkgsrc/lang/python314/distinfo"; then
+        echo 'Dropped faulthandler workaround returned to the export' >&2; exit 1
+    fi
     echo 'PASS: Python source/checksum/negative cases/export; unchanged Meson/GCC/native contracts not run'
     exit 0
 fi

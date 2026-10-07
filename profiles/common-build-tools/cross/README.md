@@ -3,8 +3,8 @@
 This opt-in path builds ordinary NetBSD 11/AArch64 pkgsrc packages with the
 [GCC 16.2 cross compiler](../../development-toolchain/cross/README.md).
 The compiler and build tools execute on macOS; installed packages are tested
-on EmberBSD. This does not yet establish a complete GCC16-built OS or accept
-Python, Meson or LLVM target packages.
+on EmberBSD. Python is among the [accepted target packages](validation.md).
+This does not yet establish a complete GCC16-built OS or accept Meson/LLVM packages.
 
 Use the `common-build-tools` export from the parent profile. It preserves the
 pinned pkgsrc revision and obtains original upstream archives with recipe
@@ -52,6 +52,8 @@ MAKE_JOBS=4
 # Optional when these host tools are already installed:
 TOOLS_PLATFORM.makeinfo=/absolute/host-texinfo/bin/makeinfo
 TOOLS_PLATFORM.msgfmt=/absolute/host-gettext/bin/msgfmt
+# Optional matching host interpreter for the Python target package:
+EMBERBSD_CROSS_BUILD_PYTHON=/absolute/python3.14
 .include "/absolute/EmberBSD-Ports/profiles/common-build-tools/cross/mk.conf"
 .endif
 ```
@@ -75,6 +77,9 @@ host compiler paths when necessary. They reach upstream configure as
 `CC_FOR_BUILD` and `CXX_FOR_BUILD`; target wrappers still compile the package.
 Host tool dependencies read the host bootstrap MAKECONF, so interpreter and
 tool choices needed by those dependencies belong there as well.
+The [Python recipe](../python.md) validates the matching host interpreter and
+keeps installed extension metadata on the target side. SQLite and zstd
+receive explicit target platform settings during cross compilation.
 
 ## What the cross adaptation checks
 
@@ -121,6 +126,8 @@ Target acceptance scripts in this directory require a new output directory:
 - `run-binutils-tests.sh`: GNU assembler/linker and archive consumers,
   DWARF5/64, split debug information, stripping, C++ DSO exceptions,
   GNU CTF and unresolved-symbol errors; see [Binutils](../binutils.md).
+- `run-python-tests.sh`: installed C/C++ consumers, extension loading,
+  build-details agreement and focused upstream Python suites.
 
 Pkgconf builds its test binaries as upstream `noinst_PROGRAMS` during `all`.
 Copy the actual `WRKSRC/.libs/test-api-*` and `.libs/test-runner` ELF files;
