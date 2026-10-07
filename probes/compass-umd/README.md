@@ -87,13 +87,18 @@ Sanitizers are opt-in (default `CORE_TEST_SANITIZERS=0`). That mode visibly
 skips the original maximum-bound sanitizer proof and never runs its undefined
 access unsanitized. It still requires all logical REDs and 29 plain GREENs in
 each branch. `CXX` selects the compiler; `CORE_TEST_CXXFLAGS` supplies extra
-compiler/linker flags while preserving required warnings. Core-count checks
-currently pass on macOS ARM64/Clang 21; native checks remain pending.
+compiler/linker flags while preserving required warnings. Both plain and
+sanitized checks pass on macOS ARM64/Clang 21. Plain checks also pass on
+NetBSD 11/AArch64 with GCC 16.2: 29 cases per branch, with the same six/four
+original logical failures. The native run took 1.07 seconds, 75,500 KiB peak
+RSS and no swaps. Its four binaries resolve one libstdc++.so.7 and
+libgcc_s.so.1 from GCC 16.2. Native sanitizer checks were not run; the maximum
+original-index sanitizer proof is explicitly skipped in that mode.
 
 ## Verified and unresolved scope
 
 On macOS ARM64 with Clang 21 and the NetBSD 11 AArch64 VM with GCC 16.2,
-the patched isolated production methods pass all 13 cases. Both platforms
+the descriptor-lifetime methods pass all 13 cases. Both platforms
 reproduce 11 expected original failures and two unchanged passing controls.
 The native VM contract run took 1.08 seconds with 104,048 KiB peak RSS.
 This does not establish a full UMD build on NetBSD,

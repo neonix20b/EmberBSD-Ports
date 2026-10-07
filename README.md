@@ -44,8 +44,8 @@ runtime behavior are validated.
   separately. These are source probes, without microphone or accelerator validation.
 - [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
   upstream descriptor-zero and failure-cleanup fixes pass host/native software
-  contracts; public core-count bounds pass host production-extracted checks
-  with legacy behavior preserved. Native kernel/DMA integration
+  contracts; public core-count bounds pass 58 native production-extracted cases
+  on AArch64/GCC 16.2, with legacy behavior preserved. Kernel/DMA integration
   and model execution remain unverified.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and

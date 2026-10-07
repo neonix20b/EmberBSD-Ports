@@ -41,7 +41,13 @@ The separate core-count contract passes 29 cases per branch with Clang 21 on
 macOS ARM64, plain and ASan/UBSan. Original logical controls retain exit 1 with
 six hardware/four simulation failures; both original maximum-bound sanitizer
 checks retain the real nonzero status and explicit index-8 diagnostic.
-Native core-count verification is pending. These checks do not establish
+The exact Ports `aaeccf9ed3684fdf65ab10a91d49983a81e8cc9d` export also passes
+29 plain core-count cases per branch on NetBSD 11/AArch64 with GCC 16.2,
+with the same six/four original logical failures. Native sanitizer checks
+were explicitly omitted; the original maximum-index proof remains host-only.
+The guarded native run completed with status 0 in 1.07 seconds,
+75,500 KiB peak RSS and no swaps. Its binaries resolve one GCC16 C++ runtime.
+These checks do not establish
 full UMD/KMD, simulator SDK, native NPU, model or repeated-inference support.
 
 Factory locking does not prevent another thread from reusing a process-wide
