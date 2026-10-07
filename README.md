@@ -29,7 +29,9 @@ runtime behavior are validated.
   repairs TSVC allocation on NetBSD. The common package MAKECONF now selects
   the prepared compiler after native-GCC bootstrap; actual pkgsrc wrapper and
   installed-consumer checks pass on Zero 3W with current MPFR/MPC/libxml2.
-  C++ modules repair, the common Qt/LLVM rebuild and image/default integration
+  The repaired nb1 package passes installed module export/import/link/run
+  without a private frontend, and reversible board login/SSH and pkgsrc
+  defaults select it. Common Qt/LLVM rebuilding and full-image integration
   remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   coherent Python 3.14.8, Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source

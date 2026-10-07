@@ -1,0 +1,17 @@
+Local AI-assisted EmberBSD pkgsrc metadata fix, not submitted upstream.
+Normalize ELF loader /./ spelling before pkgsrc subtracts package-owned files.
+Otherwise GCC16's own lib/./libgcc_s.so.1 becomes an external REQUIRES entry,
+which pkg_add checks before extraction (and after removing an updated package).
+Keep ../ and symlink resolution unchanged; preserve every external requirement.
+
+--- a/mk/pkgformat/pkg/metadata.mk
++++ b/mk/pkgformat/pkg/metadata.mk
+@@ -78,7 +78,7 @@
+ 	ELF)								\
+ 		libs=`${AWK} '/\/lib.*\.so(\.[0-9]+)*$$/ { print "${DESTDIR}${PREFIX}/" $$0 } END { exit 0 }' ${_PLIST_NOKEYWORDS}`; \
+ 		if ${TEST} -n "$$bins" -o -n "$$libs"; then		\
+-			requires=`(${PKGSRC_SETENV} ${LDD_ENV:U} $$ldd $$bins $$libs 2>/dev/null || ${TRUE}) | ${AWK} '$$2 == "=>" && $$3 ~ "/" { print $$3 }' | ${SORT} -u`; \
++			requires=`(${PKGSRC_SETENV} ${LDD_ENV:U} $$ldd $$bins $$libs 2>/dev/null || ${TRUE}) | ${AWK} '$$2 == "=>" && $$3 ~ "/" { while (gsub(/\/\.\//, "/", $$3)) {}; print $$3 }' | ${SORT} -u`; \
+ 		fi;							\
+ 		linklibs=`${AWK} '/.*\.so(\.[0-9]+)*$$/ { print "${DESTDIR}${PREFIX}/" $$0 }' ${_PLIST_NOKEYWORDS}`; \
+ 		for i in $$linklibs; do					\

@@ -7,7 +7,9 @@ compiler foundation for a reproducible distribution development environment.
 The common build-tools MAKECONF selects it for new package consumers after
 bootstrap; actual native pkgsrc wrapper and installed-consumer checks pass on
 Zero 3W. Full upstream tests, shared consumer migration and image integration
-remain gates; user-facing system defaults are unchanged.
+remain gates. Reversible development defaults select installed nb1 for fresh
+login/SSH sessions and ordinary pkgsrc builds on the checked Zero 3W board;
+base compiler files remain intact.
 
 On the AArch64 NetBSD 11 VM, the native prerequisites are now validated:
 MPC 1.4.1 (75 tests), Texinfo 7.3 (required XS plus Info/HTML output),
@@ -48,8 +50,9 @@ The [C++ modules allocation repair](modules-portability.md) prepares
 `gcc16-16.2.0nb1` with the accepted upstream `ENOTSUP` fix and a local NetBSD
 `EOPNOTSUPP` extension. Production-function source regressions and private
 frontend module export/import/link/run pass on Zero 3W A733. Normal package
-creation/file checks pass; installation and the updated common-consumer
-fixture remain pending.
+creation/file checks and final installation pass; the installed driver passes
+the same module gates without `-B`. The updated common-consumer fixture
+passes through the durable system pkgsrc configuration on that board.
 
 The [TSVC portability backport](testsuite-portability.md) applies GCC's accepted
 NetBSD allocator fix without changing the compiler or runtime. The exported
@@ -199,7 +202,10 @@ The recipe retains `--disable-bootstrap`; no three-stage bootstrap is claimed.
 The installed candidate passed C11 atomics/pthreads/TLS and C++20 shared-DSO
 string exchange, exception cleanup, threads and TLS. The actual process map
 contains one libstdc++ and one libgcc_s from `/usr/pkg/gcc16`. Base compiler
-and runtime file hashes stayed unchanged; global defaults were not changed.
+and runtime file hashes stayed unchanged in the original check. The later
+[board development-default gate](../common-build-tools/development-defaults.md)
+selects installed repaired nb1 in fresh sessions and ordinary pkgsrc builds
+with verified reversal; it does not replace the base compiler.
 The installed old Qt 6.11 closure correctly fails the same identity check:
 it loads both candidate libstdc++.7 and base libstdc++.9. Its Qt/ICU/LLVM
 consumer rebuild remains required; a working isolated C++ probe cannot accept

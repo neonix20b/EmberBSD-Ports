@@ -5,7 +5,7 @@ Python314 lit for the common Mesa26/TinyGo dependency closure. It extends
 [the common profile](README.md), based on pkgsrc
 `fff4deb639a1a640476203c80f752fb77b6cb14b`. Host source contracts pass;
 native packages, staging/check-files, LLVM23 driver behavior, JIT and
-application consumers remain pending. No installed toolchain is activated.
+application consumers remain pending. No installed LLVM23 toolchain is activated.
 
 ## One family and development payload
 

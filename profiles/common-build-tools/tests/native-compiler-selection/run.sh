@@ -50,16 +50,17 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 make_pkg() {
-    (cd "$recipe" && make MAKECONF="$makeconf" PREFIX=/usr/pkg LOCALBASE=/usr/pkg \
+    (cd "$recipe" && make MAKECONF="$makeconf" \
         WRKOBJDIR="$work/work" PACKAGES="$work/packages" DISTDIR="$work/distfiles" \
         MAKE_JOBS=1 "$@")
 }
 make_pkg -V 'compiler=${_GCC_PKGBASE}' -V 'prefix=${_GCC_PREFIX}' \
-    -V 'runtime=${USE_PKGSRC_GCC_RUNTIME}' -V 'method=${BUILDLINK_DEPMETHOD.gcc16}' \
+    -V 'floor=${_GCC_REQD}' -V 'runtime=${USE_PKGSRC_GCC_RUNTIME}' -V 'method=${BUILDLINK_DEPMETHOD.gcc16}' \
     -V 'deps=${DEPENDS} ${BUILD_DEPENDS} ${TOOL_DEPENDS}' \
     -V 'fail=${PKG_FAIL_REASON}' >"$work/selection.txt"
 grep -Fx compiler=gcc16 "$work/selection.txt" >/dev/null || fail "wrong compiler metadata"
 grep -Fx prefix=/usr/pkg/gcc16/ "$work/selection.txt" >/dev/null || fail "wrong compiler prefix"
+grep -Fx floor=16.2 "$work/selection.txt" >/dev/null || fail "wrong GCC floor"
 grep -Fx runtime=no "$work/selection.txt" >/dev/null || fail "separate GCC runtime selected"
 grep -Fx method=full "$work/selection.txt" >/dev/null || fail "missing full GCC dependency"
 grep -Fx fail= "$work/selection.txt" >/dev/null || fail "pkgsrc rejected configuration"

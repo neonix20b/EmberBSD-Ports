@@ -11,7 +11,7 @@ The profile owns full Python, Meson and
 [LLVM family recipes](llvm-family.md), based on
 pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`. It composes the established
 [development toolchain](../development-toolchain/README.md) export without
-changing GCC recipes or bootstrap options. The common MAKECONF selects
+changing GCC bootstrap options. The common MAKECONF selects
 the prepared GCC16 package for new native builds. LLVM family recipes also
 prepare scoped native Clang defaults. The default
 export and `development-toolchain` mode retain their previous behavior.
@@ -41,7 +41,9 @@ requires Python 314, Meson >=1.12.1 and pkgsrc GCC for native NetBSD 11/AArch64,
 with final `LOCALBASE=PREFIX=/usr/pkg` and one worker. It sets `GCC_REQD+=16.2`,
 `PKGSRC_COMPILER=gcc`, `USE_PKGSRC_GCC=yes` and `USE_NATIVE_GCC=no`.
 `GCC_REQD` is a major.minor floor, not an exact installed-version check;
-the prepared recipe supplies `gcc16-16.2.0nb1`. The standard\n`BUILDLINK_API_DEPENDS.gcc16+=gcc16>=16.2.0nb1` dependency requires the\n[C++ modules allocation repair](../development-toolchain/modules-portability.md). The pinned pkgsrc comparison
+the prepared recipe supplies `gcc16-16.2.0nb1`. The standard
+`BUILDLINK_API_DEPENDS.gcc16+=gcc16>=16.2.0nb1` dependency requires the
+[C++ modules allocation repair](../development-toolchain/modules-portability.md). The pinned pkgsrc comparison
 cannot handle `GCC_REQD=16.2.0`; use `16.2`. Compatible command-line floors
 and `ccache gcc` / `distcc gcc` chains remain supported. Incompatible compiler,
 native-compiler, runtime and dependency-method overrides fail explicitly.
@@ -64,18 +66,23 @@ that separate provider; it does not select the base GCC12 runtime.
 Native compile/link/runtime checks must verify the actual loaded libraries.
 The original [native selection fixture](tests/native-compiler-selection/README.md) passes
 on physical Orange Pi Zero 3W: actual pkgsrc wrappers compile and package C/C++,
-and the installed consumer loads the selected GCC16 runtime. The updated\nfixture requires nb1 or newer and must be repeated after repaired-package\ninstallation. The
+and the installed consumer loads the selected GCC16 runtime. The updated
+fixture passes with installed nb1 through the durable
+`/etc/mk.conf` default on the same board. The
 [compiler validation](../development-toolchain/native-validation.md) records
 current math dependencies, focused LTO checks and remaining compiler limits.
-This source selection does not change `/usr/bin/cc`, `/etc/mk.conf`, running
-old GUI programs or the image's user-facing defaults. Consumer migration
-and fresh-image acceptance remain separate gates.
+The [reversible development defaults](development-defaults.md) now select
+installed nb1 in fresh login/SSH sessions and ordinary pkgsrc builds on that
+board. The durable common include is copied from this committed profile.
+Base `/usr/bin/cc` remains available through the explicit private bootstrap
+configuration. Existing GUI consumer migration and fresh-image acceptance
+remain separate gates.
 
 The opt-in `lang/python/pyversion.mk` guard rejects unsupported consumers
 and older command-line interpreter overrides. Repair those consumers through
 Ports; do not select an old interpreter or install another one beside this
-stack. This source stage does not uninstall existing packages or change
-system defaults. Later package migration must check their reverse dependencies.
+stack. This source stage does not install those interpreter packages. Later
+package migration must check their reverse dependencies.
 
 Run the focused metadata gate against a prepared common-media export:
 

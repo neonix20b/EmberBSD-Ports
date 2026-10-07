@@ -1,9 +1,10 @@
 # GCC 16.2 native validation
 
-The ready `gcc16-16.2.0` package runs on the physical Orange Pi Zero 3W
-(Allwinner A733, NetBSD 11/AArch64). It was built once in the AArch64 UTM
-environment and reused unchanged. Its SHA256 is
-`ac0dae96d79c0568ce1aa9d8d1c861dfda3d1defa9a59bfb6a6ff72adad06559`.
+The repaired `gcc16-16.2.0nb1` package is installed and runs on physical
+Orange Pi Zero 3W (Allwinner A733, NetBSD 11/AArch64). It was built once in the AArch64 UTM
+environment; the scoped module repair reuses its retained objects. Its final
+package SHA256 is
+`9137c8f5460b1421ce453690ba330755967022fac2967b493c4428adb4cd09f9`.
 These results describe the installed compiler and named consumers. They do
 not accept the complete upstream suite, a self-hosted build or a release image.
 
@@ -68,11 +69,17 @@ baseline into a successful full suite. The [module allocation repair](modules-po
 passes the unchanged upstream reproducer and a module export/import/link/run
 check through a private frontend on this board. The repaired nb1 package also
 passes normal staging/file checks; its extracted frontend passes the same
-private-prefix checks. Global installation and the updated common-consumer
-fixture are pending. No complete C++20 modules support is claimed here.
+private-prefix checks. The final package installs with ordinary `pkg_add -u`;
+`pkg_admin check` verifies all 1,633 files. The installed driver passes the same atom and module
+consumer gates without `-B`. The updated common-consumer fixture passes
+through the durable `/etc/mk.conf` default, including GDB and package removal.
+No complete C++20 modules support is claimed here.
 
 The VM's old Qt/ICU/LLVM closure still requires coordinated rebuilding.
 Current binutils, self-hosting and complete base/image integration are separate
 gates. Installing the package does not replace /usr/bin/cc or all system C++
 libraries. Follow the [common profile](../common-build-tools/README.md) for
 new pkgsrc consumers and retain the documented bootstrap boundary.
+[Development defaults](../common-build-tools/development-defaults.md) now
+select nb1 in fresh board login/SSH sessions and ordinary pkgsrc builds;
+explicit base bootstrap and all base compiler hashes remain unchanged.

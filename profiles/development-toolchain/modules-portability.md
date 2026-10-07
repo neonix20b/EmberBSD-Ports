@@ -48,7 +48,8 @@ they do not establish a rebuilt native frontend or installable package.
 Use the committed source delta with the retained configured native GCC build.
 Preserve the original source, `cp/module.o`, `cc1plus`, command lines and hashes
 before replacing owned outputs. Recompile only `cp/module.o` and relink
-`cc1plus`, refreshing its generated checksum object. Do not rebuild unchanged\nGCC objects or modify original suite logs.
+`cc1plus`, refreshing its generated checksum object. Do not rebuild unchanged
+GCC objects or modify original suite logs.
 Test with the existing installed GCC driver and a private `-B` frontend prefix,
 starting with the unchanged upstream `atom-pragma-1.C`, then export/import/link
 and run a small module consumer. Keep the ordinary loader and existing runtime.
@@ -73,11 +74,14 @@ cases. These bounded checks do not establish complete C++ modules support.
 
 Normal pkgsrc fresh check-files and package creation pass for
 `gcc16-16.2.0nb1`, SHA256
-`0dd92fa4b006bd66d61841ef6401f193b2950fa96809a5193ea46aab5af4a433`.
+`9137c8f5460b1421ce453690ba330755967022fac2967b493c4428adb4cd09f9`.
 The package identity is checked inside `+CONTENTS`; only the staged C++
 frontend differs from the original payload. Drivers/runtime libraries remain
-byte-identical. The original package is retained for rollback. Package
-installation and the updated native common-consumer fixture remain pending.
+byte-identical. The original package is retained for rollback. The final package
+installs
+with normal `pkg_add -u` and passes verification of all 1,633 installed files.
+Installed-mode atom and module export/import/link/run pass without `-B`;
+the updated native common-consumer fixture passes through `/etc/mk.conf`.
 
 Real exported C/C++ recipe metadata preserves the repaired revision dependency,
 `GCC_REQD=16.2`, the full compiler package and no separate runtime. Package
@@ -88,3 +92,29 @@ an actual native make/pkg_admin or the documented host metadata boundary:
 sh profiles/common-build-tools/tests/gcc16-revision.sh \
     EXPORTED_PKGSRC MAKE_WRAPPER PKG_ADMIN NEW_OUTPUT
 ```
+
+## Package metadata path repair
+
+The earlier unpublished nb1 candidate, SHA256
+`0dd92fa4b006bd66d61841ef6401f193b2950fa96809a5193ea46aab5af4a433`,
+passed staged payload checks but failed installation. Its generated metadata
+recorded its own `/usr/pkg/gcc16/lib/./libgcc_s.so.1` as an external requirement.
+pkgsrc subtracts package-owned files by exact spelling; pkg_add checks the
+remaining requirements before extraction and after deleting an older package.
+The original package was restored normally while this defect was repaired.
+
+`gcc-package-requires.patch` normalizes repeated `/./` in ELF loader paths
+before that subtraction. It changes no `../` or symlink resolution and retains
+external library checks. This is a local AI-assisted pkgsrc adaptation, not
+submitted upstream. The actual metadata rule regression is RED before the
+repair and GREEN after it; an isolated pkg_add still rejects a missing external
+library. Run it with the actual exported file and BSD make:
+
+```sh
+sh profiles/development-toolchain/tests/package-requires.sh \
+    EXPORTED_PKGSRC/mk/pkgformat/pkg/metadata.mk BSD_MAKE NEW_OUTPUT
+```
+
+Normal metadata/package regeneration from retained staging produces the final
+hash above. Every payload byte, mode, owner and symlink matches the earlier
+reviewed candidate. No GCC object or runtime was rebuilt for this metadata fix.
