@@ -110,6 +110,10 @@ runtime behavior are validated.
   consumer checks on AArch64. They cover numerical inference, stream state,
   speech/silence and invalid inputs; explicit ORT worker affinity is checked
   separately. These are source probes, without microphone or accelerator validation.
+- [A733 accelerator audit](probes/a733-accelerators/README.md): compiled vendor
+  and Mesa feature tables identify the VIP9000 NPU's missing TP path and MMU
+  differences. Exact PowerVR firmware is pinned. The Zero 3W FDT and device
+  checks confirm that native accelerator drivers are not attached yet.
 - [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
   upstream descriptor-zero and failure-cleanup fixes pass host/native software
   contracts; public core-count bounds pass 58 native production-extracted cases
