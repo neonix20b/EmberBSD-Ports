@@ -60,6 +60,22 @@ runtime behavior are validated.
   cases pass. The [RGB-D example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
   tracks 573 TUM fr1/desk pairs with 1.71–1.76 cm translation ATE RMSE in two
   controlled runs. Cameras, IMU fusion, boards and sustained operation are unverified.
+- [Navigation source profiles](probes/gtsam/README.md): GTSAM 4.3.0,
+  [PCL 1.15.1](probes/pcl/README.md), [OpenVINS 2.7](probes/openvins/README.md)
+  and [RTAB-Map 0.23.8](probes/rtabmap/README.md) have pinned recipes and numerical
+  consumer checks. They share current Eigen/OpenCV dependencies; native
+  installation and these navigation scenarios remain unverified.
+- [Local trajectory generation](probes/ruckig/README.md),
+  [quadratic optimization](probes/osqp/README.md) and
+  [motion planning](probes/ompl/README.md): Ruckig 0.19.4 and OSQP 1.0.0 pass
+  installed macOS software contracts; OMPL 2.0.2 has a prepared source profile
+  and checked geometry oracle. Native EmberBSD validation remains pending.
+- [Ethernet SDR source profile](probes/sdr/README.md): SoapySDR 0.8.1,
+  libiio 1.0.0, libad9361-iio and SoapyPlutoSDR use a common
+  [libxml2 2.15.4 provider](probes/libxml2/README.md). Installed macOS contracts
+  cover synthetic IQ, separate contexts, RX errors and loopback transport.
+  Native EmberBSD, physical PlutoSky/AD9361 RX and per-call stream deadlines
+  remain unverified; the profile includes instructions for continuing on hardware.
 - [Robotics and automotive developer tools](probes/robotics-tools/README.md):
   MCAP C++ 2.1.3, AprilTag 3.4.5, dbcppp 3.2.6, iso14229 0.11.0,
   Ceres 2.2.0, BehaviorTree.CPP 4.9.0 and libmodbus 3.2.0 source profiles.
