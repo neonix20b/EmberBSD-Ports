@@ -1,0 +1,116 @@
+From: EmberBSD Ports contributors
+Subject: [LOCAL] virtio-gpu: report rejected VirGL CREATE before publication
+
+Origin: EmberBSD, AI-assisted by Codex. Not submitted or accepted upstream.
+Against UTM QEMU 6601422e1fff2da1376faafb1e4c2c5cdb2d8003.
+Original Red Hat authors and GPL-2.0-or-later notices remain in source.
+
+--- a/hw/display/virtio-gpu-virgl.c
++++ b/hw/display/virtio-gpu-virgl.c
+@@ -284,14 +284,24 @@
+     virtio_gpu_resource_destroy(g, res, errp);
+ }
+ 
++/* EmberBSD local, AI-assisted: preserve arbitrary renderer error values. */
++static uint32_t virgl_create_resource_error(int ret)
++{
++    return ret == ENOMEM || ret == -ENOMEM ?
++           VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY : VIRTIO_GPU_RESP_ERR_UNSPEC;
++}
++
+ static void virgl_cmd_create_resource_2d(VirtIOGPU *g,
+                                          struct virtio_gpu_ctrl_command *cmd)
+ {
+     struct virtio_gpu_resource_create_2d c2d;
+     struct virgl_renderer_resource_create_args args;
+     struct virtio_gpu_virgl_resource *res;
++    int ret;
+ 
++    cmd->error = VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
+     VIRTIO_GPU_FILL_CMD(c2d);
++    cmd->error = 0;
+     trace_virtio_gpu_cmd_res_create_2d(c2d.resource_id, c2d.format,
+                                        c2d.width, c2d.height);
+ 
+@@ -310,13 +320,16 @@
+         return;
+     }
+ 
+-    res = g_new0(struct virtio_gpu_virgl_resource, 1);
++    res = g_try_new0(struct virtio_gpu_virgl_resource, 1);
++    if (!res) {
++        cmd->error = VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY;
++        return;
++    }
+     res->base.width = c2d.width;
+     res->base.height = c2d.height;
+     res->base.format = c2d.format;
+     res->base.resource_id = c2d.resource_id;
+     res->base.dmabuf_fd = -1;
+-    QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ 
+     args.handle = c2d.resource_id;
+     args.target = 2;
+@@ -329,7 +342,14 @@
+     args.last_level = 0;
+     args.nr_samples = 0;
+     args.flags = VIRTIO_GPU_RESOURCE_FLAG_Y_0_TOP;
+-    virgl_renderer_resource_create(&args, NULL, 0);
++    ret = virgl_renderer_resource_create(&args, NULL, 0);
++    if (ret) {
++        g_free(res);
++        cmd->error = virgl_create_resource_error(ret);
++        return;
++    }
++
++    QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ }
+ 
+ static void virgl_cmd_create_resource_3d(VirtIOGPU *g,
+@@ -338,8 +358,11 @@
+     struct virtio_gpu_resource_create_3d c3d;
+     struct virgl_renderer_resource_create_args args;
+     struct virtio_gpu_virgl_resource *res;
++    int ret;
+ 
++    cmd->error = VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
+     VIRTIO_GPU_FILL_CMD(c3d);
++    cmd->error = 0;
+     trace_virtio_gpu_cmd_res_create_3d(c3d.resource_id, c3d.format,
+                                        c3d.width, c3d.height, c3d.depth);
+ 
+@@ -358,13 +381,16 @@
+         return;
+     }
+ 
+-    res = g_new0(struct virtio_gpu_virgl_resource, 1);
++    res = g_try_new0(struct virtio_gpu_virgl_resource, 1);
++    if (!res) {
++        cmd->error = VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY;
++        return;
++    }
+     res->base.width = c3d.width;
+     res->base.height = c3d.height;
+     res->base.format = c3d.format;
+     res->base.resource_id = c3d.resource_id;
+     res->base.dmabuf_fd = -1;
+-    QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ 
+     args.handle = c3d.resource_id;
+     args.target = c3d.target;
+@@ -377,7 +403,14 @@
+     args.last_level = c3d.last_level;
+     args.nr_samples = c3d.nr_samples;
+     args.flags = c3d.flags;
+-    virgl_renderer_resource_create(&args, NULL, 0);
++    ret = virgl_renderer_resource_create(&args, NULL, 0);
++    if (ret) {
++        g_free(res);
++        cmd->error = virgl_create_resource_error(ret);
++        return;
++    }
++
++    QTAILQ_INSERT_HEAD(&g->reslist, &res->base, next);
+ }
+ 
+ static void virgl_cmd_resource_unref(VirtIOGPU *g,

@@ -1,0 +1,18 @@
+From: EmberBSD Ports contributors
+Subject: [LOCAL] vrend: destroy owned partial CREATE allocations on reported failure
+
+Origin: EmberBSD, AI-assisted by Codex. Not submitted or accepted upstream.
+Against UTM renderer 5d26f605 plus unchanged accepted 123e0bc IOV backport.
+Original Red Hat authors and MIT notices remain in source.
+
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -9120,7 +9120,7 @@
+    }
+ 
+    if (ret) {
+-      FREE(gr);
++      vrend_renderer_resource_destroy(gr);
+       return NULL;
+    }
+ 

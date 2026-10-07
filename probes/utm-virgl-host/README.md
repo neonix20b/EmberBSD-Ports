@@ -85,6 +85,27 @@ and alternate GBM paths are outside the focused contract. Main host bounds
 failure reports `VIRGL_ERROR_CTX_TRANSFER_IOV_BOUNDS` and returns `EINVAL`,
 but that error handling is inspected source, not a compiled runtime check.
 
+## Reported CREATE failure handling
+
+The separate [CREATE source stage](CREATE.md) adds local, AI-assisted patches
+for already reported CREATE failures. Both pinned QEMU CREATE handlers reject
+short bodies and wrapper OOM, publish resources only after renderer success,
+and return an error for any nonzero renderer result. The renderer uses its
+existing destructor to unwind owned partial allocations. Ports owns these
+patches; they have not been submitted or accepted upstream.
+
+Actual-function macOS/arm64 contracts compile baseline RED and patched GREEN
+for publication, response/fence headers, ordinary UNREF and allocator cleanup.
+ASan/UBSan pass; EGL/Metal and GBM paths use modeled external calls. A separate
+existing GLib 2.90.0 allocator check reproduces fatal versus recoverable behavior
+with bounded size-overflow injection. The accepted IOV preparation, source
+identity, hash contract and 23-case test behavior remain unchanged.
+
+This handles reported failures only. Silent backend errors, asynchronous
+completion/reset, full QEMU and host builds, installation, pixel readback and
+acceleration remain unverified. [CREATE.md](CREATE.md) records the seams,
+exact source preparation and remaining gate.
+
 The former 0.10.4 recovery host and the UTM beta installation are unchanged.
 There is no installed host, enabled VirGL, pixel, Mesa runtime, GPU/NPU,
 VM or board validation claim. Parent integration owns publication and the

@@ -1,0 +1,7 @@
+# local-input-name	revision	original-url	sha256
+utm-qemu-6601422-virtio-gpu-virgl.c	6601422e1fff2da1376faafb1e4c2c5cdb2d8003	https://raw.githubusercontent.com/utmapp/qemu/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/hw/display/virtio-gpu-virgl.c	1e965a052c77eb663a6e90e4c815e8a2d38f186f3e130cb1c5acbac04c70dc03
+utm-qemu-6601422-virtio-gpu.h	6601422e1fff2da1376faafb1e4c2c5cdb2d8003	https://raw.githubusercontent.com/utmapp/qemu/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/include/hw/virtio/virtio-gpu.h	7e804deaf4ad4f477aa61300221686982a9c69e8d1c5bd0ef891d0b3739991a2
+utm-qemu-6601422-virtio-gpu.c	6601422e1fff2da1376faafb1e4c2c5cdb2d8003	https://raw.githubusercontent.com/utmapp/qemu/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/hw/display/virtio-gpu.c	c60e4a331567d2d9c2bf9effa74716532771383ba2bc3f086131de558e10df0f
+utm-qemu-6601422-virtio-gpu-base.c	6601422e1fff2da1376faafb1e4c2c5cdb2d8003	https://raw.githubusercontent.com/utmapp/qemu/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/hw/display/virtio-gpu-base.c	3a6160648b5a6d5e67774d382e4452b0389a6af396fcbdf05632b217819d9df6
+utm-qemu-6601422-virtio-gpu-gl.c	6601422e1fff2da1376faafb1e4c2c5cdb2d8003	https://raw.githubusercontent.com/utmapp/qemu/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/hw/display/virtio-gpu-gl.c	c572dbba904ea57885b9142522cd6cee67a9be785aa7da56fec194166c5b74ed
+utm-v5.0.6-qemu.patch	968fef31ee3299224feaf4de1e40e1e5f46369c1	https://raw.githubusercontent.com/utmapp/UTM/968fef31ee3299224feaf4de1e40e1e5f46369c1/patches/qemu-10.0.12-utm.patch	05a46d5e52fd662e8d40bd28d23c0cf702f92cc28a83eca89e9ee14c1646aee7

@@ -40,3 +40,35 @@
 Archives, extracted sources, generated format tables, binaries and complete
 logs belong in a private work directory. They are excluded from this probe's
 tracked export. The [README](README.md) states the causal checks and limitations.
+
+## Local reported CREATE failure stage
+
+[`create-sources.tsv`](create-sources.tsv) pins five original raw QEMU files at
+`6601422e1fff2da1376faafb1e4c2c5cdb2d8003` and the complete UTM overlay at
+`968fef31ee3299224feaf4de1e40e1e5f46369c1`. Their URLs and SHA256 were verified
+on 2026-10-07. Full original Red Hat/Airlie/Hoffmann GPL-2.0-or-later notices
+remain in the private QEMU inputs and extracted function compilation. The
+original QEMU [COPYING](https://github.com/utmapp/qemu/blob/6601422e1fff2da1376faafb1e4c2c5cdb2d8003/COPYING)
+is the license referenced by those notices. These raw files are not a complete
+QEMU checkout. The original UTM overlay remains unchanged, with its authors
+and mail headers; sequential hunk-range checks establish that neither CREATE
+function is modified. Complete overlay application/build is unverified.
+
+Local patches are authored by EmberBSD contributors with Codex AI assistance:
+
+- [`create-qemu-local.patch`](patches/create-qemu-local.patch): report short
+  CREATE/wrapper OOM and reject nonzero renderer status before publication.
+  SHA256 `a1a8bc72138759435fe4f99f96463bf1cf229a0e3f54edbde64767e4037bdcd7`.
+- [`create-renderer-local.patch`](patches/create-renderer-local.patch): use
+  the existing renderer destructor on reported allocator error, after the
+  unchanged accepted IOV backport.
+  SHA256 `3f131d11dd3d5e570c5f57df4d3bb4611e053b2a5cea75ea06e9f6c908e93ef1`.
+
+Neither local patch is submitted or accepted upstream. Original renderer
+MIT notices and Chromium resource-table authorship are preserved. New tests,
+shell and AWK are BSD-2-Clause under `LICENSE.tests`. The complete CREATE-stage
+QEMU file SHA256 is
+`4eb8fc1fc00dc8a159de537a4c9d11e6cc4f2b9c444f7cf4bf235d06b0a3f330`;
+the IOV-plus-CREATE renderer file SHA256 is
+`7bb55e69e483df96d7e14895dab2e0cae6f13d60c8fcd0293169a2942fe421df`.
+[`CREATE.md`](CREATE.md) records preparation, causal checks and limitations.
