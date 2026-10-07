@@ -38,6 +38,13 @@ runtime behavior are validated.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
+- [Robotics and automotive developer tools](probes/robotics-tools/README.md):
+  MCAP C++ 2.1.3, AprilTag 3.4.5, dbcppp 3.2.6, iso14229 0.11.0,
+  Ceres 2.2.0, BehaviorTree.CPP 4.9.0 and libmodbus 3.2.0 source profiles.
+  They provide recording/replay, marker pose, DBC decoding, UDS over ISO-TP,
+  nonlinear fitting, asynchronous behavior trees and Modbus TCP/RTU.
+  All seven pass 19 installed application cases in an AArch64 VM, including
+  error paths. Physical camera, CAN/RS-485, ECU and PLC workflows are unverified.
 - [Media and OpenCV videoio](probes/media/README.md): FFmpeg 9.0.2,
   GStreamer 1.28.7 and OpenCV 5.0.0 pass installed file/video pipeline checks
   on AArch64, including both videoio backends, timestamps, seeking, lossless

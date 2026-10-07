@@ -1,0 +1,4 @@
+BehaviorTree.CPP-4.9.0.tar.gz 74a22cf46d7cd423d7065616528cfd68bcd925b3fc2b819a99413cdd3334c02a https://github.com/BehaviorTree/BehaviorTree.CPP/archive/refs/tags/4.9.0.tar.gz
+flatbuffers-24.3.25-LICENSE.txt cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30 https://raw.githubusercontent.com/google/flatbuffers/v24.3.25/LICENSE
+boost-1.91.0-LICENSE.txt c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566 https://raw.githubusercontent.com/boostorg/boost/boost-1.91.0/LICENSE_1_0.txt
+nlohmann-json-3.11.3-LICENSE.txt 86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14 https://raw.githubusercontent.com/nlohmann/json/v3.11.3/LICENSE.MIT

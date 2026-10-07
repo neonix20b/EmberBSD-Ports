@@ -1,0 +1,28 @@
+--- a/include/dbcppp/Network.h
++++ b/include/dbcppp/Network.h
+@@ -39,7 +39,7 @@
+             , std::string&& comment);
+         static std::map<std::string, std::unique_ptr<INetwork>> LoadNetworkFromFile(const std::filesystem::path& filename);
+         static std::unique_ptr<INetwork> LoadDBCFromIs(std::istream& is);
+-        static std::map<std::string, std::unique_ptr<INetwork>> LoadKCDFromIs(std::istream& is);
++        // KCD is outside the EmberBSD DBC-only source probe.
+         
+         virtual std::unique_ptr<INetwork> Clone() const = 0;
+ 
+--- a/src/libdbcppp/NetworkImpl.cpp
++++ b/src/libdbcppp/NetworkImpl.cpp
+@@ -1,3 +1,4 @@
++#include <stdexcept>
+ #include <fstream>
+ #include <iomanip>
+ #include "../../include/dbcppp/Network.h"
+@@ -341,7 +342,7 @@
+     }
+     else if (filename.extension() == ".kcd")
+     {
+-        result = LoadKCDFromIs(is);
++        throw std::runtime_error("KCD is unavailable in the EmberBSD DBC-only probe");
+     }
+     return std::move(result);
+ }
+\ No newline at end of file

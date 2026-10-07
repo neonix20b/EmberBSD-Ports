@@ -1,0 +1,45 @@
+--- a/common/string_util.h
++++ b/common/string_util.h
+@@ -124,9 +124,9 @@ static inline bool strcaseeq(const char *str1, const char* str2)
+     for (i = 0 ; str1[i] != '\0' ; i++) {
+         if (str1[i] == str2[i])
+             continue;
+-        else if (islower(str1[i]) && (str1[i] - 32) == str2[i])
++        else if (islower((unsigned char)str1[i]) && (str1[i] - 32) == str2[i])
+             continue;
+-        else if (isupper(str1[i]) && (str1[i] + 32) == str2[i])
++        else if (isupper((unsigned char)str1[i]) && (str1[i] + 32) == str2[i])
+             continue;
+ 
+         return false;
+--- a/common/string_util.c
++++ b/common/string_util.c
+@@ -234,7 +234,7 @@ char *str_lstrip(char *str)
+ 
+     char *ptr = str;
+     char *end = str + strlen(str);
+-    for(; ptr != end && isspace(*ptr); ptr++);
++    for(; ptr != end && isspace((unsigned char)*ptr); ptr++);
+     // shift the string to the left so the original pointer still works
+     memmove(str, ptr, strlen(ptr)+1);
+     return str;
+@@ -245,7 +245,7 @@ char *str_rstrip(char *str)
+     assert(str != NULL);
+ 
+     char *ptr = str + strlen(str) - 1;
+-    for(; ptr+1 != str && isspace(*ptr); ptr--);
++    for(; ptr+1 != str && isspace((unsigned char)*ptr); ptr--);
+     *(ptr+1) = '\0';
+     return str;
+ }
+--- a/common/getopt.c
++++ b/common/getopt.c
+@@ -257,7 +257,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
+ 
+                 if (goo==NULL) {
+                     // is the argument a numerical literal that happens to be negative?
+-                    if (pos==1 && isdigit(tok[pos])) {
++                    if (pos==1 && isdigit((unsigned char)tok[pos])) {
+                         zarray_add(gopt->extraargs, &tok);
+                         tok = NULL;
+                         break;
