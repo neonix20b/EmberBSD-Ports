@@ -15,6 +15,10 @@ changing GCC recipes or bootstrap options. LLVM family builds request
 GCC16 and prepare scoped native Clang defaults. The default
 export and `development-toolchain` mode retain their previous behavior.
 
+The [common graphics profile](../common-graphics/README.md) composes these
+tools with canonical MesaLib/libdrm source recipes. It does not change this
+profile's exported package set or establish an installed graphics stack.
+
 ## Prepare and select
 
 ```sh

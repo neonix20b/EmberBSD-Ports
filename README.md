@@ -35,6 +35,12 @@ runtime behavior are validated.
   checks cover Python, LLVM family selection and real GCC16 config metadata;
   native LLVM23/compiler-family checks, packages,
   installed extensions, ELF consumers and LLVM23/Mesa26 acceptance remain pending.
+- [Common graphics source packages](profiles/common-graphics/README.md):
+  canonical MesaLib 26.2.4 and adapted libdrm 2.4.134nb1 compose the common
+  GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.
+  Source, export and dependency-selection checks cover X11/Wayland,
+  EGL/GBM and classic VirGL/softpipe/llvmpipe. Native package contents,
+  consumer migration and renderer runtime remain unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.

@@ -20,6 +20,12 @@ The current source recipe and narrow portability regressions are prepared;
 **complete Mesa 26 build and renderer runtime remain pending** on the common
 toolchain. Configuration does not establish a validated graphics stack.
 
+The [common graphics package profile](../../profiles/common-graphics/README.md)
+now owns canonical MesaLib/libdrm recipes for the final `/usr/pkg` transition.
+It preserves this probe's accepted source patches and adds package/dependency
+selection. Its source-derived package contents still require native validation;
+this private probe remains the owner of the focused source regressions.
+
 The [Mesa patch inventory](mesa-patches.md) explains all retained, replaced
 and removed adaptations, including original pkgsrc identifiers. Non-Mesa
 patches retain their imports from
