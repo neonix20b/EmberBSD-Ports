@@ -2,10 +2,15 @@
 
 This profile prepares one common Python 3.14.8, Meson 1.12.1 and matching
 LLVM/Clang/LLD 23.1.2 with upstream lit for the
-GCC 16 / LLVM 23 / Mesa 26 dependency closure. Source preparation and host
-contracts and focused native macro/selection checks pass. Native packages,
-package-file checks, installed
-extensions and consumers remain pending. This is not an installed Mesa stack.
+GCC 16 / LLVM 23 / Mesa 26 dependency closure. Source preparation, host
+contracts and focused native macro/selection checks pass. Complete Python,
+Meson and LLVM packages, installed extensions and consumers remain pending.
+This is not an installed Mesa stack.
+
+The [macOS cross-package path](cross/README.md) uses GCC16 and ordinary pkgsrc
+packaging. Pkgconf 3.0.7, GNU M4 1.4.21 and Libtool 2.6.2 pass package checks
+and [installed AArch64 VM acceptance](cross/validation.md). Cross package
+metadata, alternate-root updates and target script paths have regressions.
 
 The profile owns full Python, Meson and
 [LLVM family recipes](llvm-family.md), based on
@@ -21,8 +26,9 @@ tools with canonical MesaLib/libdrm source recipes. It does not change this
 profile's exported package set or establish an installed graphics stack.
 
 This MAKECONF selects an installed native target compiler. For compilation
-on macOS, use the separate [GCC16 cross recipe](../development-toolchain/cross/README.md).
-Its build-host support is independent of this native pkgsrc selection policy.
+on macOS, use the [cross-package configuration](cross/README.md) with the
+[GCC16 cross recipe](../development-toolchain/cross/README.md). Its host tools
+and target sysroot are separate from this native pkgsrc selection policy.
 
 ## Prepare and select
 

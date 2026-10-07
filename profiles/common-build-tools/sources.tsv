@@ -2,3 +2,6 @@
 Python-3.14.8.tar.xz	c2215904f02b175596dc49351585104f4bc20341e1c47378b26a2c274360ce73	https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz
 meson-1.12.1.tar.gz	ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743	https://github.com/mesonbuild/meson/releases/download/1.12.1/meson-1.12.1.tar.gz
 llvm-project-23.1.2.src.tar.xz	c98bbef08a2b4c2613cd50e9aa9ae7b69b1fe6c16b2c40373bc0ab6116fdf78a	https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.2/llvm-project-23.1.2.src.tar.xz
+pkgconf-3.0.7.tar.xz	028889796fd6d556e019d35b8e8d68d321cbb5cf9827d3ea7653625629641345	https://distfiles.dereferenced.org/pkgconf/pkgconf-3.0.7.tar.xz
+libtool-2.6.2.tar.xz	2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e	https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz
+m4-1.4.21.tar.gz	38ae59f7a30bf9c108193cc5c25fbb06014f21e230c7ede2eff614f7b7c37ed8	https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.gz

@@ -1,0 +1,467 @@
+Origin: EmberBSD (AI-assisted), not submitted upstream.
+Repair cross-host platform selection and collect direct ELF requirements
+from the target sysroot instead of invoking the build host loader.
+Native dependency selection and native ldd metadata remain unchanged.
+
+--- a/mk/platform/NetBSD.mk
++++ b/mk/platform/NetBSD.mk
+@@ -235,7 +235,7 @@
+ # by default.)
+ _OPSYS_LDEMUL.i386=		elf_i386
+ 
+-.if ${MACHINE_ARCH} != ${HOST_MACHINE_ARCH} && \
++.if "${MACHINE_ARCH}" != "${HOST_MACHINE_ARCH:U}" && \
+     defined(_OPSYS_LDEMUL.${MACHINE_ARCH})
+ _WRAP_EXTRA_ARGS.LD+=	-m ${_OPSYS_LDEMUL.${MACHINE_ARCH}}
+ CWRAPPERS_APPEND.ld+=	-m ${_OPSYS_LDEMUL.${MACHINE_ARCH}}
+--- a/mk/pkgformat/pkg/depends.mk
++++ b/mk/pkgformat/pkg/depends.mk
+@@ -90,6 +90,13 @@
+ 
+ CROSSTARGETSETTINGS=	${CROSSVARS:@_v_@TARGET_${_v_}=${${_v_}}@}
+ 
++# Recompute target-derived platform values when a dependency switches to
++# native host tools. Preserve the cached NATIVE_* values and user settings.
++_DEPENDS_MAKEFLAGS=	${MAKEFLAGS}
++.if ${TOOLS_USE_CROSS_COMPILE:Uno:tl} == "yes"
++_DEPENDS_MAKEFLAGS=	${MAKEFLAGS:NOPSYS=*:NOS_VERSION=*:NOPSYS_VERSION=*:NLOWER_OPSYS=*}
++.endif
++
+ # _DEPENDS_INSTALL_CMD checks whether the package $pattern is installed,
+ #	and installs it if necessary.
+ #
+@@ -142,7 +149,7 @@
+ 			PKGNAME_REQD="$$pattern"			\
+ 			USE_CROSS_COMPILE=$$cross			\
+ 			$$crosstargetsettings				\
+-		    ${MAKE} ${MAKEFLAGS} _AUTOMATIC=yes $$target;	\
++		    ${MAKE} ${_DEPENDS_MAKEFLAGS} _AUTOMATIC=yes $$target;	\
+ 		case $$type in						\
+ 		bootstrap|tool)						\
+ 			pkg=`${_HOST_PKG_BEST_EXISTS} "$$pattern" || ${TRUE}`;; \
+@@ -234,12 +241,12 @@
+ 	${PKGSRC_SETENV} ${PKGSRC_MAKE_ENV} PATH=${_PATH_ORIG:Q} \
+ 	    _PKGSRC_DEPS="$$extradep${_PKGSRC_DEPS}" \
+ 	    USE_CROSS_COMPILE=no \
+-	    ${MAKE} ${MAKEFLAGS} _AUTOMATIC=yes clean && \
++	    ${MAKE} ${_DEPENDS_MAKEFLAGS} _AUTOMATIC=yes clean && \
+ 	cd ../../pkgtools/pkg_install && \
+ 	${PKGSRC_SETENV} ${PKGSRC_MAKE_ENV} PATH=${_PATH_ORIG:Q} \
+ 	    _PKGSRC_DEPS="$$extradep${_PKGSRC_DEPS}" \
+ 	    USE_CROSS_COMPILE=no \
+-	    ${MAKE} ${MAKEFLAGS} _AUTOMATIC=yes ${DEPENDS_TARGET:Q}; \
++	    ${MAKE} ${_DEPENDS_MAKEFLAGS} _AUTOMATIC=yes ${DEPENDS_TARGET:Q}; \
+ 	fi
+ 
+ ######################################################################
+--- a/mk/check/check-shlibs-elf.awk
++++ b/mk/check/check-shlibs-elf.awk
+@@ -104,9 +104,84 @@
+ 	close(depends_file)
+ }
+ 
+-function checkshlib(DSO, needed, rpath, found, dso_rpath, got_rpath, nrpath) {
++# Resolve staged aliases in the target namespace, including directory links.
++# Never follow an absolute target link into the build host's filesystem.
++function target_path(file,    path, rest, part, nextpath, candidate, cmd, line, link, status, links) {
++	if (destdir == "" || index(file, destdir "/") != 1)
++		return file
++	rest = substr(file, length(destdir) + 2)
++	path = ""
++	links = 0
++	while (rest != "") {
++		part = rest
++		sub(/\/.*/, "", part)
++		if (rest == part) rest = ""
++		else rest = substr(rest, length(part) + 2)
++		if (part == "" || part == ".") continue
++		if (part == "..") { sub(/\/[^\/]*$/, "", path); continue }
++		nextpath = path "/" part
++		candidate = destdir nextpath
++		if (system("test -e " shquote(candidate) " || test -L " shquote(candidate)) != 0)
++			candidate = cross_destdir nextpath
++		if (system("test -L " shquote(candidate)) == 0) {
++			if (++links > 40) return ""
++			cmd = "readlink " shquote(candidate) " 2>/dev/null; printf '\nEMBER_LINK_STATUS=%s\n' \"$?\""
++			link = ""
++			status = -1
++			while ((cmd | getline line) > 0) {
++				if (line ~ /^EMBER_LINK_STATUS=[0-9]+$/)
++					status = substr(line, 19) + 0
++				else if (line != "")
++					link = line
++			}
++			close(cmd)
++			if (status != 0 || link == "") return ""
++			if (substr(link, 1, 1) == "/") path = ""
++			rest = link (rest == "" ? "" : "/" rest)
++		} else {
++			path = nextpath
++		}
++	}
++	return candidate
++}
++
++function checkshlib(DSO, needed, rpath, found, dso_rpath, got_rpath, nrpath, header, status, line, file) {
++	# Native checks retain their historical handling of non-ELF input.
++	# Metadata must distinguish scripts from broken ELF or a failed tool.
++	if (requires_file != "") {
++		file = target_path(DSO)
++		if (file == "") {
++			print DSO ": cannot resolve target path"
++			return
++		}
++		DSO = file
++		cmd = "od -An -tx1 -N4 " shquote(DSO) " 2>/dev/null; printf '\nEMBER_OD_STATUS=%s\n' \"$?\""
++		header = ""
++		status = -1
++		while ((cmd | getline line) > 0) {
++			if (line ~ /^EMBER_OD_STATUS=[0-9]+$/)
++				status = substr(line, 17) + 0
++			else
++				header = header line
++		}
++		close(cmd)
++		if (status != 0) {
++			print DSO ": cannot read ELF header"
++			return
++		}
++		gsub(/[[:space:]]/, "", header)
++		if (header != "7f454c46")
++			return
++	}
+ 	cmd = readelf " -Wd " shquote(DSO) " 2> /dev/null"
++	status = -1
++	if (requires_file != "")
++		cmd = cmd "; printf '\nEMBER_READELF_STATUS=%s\n' \"$?\""
+ 	while ((cmd | getline) > 0) {
++		if (requires_file != "" && $0 ~ /^EMBER_READELF_STATUS=[0-9]+$/) {
++			status = substr($0, 22) + 0
++			continue
++		}
+ 		if ($2 == "(RPATH)" || $2 == "(RUNPATH)") {
+ 			sub("^[[:space:]]*0[xX][[:xdigit:]]+[[:space:]]+\\(RU?N?PATH\\)[[:space:]]+Library ru?n?path: \\[", "")
+ 			dso_rpath = substr($0, 1, length($0) - 1)
+@@ -124,6 +199,10 @@
+ 	if (!got_rpath)
+ 		nrpath = split(system_rpath, rpath, ":")
+ 	close(cmd)
++	if (requires_file != "" && status != 0) {
++		print DSO ": readelf failed"
++		return
++	}
+ 	for (p in rpath) {
+ 		if (rpath[p] == wrkdir ||
+ 		    substr(rpath[p], 1, length(wrkdir) + 1) == wrkdir "/") {
+@@ -164,6 +243,8 @@
+ 				break
+ 			}
+ 		}
++		if (found && requires_file != "")
++			print rpath[p] "/" lib >> requires_file
+ 		if (found == 0)
+ 			print DSO ": missing library: " lib;
+ 	}
+@@ -181,6 +262,7 @@
+ 	toxic = ENVIRON["CHECK_SHLIBS_TOXIC"]
+ 	pkg_info_cmd = ENVIRON["PKG_INFO_CMD"]
+ 	depends_file = ENVIRON["DEPENDS_FILE"]
++	requires_file = ENVIRON["REQUIRES_FILE"]
+ 	if (readelf == "")
+ 		readelf = "readelf"
+ }
+--- a/mk/pkgformat/pkg/metadata.mk
++++ b/mk/pkgformat/pkg/metadata.mk
+@@ -78,7 +78,30 @@
+ 	ELF)								\
+ 		libs=`${AWK} '/\/lib.*\.so(\.[0-9]+)*$$/ { print "${DESTDIR}${PREFIX}/" $$0 } END { exit 0 }' ${_PLIST_NOKEYWORDS}`; \
+ 		if ${TEST} -n "$$bins" -o -n "$$libs"; then		\
++			if ${TEST} ${USE_CROSS_COMPILE:Uno:tl:Q} = yes; then \
++				: > ${WRKDIR}/.elf-requires; \
++				for elf in $$bins $$libs; do \
++					file=$${elf#${DESTDIR}${PREFIX}/}; \
++					case "$$file" in \
++					${CHECK_SHLIBS_SKIP:@p@${p}) continue ;;@} \
++					*) ;; \
++					esac; \
++					${ECHO} "$$elf"; \
++				done | \
++				${PKGSRC_SETENV} REQUIRES_FILE=${WRKDIR}/.elf-requires \
++				    PLATFORM_RPATH=${_OPSYS_SYSTEM_RPATH:Q} \
++				    CROSS_DESTDIR=${_CROSS_DESTDIR:Q} DESTDIR=${DESTDIR:Q} \
++				    WRKDIR=${WRKDIR:Q} READELF=${TOOLS_PATH.readelf:Q} \
++				    PKG_INFO_CMD=${PKG_INFO:Q} DEPENDS_FILE=${_RRDEPENDS_FILE:Q} \
++				    ${AWK} -f ${PKGSRCDIR}/mk/check/check-shlibs-elf.awk \
++				    > ${WRKDIR}/.elf-requires-errors || exit 1; \
++				if ${TEST} -s ${WRKDIR}/.elf-requires-errors; then \
++					${CAT} ${WRKDIR}/.elf-requires-errors; exit 1; \
++				fi; \
++				requires=`${SORT} -u ${WRKDIR}/.elf-requires`; \
++			else \
+ 			requires=`(${PKGSRC_SETENV} ${LDD_ENV:U} $$ldd $$bins $$libs 2>/dev/null || ${TRUE}) | ${AWK} '$$2 == "=>" && $$3 ~ "/" { while (gsub(/\/\.\//, "/", $$3)) {}; print $$3 }' | ${SORT} -u`; \
++			fi; \
+ 		fi;							\
+ 		linklibs=`${AWK} '/.*\.so(\.[0-9]+)*$$/ { print "${DESTDIR}${PREFIX}/" $$0 }' ${_PLIST_NOKEYWORDS}`; \
+ 		for i in $$linklibs; do					\
+--- a/mk/tools/replace.mk
++++ b/mk/tools/replace.mk
+@@ -140,7 +140,12 @@
+ _TOOLS_DEPMETHOD.${_t_:C/:.*//}=	TOOL_DEPENDS
+ .endfor
+ .for _t_ in ${USE_TOOLS:M*\:run}
+-.  if ${USE_CROSS_COMPILE:tl} == "yes" && ${OPSYS} != ${NATIVE_OPSYS}
++# install-info is never executed during the build: its wrapper is a no-op.
++# Permit the verified NetBSD base path in target package scripts only.
++.  if ${USE_CROSS_COMPILE:tl} == "yes" && ${OPSYS} != ${NATIVE_OPSYS} && \
++      !(${_t_} == "install-info:run" && ${OPSYS} == "NetBSD" && \
++        exists(${CROSS_DESTDIR}/usr/bin/install-info) && \
++        ${TOOLS_PLATFORM.install-info:U} == "/usr/bin/install-info")
+ PKG_FAIL_REASON+=	"USE_TOOLS+=${_t_} not supported in cross-compilation"
+ .  endif
+ _TOOLS_DEPMETHOD.${_t_:C/:.*//}=	DEPENDS
+--- a/mk/pkgformat/pkg/package.mk
++++ b/mk/pkgformat/pkg/package.mk
+@@ -148,10 +148,7 @@
+ 	@${PHASE_MSG} "Installing binary package of "${PKGNAME:Q}
+ .if !empty(USE_CROSS_COMPILE:M[yY][eE][sS])
+ 	@${MKDIR} ${_CROSS_DESTDIR}${PREFIX}
+-	${SETENV} ${PKGTOOLS_ENV} ${PKG_ADD} -m ${OPSYS:Q}/${MACHINE_ARCH:Q}\ ${OS_VERSION:Q} -I -p ${_CROSS_DESTDIR}${PREFIX} ${STAGE_PKGFILE}
+-	@${ECHO} "Fixing recorded cwd..."
+-	@${SED} -e 's|@cwd ${_CROSS_DESTDIR}|@cwd |' ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS > ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS.tmp
+-	@${MV} ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS.tmp ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS
++	${SETENV} ${PKGTOOLS_ENV} ${PKG_ADD} -m ${OPSYS:Q}/${MACHINE_ARCH:Q}\ ${OS_VERSION:Q} -I -K ${PKG_DBDIR:Q} -P ${_CROSS_DESTDIR:Q} -p ${PREFIX:Q} ${STAGE_PKGFILE}
+ .else
+ 	${RUN} case ${_AUTOMATIC:Q}"" in					\
+ 	[yY][eE][sS])								\
+--- a/mk/pkgformat/pkg/replace.mk
++++ b/mk/pkgformat/pkg/replace.mk
+@@ -197,10 +197,7 @@
+ 	@${PHASE_MSG} "Updating using binary package of "${PKGNAME:Q}
+ .if !empty(USE_CROSS_COMPILE:M[yY][eE][sS])
+ 	@${MKDIR} ${_CROSS_DESTDIR}${PREFIX}
+-	${SETENV} ${PKGTOOLS_ENV} ${PKG_ADD} -U -D -m ${OPSYS:Q}/${MACHINE_ARCH:Q}\ ${OS_VERSION:Q} -I -p ${_CROSS_DESTDIR}${PREFIX} ${STAGE_PKGFILE}
+-	@${ECHO} "Fixing recorded cwd..."
+-	@${SED} -e 's|@cwd ${_CROSS_DESTDIR}|@cwd |' ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS > ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS.tmp
+-	@${MV} ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS.tmp ${_PKG_DBDIR}/${PKGNAME:Q}/+CONTENTS
++	${SETENV} ${PKGTOOLS_ENV} ${PKG_ADD} -U -D -m ${OPSYS:Q}/${MACHINE_ARCH:Q}\ ${OS_VERSION:Q} -I -K ${PKG_DBDIR:Q} -P ${_CROSS_DESTDIR:Q} -p ${PREFIX:Q} ${STAGE_PKGFILE}
+ .else
+ 	${SETENV} ${PKGTOOLS_ENV} ${PKG_ADD} -U -D ${STAGE_PKGFILE}
+ .endif
+--- a/mk/pkginstall/bsd.pkginstall.mk
++++ b/mk/pkginstall/bsd.pkginstall.mk
+@@ -1092,7 +1092,20 @@
+ FILES_SUBST+=		USERADD=${USERADD:Q}
+ FILES_SUBST+=		XARGS=${XARGS:Q}
+ 
+-FILES_SUBST_SED=	${FILES_SUBST:S/=/@!/:S/$/!g/:S/^/ -e s!@/}
++# Package and rc.d scripts execute on the target, not under host bootstrap tools.
++.if ${USE_CROSS_COMPILE:Uno:tl} == "yes" && ${OPSYS} == "NetBSD"
++_CROSS_FILES_SUBST= AWK=/usr/bin/awk SH=/bin/sh SED=/usr/bin/sed \
++	CHOWN=/usr/sbin/chown CHGRP=/usr/bin/chgrp \
++	PKG_ADMIN=/usr/sbin/pkg_admin PKG_INFO=/usr/sbin/pkg_info \
++	LINKFARM=/usr/sbin/linkfarm PERL5=${PREFIX}/bin/perl \
++	GROUPADD=/usr/sbin/groupadd USERADD=/usr/sbin/useradd \
++	RCD_SCRIPTS_SHELL=/bin/sh
++.else
++_CROSS_FILES_SUBST=
++.endif
++
++_TARGET_FILES_SUBST=	${_CROSS_FILES_SUBST} ${FILES_SUBST}
++FILES_SUBST_SED=	${_TARGET_FILES_SUBST:S/=/@!/:S/$/!g/:S/^/ -e s!@/}
+ 
+ PKG_REFCOUNT_DBDIR?=	${PKG_DBDIR}.refcount
+ 
+--- a/pkgtools/pkg_install/files/add/perform.c
++++ b/pkgtools/pkg_install/files/add/perform.c
+@@ -759,13 +759,15 @@
+ 			break;
+ 
+ 		case PLIST_PKGDIR:
+-			fullpath = xasprintf("%s/%s", pkg->prefix, p->name);
++			fullpath = xasprintf("%s/%s", pkg->install_prefix, p->name);
+ 			mkdir_p(fullpath);
+ 			free(fullpath);
+ 			add_pkgdir(pkg->pkgname, pkg->prefix, p->name);
+ 			continue;
+ 
+ 		case PLIST_CMD:
++			if (Destdir != NULL && NoInstall)
++				continue;
+ 			if (format_cmd(cmd, sizeof(cmd), p->name, pkg->prefix, last_file))
+ 				return -1;
+ 			printf("Executing '%s'\n", cmd);
+@@ -1313,6 +1315,8 @@
+ start_replacing(struct pkg_task *pkg)
+ {
+ 	int result = -1;
++	const char *delete_dbdir = config_pkg_dbdir;
++	const char *skip_scripts = Destdir != NULL && NoInstall ? "-D" : "";
+ 
+ 	if (preserve_meta_data_file(pkg, REQUIRED_BY_FNAME))
+ 		return -1;
+@@ -1325,19 +1329,21 @@
+ 		return -1;
+ 
+ 	if (Verbose || Fake) {
+-		printf("%s/pkg_delete -K %s -p %s%s%s '%s'\n",
+-			BINDIR, pkgdb_get_dir(), pkg->prefix,
++		printf("%s/pkg_delete %s -K %s -p %s%s%s '%s'\n",
++			BINDIR, skip_scripts, delete_dbdir, pkg->prefix,
+ 			Destdir ? " -P ": "", Destdir ? Destdir : "",
+ 			pkg->other_version);
+ 	}
+ 	if (!Fake) {
+-		result = fexec_skipempty(BINDIR "/pkg_delete", "-K", pkgdb_get_dir(),
++		/* pkg_delete adds Destdir itself; never pass the expanded database. */
++		result = fexec_skipempty(BINDIR "/pkg_delete", skip_scripts,
++		    "-K", delete_dbdir,
+ 		    "-p", pkg->prefix,
+ 		    Destdir ? "-P": "", Destdir ? Destdir : "",
+ 		    pkg->other_version, NULL);
+ 		if (result != 0) {
+-			warnx("command failed: %s/pkg_delete -K %s -p %s %s%s%s",
+-			      BINDIR, pkgdb_get_dir(), pkg->prefix, Destdir ? "-P" : " ",
++			warnx("command failed: %s/pkg_delete %s -K %s -p %s %s%s%s",
++			      BINDIR, skip_scripts, delete_dbdir, pkg->prefix, Destdir ? "-P" : " ",
+ 			      Destdir ? Destdir : "", pkg->other_version);
+ 		}
+ 	}
+@@ -1665,6 +1671,8 @@
+ 			    pkg->pkgname, pkg->other_version, pkg->pkgname);
+ 			warnx("Remember to run pkg_admin rebuild-tree after fixing this.");
+ 		}
++		if (Destdir != NULL && NoInstall)
++			delete_plist(&pkg->plist, TRUE, PLIST_UNEXEC, NULL);
+ 		delete_package(FALSE, &pkg->plist, FALSE, Destdir);
+ 	}
+ 
+--- a/pkgtools/pkg_install/Makefile
++++ b/pkgtools/pkg_install/Makefile
+@@ -7,6 +7,7 @@
+ # change in the pkg_* tools that pkgsrc relies on for proper operation.
+ 
+ PKGNAME=		pkg_install-${VERSION}
++PKGREVISION=		1
+ CATEGORIES=		pkgtools
+ 
+ MAINTAINER=		agc@NetBSD.org
+--- a/pkgtools/pkg_install/files/lib/plist.c
++++ b/pkgtools/pkg_install/files/lib/plist.c
+@@ -71,7 +71,7 @@
+ #include <md5.h>
+ #endif
+ 
+-static int     delete_with_parents(const char *, Boolean, Boolean);
++static int     delete_with_parents(const char *, Boolean, Boolean, const char *);
+ 
+ /* This struct defines a plist command type */
+ typedef struct cmd_t {
+@@ -569,7 +569,7 @@
+ 			} else if (!isdir(tmp)) {
+ 				warnx("attempting to delete a file `%s' as a directory\n"
+ 				    "this packing list is incorrect - ignoring delete request", tmp);
+-			} else if (delete_with_parents(tmp, ign_err, TRUE))
++			} else if (delete_with_parents(tmp, ign_err, TRUE, destdir))
+ 				fail = FAIL;
+ 			break;
+ 
+@@ -594,6 +594,18 @@
+ 			    destdir ? destdir : "", destdir ? "/" : "",
+ 			    prefix, p->name);
+ 			if (isdir(tmp)) {
++				const char *owner;
++				char key[MaxPathSize];
++
++				/* A failed extraction may have registered this path. */
++				(void) snprintf(key, sizeof(key), "%s/%s",
++				    prefix, p->name);
++				owner = pkgdb_retrieve(key);
++				if (!Fake && owner != NULL && strcmp(owner, name) == 0) {
++					errno = 0;
++					if (pkgdb_remove(key) && errno)
++						perror("pkgdb_remove");
++				}
+ 				warnx("attempting to delete directory `%s' as a file\n"
+ 				    "this packing list is incorrect - ignoring delete request", tmp);
+ 			} else {
+@@ -655,7 +667,7 @@
+ 				if (Verbose && !NoDeleteFiles)
+ 					printf("Delete file %s\n", tmp);
+ 				if (!Fake && !NoDeleteFiles) {
+-					if (delete_with_parents(tmp, ign_err, FALSE))
++					if (delete_with_parents(tmp, ign_err, FALSE, destdir))
+ 						fail = FAIL;
+ 					if (preserve && name) {
+ 						char    tmp2[MaxPathSize];
+@@ -675,6 +687,9 @@
+ pkgdb_cleanup:
+ 				if (!Fake) {
+ 					if (!restored) {
++						/* Database keys are target paths, without destdir. */
++						(void) snprintf(tmp, sizeof(tmp), "%s/%s",
++						    prefix, p->name);
+ 						errno = 0;
+ 						if (pkgdb_remove(tmp) && errno)
+ 							perror("pkgdb_remove");
+@@ -695,9 +710,11 @@
+  * Returns 1 on error, 0 else.
+  */
+ static int
+-delete_with_parents(const char *fname, Boolean ign_err, Boolean ign_nonempty)
++delete_with_parents(const char *fname, Boolean ign_err, Boolean ign_nonempty,
++    const char *destdir)
+ {
+ 	char   *cp, *cp2;
++	size_t rootlen = destdir != NULL ? strlen(destdir) + 1 : 0;
+ 
+ 	if (remove(fname)) {
+ 		if (!ign_err && (!ign_nonempty || errno != ENOTEMPTY))
+@@ -708,9 +725,11 @@
+ 	while (*cp) {
+ 		if ((cp2 = strrchr(cp, '/')) != NULL)
+ 			*cp2 = '\0';
++		if (rootlen != 0 && strlen(cp) <= rootlen)
++			break;
+ 		if (!isemptydir(cp))
+ 			break;
+-		if (has_pkgdir(cp))
++		if (has_pkgdir(cp + rootlen))
+ 			break;
+ 		if (rmdir(cp))
+ 			break;
+--- a/pkgtools/pkg_install/files/delete/pkg_delete.c
++++ b/pkgtools/pkg_install/files/delete/pkg_delete.c
+@@ -577,6 +577,8 @@
+ 	}
+ 
+ 	late_error = 0;
++	if (destdir != NULL && no_deinstall)
++		delete_plist(&plist, TRUE, PLIST_UNEXEC, NULL);
+ 
+ 	if (Fake)
+ 		printf("Attempting to delete package `%s'\n", pkg);
+--- a/pkgtools/pkg_install/files/add/pkg_add.1
++++ b/pkgtools/pkg_install/files/add/pkg_add.1
+@@ -137,6 +137,10 @@
+ Display help and exit.
+ .It Fl I
+ If an installation script exists for a given package, do not execute it.
++Together with
++.Fl P ,
++also skip packing-list commands and replacement deinstallation scripts.
++This permits installing foreign-target packages without executing their programs.
+ .It Fl K Ar pkg_dbdir
+ Override the value of the
+ .Dv PKG_DBDIR
+--- a/pkgtools/pkg_install/files/delete/pkg_delete.1
++++ b/pkgtools/pkg_install/files/delete/pkg_delete.1
+@@ -108,6 +108,9 @@
+ flag.
+ .It Fl D
+ If a deinstallation script exists for a given package, do not execute it.
++Together with
++.Fl P ,
++also skip packing-list unexec commands.
+ .It Fl F
+ Any
+ .Ar pkg-name
