@@ -1,7 +1,8 @@
 # GCC16 cross compiler for AArch64 EmberBSD
 
-Build GCC 16.2.0 on the development host and execute the resulting programs
-on EmberBSD. The tested host is Apple Silicon macOS. There is no NetBSD-host
+Cross-compilation is the preferred build path: build GCC 16.2.0 on the
+development host and execute the resulting programs on EmberBSD. The tested
+host is Apple Silicon macOS. There is no NetBSD-host
 check in the compiler build or compile-only acceptance scripts. The separate
 target runner requires AArch64 NetBSD because it executes target ELF files.
 
@@ -35,7 +36,9 @@ Provide these absolute paths without whitespace:
    and rebuilding this prerequisite closure remains separate work.
 5. A new work directory with room for sources, objects and the compiler.
 
-The compiler and linker must run on the build host. The sysroot libraries
+Use native compilation only for stages whose missing cross support is
+identified explicitly; port those stages through Ports. The compiler and
+linker must run on the build host. The sysroot libraries
 and startup objects must belong to the target. Equal CPU architecture does
 not make Darwin and NetBSD executables interchangeable.
 

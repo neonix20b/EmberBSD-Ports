@@ -31,6 +31,12 @@ probe or recipe documentation before making changes.
 - Keep experimental probes separate from validated package recipes.
   Preserve error exit statuses and do not replace missing system
   behavior with silent stubs.
+- Prefer cross-compilation on the development host, with execution and
+  acceptance on the target VM or board. Use the GCC16 cross recipe where
+  applicable. Keep build-host tools separate from target headers and runtime.
+  A profile selecting an installed native compiler is not a project-wide
+  NetBSD-host requirement. If a stage still needs native compilation, record
+  the concrete missing cross support and fix it through Ports.
 - New project-owned helpers use shell or an appropriate compiled
   language, not Python. Document upstream Python dependencies honestly.
 - Select checks that address the change. A successful configuration or
