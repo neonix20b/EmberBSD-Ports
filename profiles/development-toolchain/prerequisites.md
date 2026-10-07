@@ -1,11 +1,53 @@
 # Current compiler prerequisites
 
-The GCC profile updates MPC/Texinfo recipes using
+The GCC profile updates MPFR/MPC/Texinfo recipes using
 `patches/current-prerequisites.patch` and the test harness using
 `patches/stable-expect.patch`. These are AI-assisted EmberBSD deltas,
 not submitted upstream. Versions are selected from upstream releases, not
 from the age of the pkgsrc recipe. Full archive SHA256 values are in
 `sources.tsv`; BLAKE2s, SHA512 and byte counts are in the resulting distinfo.
+
+## MPFR 4.2.2
+
+[Upstream current release](https://www.mpfr.org/mpfr-current/) identifies
+4.2.2, released 2025-03-20. NetBSD/pkgsrc's `math/mpfr` still selects 4.2.1
+at inspected trunk revision `1d0b4bfd1560971538e8ab1f3cb4648c43960c32`.
+The local update preserves the original NetBSD recipe identifiers, LGPLv3
+license, GMP >=5.0 dependency, test target and PLIST. It uses upstream's
+original `.tar.bz2` archive and HTTPS; copies from mpfr.org and ftp.gnu.org
+were byte-identical. The detached upstream signature is preserved privately;
+OpenPGP verification was not performed because the host lacks GnuPG.
+Pinned hashes verify consistency, not independent signer authentication.
+
+Upstream describes 4.2.2 as ABI-compatible with 4.2.1. Libtool version-info
+changes from `8:1:2` to `8:2:2`, retaining runtime major 6. New behavior
+includes the `mpfr_float128` conversion-type portability macro and fixes to
+formatted output, including `%c` with zero. Binary128 itself predates this
+release. The inherited NetBSD `--disable-float128` remains: a libc binary128
+comparison repair does not prove compiler `_Float128` API support.
+
+Source checks verify the new archive and prepared recipe, including corrupt
+archive and repeated-delta rejection. Run the bounded archive gate with:
+
+```sh
+sh profiles/development-toolchain/tests/source-profile.sh \
+    /absolute/verified-distfiles/mpfr-4.2.2.tar.bz2
+```
+
+Native MPFR configure/build/upstream tests, staging/check-files and installed
+GMP/MPFR identity remain required. MPC 1.4.1 must repeat its upstream arithmetic
+tests against the replacement MPFR. Check the already built GCC16's linked
+MPFR identity and focused arithmetic/compiler consumers after package
+replacement; source preparation does not accept that native dependency set
+or require rebuilding GCC. Replace the common MPFR package coherently.
+
+The private profile `mk.conf` requires `mpfr>=4.2.2` for buildlink consumers
+so an installed 4.2.1 cannot satisfy the selected common dependency policy.
+Upstream API/ABI floors stay unchanged outside this profile. The policy does
+not set `GCC_REQD`, create an MPFR self-dependency, or activate GCC16 while
+building bootstrap math packages. When BSD make is available, the finite
+source check parses the real GCC external-math option block and MPC buildlink
+metadata with the profile, plus unscoped and bootstrap boundary cases.
 
 ## MPC 1.4.1
 
@@ -21,8 +63,8 @@ The source retains libtool version-info `7:1:4`, hence runtime major 3.
 No earlier MPC package was installed on the preparation host. The recipe
 adds the new `lib/pkgconfig/mpc.pc` file. Its inherited Solaris complex-number
 workaround is refreshed for `_MPC_HAVE_COMPLEX_H` and `DOUBLE_COMPLEX`.
-MPC still requires GMP >=5.0 and MPFR >=4.1; no existing math library update
-is implied. Native arithmetic tests and dependency identity remain required.
+MPC still requires GMP >=5.0 and MPFR >=4.1; this profile selects MPFR 4.2.2
+above. Native arithmetic tests and dependency identity remain required.
 
 ## Texinfo 7.3
 
