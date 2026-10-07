@@ -93,6 +93,9 @@ runtime behavior are validated.
   patched GREEN across 23 cases, including ASan/UBSan. Local CREATE patches
   also prevent publication after reported renderer failures and unwind owned
   partial allocations; actual-function macOS/arm64 and sanitizer checks pass.
+  A [classic backing ledger](probes/utm-virgl-host/BACKING.md) keeps guest
+  mappings alive through renderer detach and every cleanup path, including
+  deferred UNREF. Causal ownership checks also pass with `NDEBUG`.
   These are experimental source contracts. Complete host builds, installation,
   async completion/reset, remaining bounds and VirGL runtime remain unverified.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
