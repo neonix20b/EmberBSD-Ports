@@ -109,8 +109,13 @@ runtime behavior are validated.
   A [classic backing ledger](probes/utm-virgl-host/BACKING.md) keeps guest
   mappings alive through renderer detach and every cleanup path, including
   deferred UNREF. Causal ownership checks also pass with `NDEBUG`.
+  An opt-in [classic lifecycle barrier](probes/utm-virgl-host/LIFECYCLE.md)
+  stops CPU producers before reset/fault revocation and detaches every backing
+  before releasing any mapping. Source tests cover display-blocked command
+  handoff, query polling and deferred native cleanup.
   These are experimental source contracts. Complete host builds, installation,
-  async completion/reset, remaining bounds and VirGL runtime remain unverified.
+  native reset/display lifetimes, remaining error paths and VirGL runtime
+  remain unverified; the profile stays disabled.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document
