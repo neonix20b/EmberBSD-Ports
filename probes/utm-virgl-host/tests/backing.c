@@ -99,7 +99,7 @@ static void *q_zero(size_t n) {void *p=q_alloc(n);memset(p,0,n);return p;}
 static void *q_renew(void *p,size_t n) { if(!p)return q_alloc(n);for(unsigned i=0;i<alloc_count;i++)if(allocs[i].p==p && allocs[i].live){void *r=realloc(p,n);assert(r);allocs[i].p=r;return r;}abort(); }
 static void q_free(void *p) {
  if(!p)return;
- if(p==tracked_array){arrays_freed++;tracked_array=NULL;}
+ if(p==tracked_array){if(invariant_child)_exit(90);arrays_freed++;tracked_array=NULL;}
  if(p==tracked_wrapper){
 #ifdef BACKING_PATCHED
   if(tracked_wrapper->classic_backing_state!=CLASSIC_BACKING_NONE)stale_ledger++;
@@ -125,7 +125,7 @@ static void *dma_memory_map(UNUSED void *as,UNUSED uint64_t a,hwaddr *len,UNUSED
  pages[npages++]=(struct dma_page){p,true,*len};maps++;return p;
 }
 static void dma_memory_unmap(UNUSED void *as,void *p,size_t len,UNUSED int d,size_t done) {
- assert(len==done);assert(!invariant_child);
+ assert(len==done);if(invariant_child)_exit(90);
  for(unsigned i=0;i<npages;i++)if(pages[i].p==p && pages[i].live){assert(pages[i].len==len);pages[i].live=false;unmaps++;assert(mprotect(p,4096,PROT_NONE)==0);return;}
  abort();
 }
@@ -136,11 +136,11 @@ static struct virtio_gpu_simple_resource *virtio_gpu_find_resource(VirtIOGPU *g,
 static void virtio_gpu_fini_udmabuf(UNUSED void *r) {abort();}
 static void virtio_gpu_disable_scanout(UNUSED VirtIOGPU *g,UNUSED int i) {abort();}
 static void qemu_pixman_image_unref(void *p) {assert(!p);}
-static void virtio_gpu_ctrl_response_nodata(UNUSED VirtIOGPU *g,UNUSED struct virtio_gpu_ctrl_command *c,uint32_t value) {assert(value==VIRTIO_GPU_RESP_OK_NODATA);assert(!invariant_child);responses++;}
+static void virtio_gpu_ctrl_response_nodata(UNUSED VirtIOGPU *g,UNUSED struct virtio_gpu_ctrl_command *c,uint32_t value) {assert(value==VIRTIO_GPU_RESP_OK_NODATA);if(invariant_child)_exit(90);responses++;}
 static void memory_region_set_enabled(MemoryRegion *mr,bool enabled) {mr->enabled=enabled;}
 static void memory_region_del_subregion(UNUSED MemoryRegion *base,MemoryRegion *mr) {assert(!mr->enabled);}
 static void object_unparent(UNUSED Object *object) { /* asynchronous grace period external seam */ }
-static void error_report(const char *s) { fprintf(stderr,"%s\n",s);if(invariant_child){assert(unmaps==0 && renderer_unrefs==0 && responses==0 && arrays_freed==0);fprintf(stderr,"REFUSED: no DMA cleanup, unref or response\n");} }
+static void error_report(const char *s) { fprintf(stderr,"%s\n",s);if(invariant_child){if(unmaps || renderer_unrefs || responses || arrays_freed)_exit(91);fprintf(stderr,"REFUSED: no DMA cleanup, unref or response\n");} }
 void virtio_gpu_cleanup_mapping_iov(VirtIOGPU *,struct iovec *,uint32_t);
 void actual_cleanup_mapping_iov(VirtIOGPU *,struct iovec *,uint32_t);
 
@@ -197,7 +197,7 @@ static void *virgl_resource_table;
 static void *util_hash_table_get(UNUSED void *table,void *key) {return global_resource && global_resource->res_id==(uintptr_t)key?global_resource:NULL;}
 static void util_hash_table_remove(void *,void *);
 #include "resource.inc"
-static void util_hash_table_remove(UNUSED void *table,void *key) {assert(global_resource && global_resource->res_id==(uintptr_t)key);virgl_resource_destroy_func(global_resource);global_resource=NULL;renderer_unrefs++;}
+static void util_hash_table_remove(UNUSED void *table,void *key) {if(invariant_child)_exit(90);assert(global_resource && global_resource->res_id==(uintptr_t)key);virgl_resource_destroy_func(global_resource);global_resource=NULL;renderer_unrefs++;}
 struct virgl_context_foreach_args {bool (*callback)(void *,void *);void *data;};
 static bool detach_resource(UNUSED void *ctx,UNUSED void *res) {return true;}
 static void virgl_context_foreach(UNUSED struct virgl_context_foreach_args *a) { /* no context-attached resource in this contract */ }
@@ -379,9 +379,20 @@ static void create3_and_hostmem_destroy(VirtIOGPU *g) {
 static void broken(VirtIOGPU *g,int injection) {
 #ifdef BACKING_PATCHED
  init(g);create(g,7);attach(g,7,16);pid_t pid=fork();assert(pid>=0);
- if(!pid){invariant_child=true;detach_injection=injection;if(injection==5)global_resource->res_id=8;detach(g,7);_exit(88);}
- int status;assert(waitpid(pid,&status,0)==pid);check(WIFSIGNALED(status) && WTERMSIG(status)==SIGABRT,"broken host contract fail-stops release build before cleanup or response");
- detach_injection=0;detach(g,7);unref(g,7);
+ if(!pid){invariant_child=true;detach_injection=injection;if(injection==7)actual_cleanup_mapping_iov(g,(void *)global_resource->iov,global_resource->iov_count);if(injection==5)global_resource->res_id=8;detach(g,7);_exit(88);}
+ int status;assert(waitpid(pid,&status,0)==pid);
+ if(injection==7)check(WIFEXITED(status) && WEXITSTATUS(status)==90,"forbidden cleanup seam cannot masquerade as production fail-stop");
+ else check(WIFSIGNALED(status) && WTERMSIG(status)==SIGABRT,"broken host contract fail-stops release build before cleanup or response");
+ detach_injection=0;
+#ifdef BACKING_EARLY_CLEANUP
+ /* Test teardown follows the unmutated renderer/cleanup chain after observing
+  * the child's rejected ordering. It does not repair the mutant handler. */
+ struct iovec *v=NULL;int n=0;actual_renderer_detach_iov(7,&v,&n);actual_cleanup_mapping_iov(g,v,n);
+ tracked_wrapper->classic_iov=NULL;tracked_wrapper->classic_iov_count=0;tracked_wrapper->classic_backing_state=CLASSIC_BACKING_NONE;
+#else
+ detach(g,7);
+#endif
+ unref(g,7);
 #else
  (void)g;(void)injection;
 #endif
@@ -391,4 +402,10 @@ static void pipe_noop(VirtIOGPU *g) {init(g);create(g,7);attach(g,7,16);pipe_cal
  tracked_wrapper->classic_iov=NULL;tracked_wrapper->classic_iov_count=0;tracked_wrapper->classic_backing_state=CLASSIC_BACKING_NONE;
 #endif
  unref(g,7);}
-int main(void) {VirtIOGPU g={0};for(int i=0;i<4;i++)lifetime(&g,i);failures_and_duplicate(&g);query_lifetime(&g);nonclassic(&g,0);nonclassic(&g,1);create3_and_hostmem_destroy(&g);for(int i=1;i<=6;i++)broken(&g,i);pipe_noop(&g);init(&g);printf("%d checks, %d failures; actual mapping, renderer CUSTOM, cleanup and query consumers\n",checks,failures);return failures?1:0;}
+int main(void) {VirtIOGPU g={0};
+#ifdef BACKING_EARLY_CLEANUP
+ broken(&g,1);
+#else
+ for(int i=0;i<4;i++)lifetime(&g,i);failures_and_duplicate(&g);query_lifetime(&g);nonclassic(&g,0);nonclassic(&g,1);create3_and_hostmem_destroy(&g);for(int i=1;i<=7;i++)broken(&g,i);pipe_noop(&g);
+#endif
+ init(&g);printf("%d checks, %d failures; actual mapping, renderer CUSTOM, cleanup and query consumers\n",checks,failures);return failures?1:0;}

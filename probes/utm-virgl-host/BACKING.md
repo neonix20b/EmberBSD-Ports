@@ -92,8 +92,8 @@ ordinary UNREF, hostmem cleanup and deferred finish_unmap bodies are actual.
 
 | QEMU conditional branch | Compiled baseline | Patched plain/sanitized/NDEBUG |
 |---|---|---|
-| VIRGL_VERSION_MAJOR=0 | 49 checks, five runtime assertion failures | 72 checks, zero failures |
-| VIRGL_VERSION_MAJOR=1 | 64 checks, five runtime assertion failures | 87 checks, zero failures |
+| VIRGL_VERSION_MAJOR=0 | 49 checks, five runtime assertion failures | 74 checks, zero failures |
+| VIRGL_VERSION_MAJOR=1 | 64 checks, five runtime assertion failures | 89 checks, zero failures |
 
 Baseline RED observes the missing explicit ledger through actual `base.iov`
 fields after a real successful mapping. It is not a claim of an existing normal
@@ -101,6 +101,14 @@ lifetime double-free. Existing CUSTOM and ordinary cleanup cases pass baseline.
 A mutant removing only the two new helper calls from actual finish_unmap fails
 under both plain and ASan/UBSan builds: the destruction observer finds retained
 pipe IOV. Its non-deferred conditional branch still passes.
+
+A second mutant inserts actual guest DMA cleanup before DETACH's renderer
+ownership check. It fails the original policy invariant in both conditional
+branches and plain/sanitized/NDEBUG builds. Forbidden cleanup, free, unref or
+response seams exit with a distinct code, so their failure cannot masquerade
+as the production SIGABRT. A direct forbidden-cleanup control verifies this
+distinction. Post-commit self-review found and repaired this harness weakness;
+the production patch did not change.
 
 Checks cover split mappings, partial failure, duplicate/failed/zero ATTACH,
 metadata-only oversized count injection, separate retained detach/release,

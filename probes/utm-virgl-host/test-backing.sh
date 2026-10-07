@@ -78,3 +78,32 @@ for tree in baseline patched mutant; do
   done
  done
  done
+# Early-cleanup causal mutant: put actual DMA cleanup before the DETACH
+# helper's renderer/invariant check, and execute only that injected command.
+out=$work/early-cleanup-test
+mkdir "$out"
+cp "$work/patched-test/"*.inc "$work/patched-test/config.h" "$out/"
+awk '
+ /^static void virgl_resource_detach_backing\(/ { active=1 }
+ active && /        detach_classic_backing\(res\);/ {
+  print "        virtio_gpu_cleanup_mapping_iov(g, res->classic_iov, res->classic_iov_count);"
+  hits++
+ }
+ {print}
+ active && /^}/ {active=0}
+ END {if(hits!=1)exit 1}
+' "$work/patched-test/qemu.inc" > "$out/qemu.inc"
+for version in 0 1;do
+ for mode in plain sanitized release;do
+  set -- -DVIRGL_VERSION_MAJOR="$version" -DBACKING_PATCHED -DBACKING_EARLY_CLEANUP
+  if [ "$mode" = sanitized ];then set -- "$@" -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer;fi
+  if [ "$mode" = release ];then set -- "$@" -DNDEBUG;fi
+  "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare "$@" -I"$out" -I"$src" -I"$src/vrend" "$recipe/tests/backing.c" "$src/vrend/iov.c" -o "$out/v$version-$mode" > "$out/compile-v$version-$mode.log" 2>&1 || { cat "$out/compile-v$version-$mode.log" >&2;exit 1; }
+  if "$out/v$version-$mode" > "$out/v$version-$mode.log" 2>&1;then status=0;else status=$?;fi
+  [ "$status" -eq 1 ]
+  grep -Fq 'FAIL: broken host contract fail-stops release build before cleanup or response' "$out/v$version-$mode.log"
+  if grep -E 'ERROR: AddressSanitizer|runtime error:|LeakSanitizer' "$out/v$version-$mode.log";then exit 1;fi
+  printf '%s\n' "$status" > "$out/v$version-$mode.status"
+  printf '%s\n' "early cleanup v$version/$mode: forbidden side effect correctly fails the policy invariant"
+ done
+done
