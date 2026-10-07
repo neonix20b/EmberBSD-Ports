@@ -1,0 +1,15 @@
+--- a/lang/python/pyversion.mk
++++ b/lang/python/pyversion.mk
+@@ -202,6 +202,12 @@
+ .      endif
+ .    endfor
+ .  endif
++.endif
++
++# The opt-in current common profile must fail instead of selecting an older
++# interpreter when a consumer or command-line override excludes Python 3.14.
++.if ${EMBERBSD_COMMON_TOOLS:Uno} == "yes" && ${_PYTHON_VERSION:Unone} != "314"
++PKG_FAIL_REASON+= "EmberBSD common tools require Python 3.14"
+ .endif
+ 
+ #

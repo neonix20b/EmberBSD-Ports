@@ -5,3 +5,4 @@ work/
 work.*/
 *.core
 !/pkgsrc/**/Makefile
+!/profiles/common-build-tools/recipes/**/Makefile

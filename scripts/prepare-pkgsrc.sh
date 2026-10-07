@@ -4,12 +4,12 @@ set -eu
 umask 022
 
 [ "$#" -ge 1 ] && [ "$#" -le 2 ] || {
-    echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY [development-toolchain]' >&2
+    echo 'Usage: sh scripts/prepare-pkgsrc.sh ABSOLUTE_NEW_DIRECTORY [development-toolchain|common-build-tools]' >&2
     exit 2
 }
 profile=${2:-}
 case "$profile" in
-    ''|development-toolchain) ;;
+    ''|development-toolchain|common-build-tools) ;;
     *) echo 'Unknown profile.' >&2; exit 2 ;;
 esac
 destination=$1
@@ -28,6 +28,22 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     echo 'Initialize the pinned submodule with git submodule update --init upstream/pkgsrc.' >&2
     exit 2
 }
+if [ "$profile" = common-build-tools ]; then
+    for recipe in lang/python314 devel/meson; do
+        source=$root/profiles/common-build-tools/recipes/$recipe
+        [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
+            [ -f "$source/distinfo" ] && [ -d "$source/patches" ] || {
+            echo "Incomplete common-tools recipe: $recipe" >&2; exit 2;
+        }
+        required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
+        [ -n "$required" ] || { echo "No patch checksums: $recipe" >&2; exit 2; }
+        for name in $required; do
+            [ -f "$source/patches/$name" ] || {
+                echo "Missing required patch: $recipe/$name" >&2; exit 2;
+            }
+        done
+    done
+fi
 archive=$(mktemp "${TMPDIR:-/tmp}/ember-pkgsrc.XXXXXXXX")
 trap 'rm -f "$archive"' EXIT
 trap 'exit 130' INT
@@ -44,13 +60,25 @@ for category in "$root"/pkgsrc/*; do
     }
     cp -R "$category" "$destination/$name"
 done
-if [ "$profile" = development-toolchain ]; then
+if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]; then
     for delta in pkgsrc-gcc16.2.patch strict-tests.patch current-prerequisites.patch stable-expect.patch; do
         patch -f -E -d "$destination" -p1 -F 0 < \
             "$root/profiles/development-toolchain/patches/$delta"
     done
     cp "$root/profiles/development-toolchain/mk.conf" \
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
+fi
+if [ "$profile" = common-build-tools ]; then
+    for recipe in lang/python314 devel/meson; do
+        source=$root/profiles/common-build-tools/recipes/$recipe
+        # Replace only recipe paths inside this newly created export.
+        rm -rf "$destination/$recipe"
+        cp -R "$source" "$destination/$recipe"
+    done
+    patch -f -N -d "$destination" -p1 -F 0 < \
+        "$root/profiles/common-build-tools/patches/current-python-selection.patch"
+    cp "$root/profiles/common-build-tools/mk.conf" \
+        "$destination/EMBERBSD-COMMON-TOOLS-MK.CONF"
 fi
 printf '%s\n' "$expected" > "$destination/EMBERBSD-PKGSRC-REVISION"
 printf 'Prepared %s with pkgsrc %s\n' "$destination" "$expected"

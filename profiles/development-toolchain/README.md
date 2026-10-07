@@ -46,6 +46,9 @@ sh scripts/prepare-pkgsrc.sh /absolute/new-pkgsrc development-toolchain
 ```
 
 The destination must be new. Existing exports are never changed in place.
+The [common build tools](../common-build-tools/README.md) preparation mode
+composes this export with current Python/Meson recipes; its native package
+acceptance is separate and it does not rebuild or activate GCC.
 The exported `EMBERBSD-DEVELOPMENT-MK.CONF` selects C/C++ only, external
 GMP/MPFR/MPC, one worker, `-O2` without debug information, and the compiler's
 own libgcc. Graphite, NLS, Fortran, Cobol, Go, and Objective-C are disabled.
