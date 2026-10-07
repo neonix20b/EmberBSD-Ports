@@ -115,6 +115,14 @@ contracts pass; removing the deferred consumer's helpers causes a runtime
 ownership failure. This source foundation does not qualify reset quiescence
 or a complete installed host.
 
+The separate [default-off classic lifecycle foundation](LIFECYCLE.md) adds a
+versioned, video-disabled downstream profile, all-resource CPU backing revoke,
+generation-aware callback inbox and separate display/native cleanup. Actual-body
+RED/GREEN, sanitizer, NDEBUG and causal mutation contracts cover this source
+boundary. Pending renderer error propagation and native no-touch/display/host
+qualification still prevent enabling it. Existing mixed UTM paths remain outside
+this profile's qualification.
+
 The former 0.10.4 recovery host and the UTM beta installation are unchanged.
 There is no installed host, enabled VirGL, pixel, Mesa runtime, GPU/NPU,
 VM or board validation claim. Parent integration owns publication and the

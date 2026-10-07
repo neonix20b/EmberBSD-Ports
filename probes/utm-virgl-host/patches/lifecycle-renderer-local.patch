@@ -1,0 +1,89 @@
+From: EmberBSD Ports contributors
+Subject: [LOCAL] Default-off classic VirGL lifecycle foundation
+
+AI-assisted downstream adaptation. Not submitted or accepted upstream.
+Preserves upstream license and author notices. Guest ABI unchanged.
+Applies after full selected UTM overlay, accepted CREATE and C8c1 backing.
+
+--- a/src/virglrenderer.c
++++ b/src/virglrenderer.c
+@@ -1743,3 +1743,25 @@
+ 
+    return ctx->get_device_fd(ctx);
+ }
++
++/* EmberBSD downstream ABI v1, AI-assisted. No guest ABI change. */
++int virgl_renderer_ember_classic_init_v1(void *cookie, int flags,
++                                       struct virgl_renderer_callbacks *cbs)
++{
++#ifdef ENABLE_VIDEO
++   (void)cookie;
++   (void)flags;
++   (void)cbs;
++   return -ENOTSUP;
++#else
++   if (flags & ~VIRGL_RENDERER_NATIVE_SHARE_TEXTURE)
++      return -EINVAL;
++   if (state.client_initialized)
++      return -EBUSY;
++   if (!cbs || cbs->version < 3 || !cbs->write_fence ||
++       !cbs->write_context_fence || !cbs->create_gl_context ||
++       !cbs->destroy_gl_context || !cbs->make_current)
++      return -EINVAL;
++   return virgl_renderer_init(cookie, flags, cbs);
++#endif
++}
+--- a/src/virglrenderer.h
++++ b/src/virglrenderer.h
+@@ -174,6 +174,11 @@
+ /* Enable Neptune renderer (D3D11/D3D12 virtualization). */
+ #define VIRGL_RENDERER_NEPTUNE       (1 << 15)
+ 
++/* Paired downstream host ABI; requires a renderer built with video=false. */
++#define VIRGL_RENDERER_EMBER_CLASSIC_LIFECYCLE_ABI 1
++VIRGL_EXPORT int virgl_renderer_ember_classic_init_v1(
++   void *cookie, int flags, struct virgl_renderer_callbacks *cbs);
++
+ VIRGL_EXPORT int virgl_renderer_init(void *cookie, int flags, struct virgl_renderer_callbacks *cb);
+ VIRGL_EXPORT void virgl_renderer_poll(void); /* force fences */
+ 
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -11913,11 +11913,12 @@
+       }
+    }
+ 
++   /* Queries must progress even when no guest fence retires this poll. */
++   vrend_renderer_check_queries();
++
+    if (list_is_empty(&retired_fences))
+       return;
+ 
+-   vrend_renderer_check_queries();
+-
+    list_for_each_entry_safe(struct vrend_fence, fence, &retired_fences, fences) {
+       struct vrend_context *ctx = fence->ctx;
+       ctx->fence_retire(fence->fence_id, ctx->fence_retire_data);
+--- a/src/vrend/vrend_winsys.c
++++ b/src/vrend/vrend_winsys.c
+@@ -107,9 +107,19 @@
+          virgl_gbm_fini(gbm);
+          gbm = NULL;
+       }
+-   } else if (use_context == CONTEXT_EGL_EXTERNAL) {
++   }
++#endif
++#ifdef HAVE_EPOXY_EGL_H
++   /* The wrapper is ours; the EGLDisplay belongs to the embedding host. */
++   if (use_context == CONTEXT_EGL_EXTERNAL) {
+       free(egl);
+       egl = NULL;
++#ifdef ENABLE_GBM
++      if (gbm) {
++         virgl_gbm_fini(gbm);
++         gbm = NULL;
++      }
++#endif
+       use_context = CONTEXT_NONE;
+    }
+ #endif
