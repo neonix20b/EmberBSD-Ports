@@ -116,8 +116,10 @@ runtime behavior are validated.
   including GLib 2.90.1, Pango 1.58.2, HarfBuzz 14.6.0 and Cairo 1.18.6,
   cross-build with normal package checks. Four installed AArch64 VM cycles
   pass real font selection, text shaping, CPU rasterization and PNG roundtrip,
-  with causal negative controls. labwc client surfaces and full SVG remain
-  separate acceptance stages.
+  with causal negative controls. Installed [desktop support](profiles/common-graphics/cross/desktop-support.md)
+  also passes all four libsfdo 0.1.4 upstream tests and a private D-Bus 1.16.2
+  session with name ownership, real method replies and error/lifecycle checks.
+  labwc client surfaces and full SVG remain separate acceptance stages.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,

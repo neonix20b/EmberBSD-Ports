@@ -148,8 +148,8 @@ ELF, RPATH and work-reference checks remained enabled.
 
 Native GLib generators and `gdbus-codegen` 2.90.1, plus gperf 3.3, also passed
 normal pkgsrc package checks. All six focused regressions above passed. The
-frozen exporter passed 63 refusal controls and all six profile compositions;
-it validates 25 source pins. Pango's X11, Cairo and fontconfig options remain
+frozen exporter passed 67 refusal controls and all six profile compositions;
+it validates 27 source pins. Pango's X11, Cairo and fontconfig options remain
 enabled. Its four installed DSOs have canonical target runtime paths only.
 
 The installed consumer below also passes in an isolated EmberBSD/NetBSD 11
@@ -209,3 +209,7 @@ visually inspected; its per-glyph geometry has no golden-image assertion.
 This validates CPU text composition and PNG through the installed common
 stack. It does not exercise GPU glyph rendering, Wayland client surfaces,
 X11/Xft drawing, SVG, APNG, target introspection or a complete desktop session.
+
+The next [desktop-support stage](desktop-support.md) supplies current libsfdo,
+D-Bus and font/theme data with normal cross-package checks. Its session-bus
+and freedesktop-library checks are separate from this text-rendering acceptance.

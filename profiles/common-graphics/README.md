@@ -55,8 +55,10 @@ still passes on the 2D device; a complete compositor session remains unaccepted.
 The [current text/image closure](cross/labwc-dependencies.md) also cross-builds
 GLib 2.90.1, Pango 1.58.2, HarfBuzz 14.6.0 and Cairo 1.18.6 with normal package
 checks. Four installed AArch64 VM cycles pass font selection, shaping, CPU
-rasterization and PNG roundtrip with causal negative controls. labwc client
-surfaces and full SVG remain separate acceptance.
+rasterization and PNG roundtrip with causal negative controls. Installed
+[libsfdo and session D-Bus](cross/desktop-support.md) pass four unchanged upstream
+lookup/parser tests and actual bus ownership, method replies, errors and shutdown
+in AArch64. labwc client surfaces and full SVG remain separate acceptance.
 
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
