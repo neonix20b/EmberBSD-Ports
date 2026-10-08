@@ -29,7 +29,7 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     exit 2
 }
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
             [ -f "$source/distinfo" ] || {
@@ -37,7 +37,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         }
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
         case "$recipe" in
-            devel/lld|devel/py-llvm-lit) ;;
+            devel/lld|devel/py-llvm-lit|devel/py-mako|textproc/py-markupsafe|textproc/py-yaml) ;;
             *) [ -n "$required" ] || { echo "No patch checksums: $recipe" >&2; exit 2; } ;;
         esac
         for name in $required; do
@@ -90,23 +90,31 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
     graphics=$root/profiles/common-graphics
     awk -F '\t' '
         /^#/ || /^$/ { next }
-        NF != 4 || ($1 != "graphics/MesaLib" && $1 != "x11/libdrm") ||
-            $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.xz$/ ||
+        NF != 4 || ($1 != "graphics/MesaLib" && $1 != "x11/libdrm" &&
+            $1 != "devel/wayland" && $1 != "devel/wayland-protocols" &&
+            $1 != "x11/xorgproto" && $1 != "devel/libudev-bsd") ||
+            $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz)$/ ||
             length($3) != 64 || $3 !~ /^[0-9a-f]+$/ ||
             $4 !~ /^https:\/\// || seen[$1]++ { bad=1 }
-        END { if (bad || !seen["graphics/MesaLib"] || !seen["x11/libdrm"]) exit 1 }
+        END { if (bad || !seen["graphics/MesaLib"] || !seen["x11/libdrm"] ||
+            !seen["devel/wayland"] || !seen["devel/wayland-protocols"] ||
+            !seen["x11/xorgproto"] || !seen["devel/libudev-bsd"]) exit 1 }
     ' "$graphics/sources.tsv" || { echo 'Invalid common graphics manifest.' >&2; exit 2; }
     while IFS="$(printf '\t')" read -r recipe archive sha url; do
         case "$recipe" in
             ''|'#'*) continue ;;
             graphics/MesaLib) pin='mesa-26.2.4.tar.xz:bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9:https://archive.mesa3d.org/mesa-26.2.4.tar.xz' ;;
             x11/libdrm) pin='libdrm-2.4.134.tar.xz:ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95:https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz' ;;
+            devel/wayland) pin='wayland-1.26.0.tar.xz:64176eaa46e4969903e286f8e5ef8331affc17fdf03ac9b58381d2b23162b7a3:https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.26.0/downloads/wayland-1.26.0.tar.xz' ;;
+            devel/wayland-protocols) pin='wayland-protocols-1.49.tar.xz:ec4c8f74942d6dff7ace8b4ce4764f0ef9ff618a935d974ea77edee2ad240b14:https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/1.49/downloads/wayland-protocols-1.49.tar.xz' ;;
+            x11/xorgproto) pin='xorgproto-2026.1.tar.xz:f9bfe4a9ed8c8ab9d2a3b0d49797f046052dadd06b7a8b45dbffaffb137e8290:https://xorg.freedesktop.org/archive/individual/proto/xorgproto-2026.1.tar.xz' ;;
+            devel/libudev-bsd) pin='libudev-bsd-0.7.0.1.tar.gz:c4a8c30781438a76720f77876ca362b7a5ecd41d15cd603d52097c2cb10425f0:https://github.com/kikadf/libudev-bsd/archive/v0.7.0.1.tar.gz' ;;
         esac
         [ "$archive:$sha:$url" = "$pin" ] || { echo "Incorrect common graphics source pin: $recipe" >&2; exit 2; }
     done < "$graphics/sources.tsv"
-    for recipe in graphics/MesaLib x11/libdrm; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do
         source=$graphics/recipes/$recipe
-        for name in Makefile DESCR PLIST distinfo buildlink3.mk builtin.mk; do
+        for name in Makefile DESCR PLIST distinfo buildlink3.mk; do
             [ -f "$source/$name" ] || { echo "Incomplete graphics recipe: $recipe/$name" >&2; exit 2; }
         done
         case "$recipe" in
@@ -114,6 +122,19 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
                 approved='patch-bin_symbols-check.py patch-dso-lifetime patch-include_c99__alloca.h patch-meson-python-selection patch-src_util_half__float.c' ;;
             x11/libdrm)
                 approved='patch-ac patch-amdgpu_amdgpu__cs.c patch-include_drm_drm.h patch-libsync.h patch-symbols-check.py patch-tests_nouveau_threaded.c patch-xf86drm.c patch-xf86drmMode.c patch-zz-native-identity patch-zzz-native-warnings' ;;
+            devel/wayland)
+                approved='patch-meson.build patch-meson__options.txt patch-scanner.c patch-src_meson.build patch-src_wayland-os.c patch-tests_client-test.c patch-tests_test-helpers.c' ;;
+            devel/wayland-protocols)
+                approved='patch-stable_xdg-shell_xdg-shell.xml patch-unstable_xdg-output_xdg-output-unstable-v1.xml' ;;
+            x11/xorgproto|devel/libudev-bsd) approved='' ;;
+        esac
+        case "$recipe" in
+            graphics/MesaLib|x11/libdrm)
+                [ -f "$source/builtin.mk" ] || { echo "Missing builtin guard: $recipe" >&2; exit 2; } ;;
+            devel/wayland)
+                [ -f "$source/cross-scanner.mk" ] && [ -f "$source/platform.mk" ] || exit 2 ;;
+            devel/wayland-protocols)
+                [ -f "$source/cross-scanner.mk" ] || { echo 'Missing protocols host scanner integration' >&2; exit 2; } ;;
         esac
         for name in $approved; do
             grep -q "^SHA1 ($name) = " "$source/distinfo" && [ -f "$source/patches/$name" ] || {
@@ -121,9 +142,15 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             }
         done
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
-        [ -n "$required" ] || { echo "No graphics patch checksums: $recipe" >&2; exit 2; }
-        actual=$(find "$source/patches" -type f -name 'patch-*' | wc -l | tr -d ' ')
-        count=$(printf '%s\n' "$required" | wc -l | tr -d ' ')
+        case "$recipe" in
+            x11/xorgproto|devel/libudev-bsd) ;;
+            *) [ -n "$required" ] || { echo "No graphics patch checksums: $recipe" >&2; exit 2; } ;;
+        esac
+        actual=0
+        if [ -d "$source/patches" ]; then
+            actual=$(find "$source/patches" -type f -name 'patch-*' | wc -l | tr -d ' ')
+        fi
+        count=$(printf '%s\n' "$required" | awk 'NF { n++ } END { print n+0 }')
         [ "$actual" = "$count" ] || { echo "Graphics patch inventory differs: $recipe" >&2; exit 2; }
         for name in $required; do
             [ -f "$source/patches/$name" ] || { echo "Missing required patch: $recipe/$name" >&2; exit 2; }
@@ -163,7 +190,7 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils; do
+    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         # Replace only recipe paths inside this newly created export.
         rm -rf "$destination/$recipe"
@@ -181,7 +208,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         "$destination/EMBERBSD-CROSS-MK.CONF"
 fi
 if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in graphics/MesaLib x11/libdrm; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done

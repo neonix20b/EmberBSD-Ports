@@ -1,19 +1,28 @@
 # Common graphics source packages
 
-This opt-in source profile prepares canonical MesaLib 26.2.4nb1 and adapted
-libdrm 2.4.134nb1 for native NetBSD 11/AArch64. It composes the existing
+This opt-in source profile prepares canonical MesaLib 26.2.4nb1, adapted
+libdrm 2.4.134nb1, Wayland 1.26.0nb1 and wayland-protocols 1.49 for
+NetBSD 11/AArch64. Native builds and the explicit
+[macOS cross composition](cross/profile.md) consume the existing
 [common build tools](../common-build-tools/README.md): GCC16, Python3.14.8,
 Meson1.12.1 and shared LLVM23.1.2 remain one dependency graph with final
 `LOCALBASE=PREFIX=/usr/pkg`. Plasma Mobile uses this exact graphics layer.
 The default, development-toolchain and common-build-tools exports keep their
-original Mesa/libdrm recipes. This is source preparation, not an installed
-common graphics stack, native package acceptance or a Mobile demonstration.
+original graphics recipes. The whole installed graphics stack and a Mobile
+demonstration still require acceptance; individual package results follow.
 
 The [graphics cross-build](cross/README.md) now builds the complete selected
 libdrm payload on macOS with GCC16. All 26 staged entries match PLIST, and
 hash, drmsl and symbol checks pass in AArch64 UTM. Device enumeration is
-skipped on the current framebuffer-only kernel. Package registration and
-the Mesa/LLVM consumer transition are still separate gates.
+skipped on the current framebuffer-only kernel. Its normal libdrm package
+and wayland-protocols package now also build and install into the cross sysroot.
+Their installed target acceptance and Mesa consumer migration remain separate gates.
+
+The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
+upstream invocations on Zero 3W with the paired kernel IPC fixes. The common
+[LLVM23 core](../common-build-tools/llvm-family.md) passes installed C API and
+four default ORC JITLink lifecycles on that board. These results establish
+library/runtime prerequisites, not a compositor or accelerated renderer.
 
 The same cross directory contains a temporary Mesa26 headless diagnostic.
 Its private softpipe bundle passed shader rejection, triangle pixels, four
@@ -44,25 +53,41 @@ Include the exported files in a private native MAKECONF, in this order:
 .include "/absolute/prepared-pkgsrc/EMBERBSD-PLASMA-TOOLKIT-MK.CONF"
 ```
 
-The exporter validates both source pins, complete recipe trees and exact
-RCS-filtered patch hashes before creating its destination. It replaces only
-`graphics/MesaLib` and `x11/libdrm` inside the new pinned pkgsrc export.
+The exporter validates all six source pins, complete recipe trees and exact
+RCS-filtered patch hashes before creating its destination. It replaces
+`graphics/MesaLib`, `x11/libdrm`, `devel/wayland` and
+`devel/wayland-protocols`, `x11/xorgproto` and `devel/libudev-bsd`
+inside the new pinned pkgsrc export.
 `EMBERBSD-COMMON-GRAPHICS-SOURCES` records their provenance. Unknown modes,
 existing destinations and category collisions remain errors. No system
 configuration or installed package is changed by preparation.
+
+The [Wayland cross instructions](cross/wayland.md) build the matching host
+scanner and run the enabled upstream suite against the installed target
+libraries. NetBSD adaptations use real peer credentials and descriptor
+counts; they retain upstream leak checks and test failures.
 
 GCC selection belongs to the included common-tools configuration, including
 the complete compiler package's runtime policy and native bootstrap boundary.
 The graphics profile adds no second compiler policy.
 
 The profile rejects conflicting command-line providers, dependency minima,
-Meson overrides, old/unprepared recipes, cross builds, another platform or
-prefix. Mesa substitutes one absolute common `PYTHONBIN` into upstream's
+Meson overrides, old/unprepared recipes, cross builds without the dedicated
+opt-in, another platform or prefix. Mesa substitutes one absolute common
+`TOOL_PYTHONBIN` into upstream's
 actual interpreter list, preserving version and Mako/packaging/PyYAML checks.
 Failed imports cannot select another interpreter. LLVM's explicit absolute
-`LLVM_CONFIG_PATH` reaches Meson's native file and environment; production
+`LLVM_CONFIG_PATH` reaches Meson's native or cross machine file; production
 pre-configure checks reject missing metadata, another version, static-only
 LLVM or missing ORC components/RTTI. There are no fallback downloads.
+Cross builds additionally require the real target-metadata helper and verify
+its receipt and target sysroot paths before configuration.
+
+The build-tool layer supplies Mako 1.4.3, MarkupSafe 3.0.4 and PyYAML
+6.0.3nb1. Native generator checks use the installed packages. PyYAML requires
+Cython 3.3 and libyaml; its real extension is packaged and the upstream suite
+passes with its documented skips. Xorgproto 2026.1 and libudev-bsd 0.7.0.1
+complete the current graphics dependency recipes.
 
 ## Bounded package contents
 
@@ -82,7 +107,7 @@ identity requirement. The canonical recipe omits pkgsrc's native-X11
 avoid-duplicate skip, so actual dependency selection still builds libdrm.
 
 Mesa's PLIST is **source-derived and unvalidated natively**. The libdrm list
-matches the complete cross-staged payload; normal package checks remain.
+matches the complete cross-staged payload and passes normal package checks.
 Mesa's GL/EGL/
 GLES/GBM/DRM SONAME closure is GL1/EGL1/GLESv1_CM1/GLESv2 2/GBM1/DRM2,
 plus `libgallium-26.2.4.so`, the GBM backend and upstream dril driver links.
@@ -150,10 +175,11 @@ rerun as package evidence. The new checks cover archive/patch integrity,
 zero-fuzz once-only applications, import/tool failures, provider/version
 selection, export composition and temporary-archive failure cleanup.
 
-## Native acceptance remains mandatory
+## Target package and consumer acceptance remain mandatory
 
-Accept the common Python/Meson/LLVM23 installed packages first. Build libdrm
-and Mesa once with upstream tests in an isolated final-prefix package root.
+Accept the common Python/Meson/LLVM23 packages first. Cross-build libdrm and
+Mesa, or use the preserved native profile, with upstream tests in an isolated
+final-prefix package root. Execute the target tests on NetBSD.
 Resolve both source-derived PLISTs against actual DESTDIR contents with normal
 `check-files`, package, shared-library/RPATH/WRKREF and installed pkg_admin
 checks. No skip list exempts a file from this gate.

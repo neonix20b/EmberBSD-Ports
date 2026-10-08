@@ -27,7 +27,9 @@ File.write("#{work}/project/meson.build", "project('mesa-package-source-check', 
 recipe=File.read("#{profile}/recipes/graphics/MesaLib/Makefile")
 # Only actual recipe option assignments, not wrapper/compiler flags.
 args=recipe.lines.grep(/^MESON_ARGS\+=/).flat_map { |l| l.split[1..] }
-run!("#{work}/python-positive.log",python,meson,'setup',"#{work}/build", "#{work}/project",'--wrap-mode=nodownload',*args)
+# pkgsrc's Meson integration supplies --buildtype=plain itself. Supplying the
+# same option a second time in recipe arguments is rejected by current Meson.
+run!("#{work}/python-positive.log",python,meson,'setup',"#{work}/build", "#{work}/project",'--wrap-mode=nodownload','--buildtype=plain',*args)
 run!("#{work}/options.json",python,meson,'introspect','--buildoptions',"#{work}/build")
 # Each wrapper runs the real selected interpreter with one actual failed import.
 %w[mako packaging yaml].each do |mod|
@@ -62,7 +64,7 @@ case "$*" in
 esac
 SH
 FileUtils.chmod(0755,config)
-File.write("#{work}/guards.mk", "TEST=test\nPYTHONBIN=#{python}\nLLVM_CONFIG_PATH=#{config}\npre-configure:\n"+commands)
+File.write("#{work}/guards.mk", "TEST=test\nUSE_CROSS_COMPILE=no\nTOOL_PYTHONBIN=#{python}\nLLVM_CONFIG_PATH=#{config}\npre-configure:\n"+commands)
 run!("#{work}/llvm-metadata-positive.log",make,'-r','-m','/','-f',"#{work}/guards.mk",'pre-configure')
 run!("#{work}/llvm-missing.log",make,'-r','-m','/','-f',"#{work}/guards.mk",'pre-configure',"LLVM_CONFIG_PATH=#{work}/absent",ok:false)
 run!("#{work}/llvm-version.log",make,'-r','-m','/','-f',"#{work}/guards.mk",'pre-configure',ok:false,env:{'TEST_LLVM_VERSION'=>'13.0.1'})

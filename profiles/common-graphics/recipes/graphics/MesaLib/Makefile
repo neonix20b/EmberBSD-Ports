@@ -30,13 +30,13 @@ PKG_FAIL_REASON+= "Mesa requires the prepared common graphics profile"
 .if ${DISTNAME} != "mesa-26.2.4" || ${PKGREVISION} != "1"
 PKG_FAIL_REASON+= "The common graphics profile requires adapted MesaLib 26.2.4nb1"
 .endif
-TOOL_DEPENDS+=	${PYPKGPREFIX}-mako-[0-9]*:../../devel/py-mako
+TOOL_DEPENDS+=	${PYPKGPREFIX}-mako>=1.4.3:../../devel/py-mako
 TOOL_DEPENDS+=	${PYPKGPREFIX}-packaging-[0-9]*:../../devel/py-packaging
-TOOL_DEPENDS+=	${PYPKGPREFIX}-yaml-[0-9]*:../../textproc/py-yaml
+TOOL_DEPENDS+=	${PYPKGPREFIX}-yaml>=6.0.3nb1:../../textproc/py-yaml
 SUBST_CLASSES+=	python
 SUBST_STAGE.python=	pre-configure
 SUBST_FILES.python=	meson.build
-SUBST_VARS.python=	PYTHONBIN
+SUBST_SED.python=	-e 's|@PYTHONBIN@|${TOOL_PYTHONBIN}|g'
 MESON_ARGS+=	-Dgallium-drivers=virgl,softpipe,llvmpipe
 MESON_ARGS+=	-Dplatforms=x11,wayland -Dglx=dri
 MESON_ARGS+=	-Degl=enabled -Dgbm=enabled -Dglvnd=disabled
@@ -48,18 +48,40 @@ MESON_ARGS+=	-Dgallium-rusticl=false -Dteflon=false -Dperfetto=false
 MESON_ARGS+=	-Dspirv-tools=disabled -Dmicrosoft-clc=disabled -Dallow-fallback-for=
 MESON_ARGS+=	-Dzlib=enabled -Dzstd=enabled -Ddisplay-info=disabled
 MESON_ARGS+=	-Dlibunwind=disabled -Dvalgrind=disabled
-MESON_ARGS+=	-Dbuild-tests=true -Dbuildtype=release -Db_lto=false
+# pkgsrc supplies --buildtype=plain and the selected compiler optimization.
+MESON_ARGS+=	-Dbuild-tests=true -Db_lto=false
 PKGCONFIG_OVERRIDE_STAGE=	pre-install
 .for pc in gl glx egl gbm glesv1_cm glesv2 dri
 PKGCONFIG_OVERRIDE+=	output/meson-private/${pc}.pc
 .endfor
 .include "../../lang/llvm/buildlink3.mk"
+.if ${USE_CROSS_COMPILE:tl} == "yes"
+USE_TOOLS+=	digest
+.include "../../devel/wayland-protocols/cross-scanner.mk"
+.endif
 # The explicit absolute binary prevents Meson's default tool/CMake search.
 MESON_BINARIES+=	llvm-config
 MESON_BINARY.llvm-config=	${LLVM_CONFIG_PATH}
 pre-configure:
-	${TEST} -x ${PYTHONBIN:Q}
-	${PYTHONBIN} -c 'import sys, mako, packaging, yaml; assert sys.version_info[:2] == (3, 14)'
+	${TEST} -x ${TOOL_PYTHONBIN:Q}
+	${TOOL_PYTHONBIN} -c 'import sys, mako, packaging, yaml; assert sys.version_info[:2] == (3, 14)'
+.if ${USE_CROSS_COMPILE:tl} == "yes"
+	${TEST} "$$(${TOOLS_CMD.pkg-config} --modversion wayland-client)" = 1.26.0
+	${TEST} -s ${LLVM_CONFIG_PATH:H:H:Q}/inputs.sha256
+	${TEST} -f ${LLVM_CONFIG_PATH:H:H:Q}/receipt.json
+	cd ${LLVM_CONFIG_PATH:H:H:Q} && \
+	while read -r expected file; do \
+		${TEST} "$${#expected}" -eq 64 || exit 1; \
+		actual=$$(${TOOLS_DIGEST} SHA256 "$$file") || exit 1; \
+		${TEST} "$${actual##* }" = "$$expected" || { \
+			echo "LLVM helper receipt mismatch: $$file" >&2; exit 1; \
+		}; \
+	done < inputs.sha256
+	${TEST} "$$(${LLVM_CONFIG_PATH} --host-target)" = aarch64-unknown-netbsd
+	${TEST} "$$(${LLVM_CONFIG_PATH} --prefix)" = ${CROSS_DESTDIR:Q}/usr/pkg
+	${TEST} "$$(${LLVM_CONFIG_PATH} --includedir)" = ${CROSS_DESTDIR:Q}/usr/pkg/include
+	${TEST} "$$(${LLVM_CONFIG_PATH} --libdir)" = ${CROSS_DESTDIR:Q}/usr/pkg/lib
+.endif
 	${TEST} -x ${LLVM_CONFIG_PATH:Q}
 	${TEST} "$$(${LLVM_CONFIG_PATH} --version)" = 23.1.2
 	${TEST} "$$(${LLVM_CONFIG_PATH} --shared-mode --link-shared)" = shared
@@ -70,8 +92,9 @@ pre-configure:
 .include "../../devel/zlib/buildlink3.mk"
 .include "../../textproc/expat/buildlink3.mk"
 .include "../../devel/libudev-bsd/buildlink3.mk"
+BUILDLINK_API_DEPENDS.wayland+= wayland>=1.26.0nb1
 .include "../../devel/wayland/buildlink3.mk"
-BUILDLINK_API_DEPENDS.wayland-protocols+= wayland-protocols>=1.41
+BUILDLINK_API_DEPENDS.wayland-protocols+= wayland-protocols>=1.49
 .include "../../devel/wayland-protocols/buildlink3.mk"
 BUILDLINK_API_DEPENDS.libX11+= libX11>=1.6
 .include "../../x11/libX11/buildlink3.mk"

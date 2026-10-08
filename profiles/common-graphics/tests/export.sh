@@ -41,10 +41,34 @@ sed '/SHA1 (patch-dso-lifetime)/d' "$work/saved-distinfo" > "$pkg/distinfo"
 negative omitted-accepted-patch
 mv "$work/saved-lifetime" "$pkg/patches/patch-dso-lifetime"
 cp "$work/saved-distinfo" "$pkg/distinfo"
+wayland=$profile/recipes/devel/wayland
+cp "$wayland/distinfo" "$work/wayland-distinfo"
+for name in patch-tests_client-test.c patch-tests_test-helpers.c; do
+    mv "$wayland/patches/$name" "$work/$name"
+    sed "/SHA1 ($name)/d" "$work/wayland-distinfo" > "$wayland/distinfo"
+    negative "omitted-$name"
+    mv "$work/$name" "$wayland/patches/$name"
+    cp "$work/wayland-distinfo" "$wayland/distinfo"
+done
+consumer=$profile/recipes/devel/wayland-protocols/cross-scanner.mk
+mv "$consumer" "$work/scanner-consumer.mk"
+negative missing-scanner-consumer
+mv "$work/scanner-consumer.mk" "$consumer"
 cp "$profile/sources.tsv" "$work/saved-manifest"
 sed 's/bce5f7fb/00000000/' "$work/saved-manifest" > "$profile/sources.tsv"
 negative altered-manifest
 cp "$work/saved-manifest" "$profile/sources.tsv"
+for dependency in x11/xorgproto devel/libudev-bsd; do
+    # These unpatched upstream recipes still need their exact source pins.
+    awk -F '\t' -v dep="$dependency" 'BEGIN { OFS="\t" }
+        $1 == dep { $3="0000000000000000000000000000000000000000000000000000000000000000" }
+        { print }' "$work/saved-manifest" > "$profile/sources.tsv"
+    negative "altered-${dependency##*/}-pin"
+    cp "$work/saved-manifest" "$profile/sources.tsv"
+    mv "$profile/recipes/$dependency/Makefile" "$work/dependency-Makefile"
+    negative "missing-${dependency##*/}-recipe"
+    mv "$work/dependency-Makefile" "$profile/recipes/$dependency/Makefile"
+done
 if sh "$script" "$work/unknown" unknown > "$work/unknown.log" 2>&1; then exit 1; fi
 [ ! -e "$work/unknown" ]
 # Failure after archive creation must preserve its status and clean the tempfile.
@@ -70,15 +94,15 @@ for mode in default development-toolchain common-build-tools common-graphics com
     else sh "$script" "$tree" "$mode" > "$work/$mode.log" 2>&1; fi
     case "$mode" in
         common-graphics|common-media|plasma-mobile)
-            for recipe in graphics/MesaLib x11/libdrm; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
             cmp "$profile/mk.conf" "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
             cmp "$profile/sources.tsv" "$tree/EMBERBSD-COMMON-GRAPHICS-SOURCES" ;;
         *)
-            for recipe in graphics/MesaLib x11/libdrm; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)
-        for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
+        for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
         cmp "$root/profiles/common-build-tools/mk.conf" "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF" ;;
     esac
     case "$mode" in development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile)

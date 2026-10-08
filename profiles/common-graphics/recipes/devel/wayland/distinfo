@@ -1,0 +1,12 @@
+$NetBSD: distinfo,v 1.18 2026/03/26 08:53:11 wiz Exp $
+
+BLAKE2s (wayland-1.26.0.tar.xz) = 9613a76998c0d76315c4d4c803ec15d349beb531026d7b206ea4dd8cac885d5c
+SHA512 (wayland-1.26.0.tar.xz) = 50861b0c40cedec5f31b49ff1e99fc135a299fa4a8e2ff50ff4bac3f42e2f3f7be38271929fd2f6e58d83d5df516f643946ceba7937cc199581487c082c7ec31
+Size (wayland-1.26.0.tar.xz) = 612384 bytes
+SHA1 (patch-meson.build) = 41a8044c2c4bfb2c0fd4fd1ed9dacb912eedf73a
+SHA1 (patch-meson__options.txt) = af930cd03994d7a2202af97b17939555c3aa7409
+SHA1 (patch-scanner.c) = 68629112c5518aeaecbf831d14bea53168c1bc95
+SHA1 (patch-src_meson.build) = 47bb46d9af0ab428667bebbed36b09f0b0b9c414
+SHA1 (patch-src_wayland-os.c) = 652cddb828ac5176f5f7b71cfd561f1c6d1d8286
+SHA1 (patch-tests_client-test.c) = ebf042208da33ca73146d0c692818c2bc11c557b
+SHA1 (patch-tests_test-helpers.c) = 537ee55df1731c660c644195514853f389f8154f

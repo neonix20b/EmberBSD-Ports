@@ -7,6 +7,15 @@ selected by the [canonical recipe](../recipes/x11/libdrm/Makefile).
 Package creation/registration and the common Mesa/consumer transition remain
 separate acceptance steps.
 
+The [LLVM metadata helper](llvm-config.md) compiles upstream `llvm-config` for
+the build host using the target build's actual metadata. The separate
+[complete cross composition](profile.md) selects host tools and target
+dependencies without changing the native profile.
+
+[Wayland 1.26 and protocols 1.49](wayland.md) use a matching host scanner,
+separate native metadata and the installed target libraries. Their target
+tests are independent of the temporary Mesa diagnostic described below.
+
 Use the [GCC16 cross compiler](../../development-toolchain/cross/README.md),
 an AArch64 NetBSD 11 sysroot with its GCC16 CRT and base libpci, host Python
 3.14.8 and the fully prepared common Meson 1.12.1 source. The sysroot must
@@ -76,7 +85,7 @@ The same cross-built libdrm subsequently passed hash, drmsl and actual PCI
 device enumeration in an isolated QEMU 11.1.2/HVF VM booting the complete
 `EMBERGPU` kernel at `c6aba7d1e240`. GCC16 also cross-built the existing
 Examples GEM/PRIME probe, which passed malformed requests and 32 process
-lifetime cycles. The [kernel receipt](https://github.com/apovalixin/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
+lifetime cycles. The [kernel receipt](https://github.com/oxtech-ember/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
 records this separate serial-only boot. It does not establish a visible
 console, accelerated rendering, the UTM desktop or package registration.
 

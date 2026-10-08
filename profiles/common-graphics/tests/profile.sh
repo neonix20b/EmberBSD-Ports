@@ -18,7 +18,7 @@ run() { (cd "$work" && "$make" -r -m / OPSYS=NetBSD OS_VERSION=11.0 MACHINE_ARCH
 [ -z "$(run)" ]
 run PKGSRC_COMPILER=clang | grep 'selected pkgsrc GCC 16.2 compiler'
 run GCC_REQD=12 | grep 'requires GCC_REQD=16.2'
-run USE_CROSS_COMPILE=yes | grep 'requires native package builds'
+run USE_CROSS_COMPILE=yes | grep 'requires EMBERBSD_COMMON_GRAPHICS_CROSS=yes'
 run MACHINE_ARCH=x86_64 | grep 'NetBSD 11/AArch64 only'
 run OS_VERSION=10.1 | grep 'NetBSD 11/AArch64 only'
 run EMBERBSD_COMMON_TOOLS=no | grep 'requires common build-tools'
@@ -34,4 +34,4 @@ run PKGPATH=lang/libLLVM | grep 'canonical shared LLVM 23'
 profile=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 sed "s|$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF|$profile/mk.conf|" "$work/Makefile" > "$work/unprepared.mk"
 run -f unprepared.mk | grep 'must be prepared together'
-echo 'PASS: production profile rejects cross/platform/tool/provider/feature and unprepared-marker overrides'
+echo 'PASS: native production profile and explicit cross/platform/tool/provider/feature/marker refusals'

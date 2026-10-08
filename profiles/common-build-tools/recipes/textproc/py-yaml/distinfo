@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.23 2025/09/26 07:36:13 adam Exp $
+
+BLAKE2s (pyyaml-6.0.3.tar.gz) = 44d54a3501bec2ba62370751d1c58dcb1ac19053c89120ac6d2de2fb61ee5244
+SHA512 (pyyaml-6.0.3.tar.gz) = 0df64497f51bd07ee01d7676afc4cf3eff228e1a73d4b1c7f034c7cba762f3451aa686e594af54e8e359173262cc0e47c110491bc7e29c3dd712a66c4316b2cf
+Size (pyyaml-6.0.3.tar.gz) = 130960 bytes

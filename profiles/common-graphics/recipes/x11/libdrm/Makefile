@@ -43,17 +43,19 @@ MESON_ARGS+=	-D${module}=disabled
 .endfor
 MESON_ARGS+=	-Dman-pages=disabled -Dcairo-tests=disabled -Dvalgrind=disabled
 MESON_ARGS+=	-Dtests=true -Dinstall-test-programs=false
-MESON_ARGS+=	-Dbuildtype=release -Db_lto=false -Dwerror=true
+# pkgsrc supplies --buildtype=plain and the selected compiler optimization.
+MESON_ARGS+=	-Db_lto=false -Dwerror=true
 LDFLAGS.NetBSD+=	-lpci
-# Unlike unmodified pkgsrc, marked common libdrm must build with native X11.
+# Unlike unmodified pkgsrc, common libdrm must also build with native X11.
 # Do not include modular-xorg/avoid-duplicate.mk here.
 .include "../../lang/python/tool.mk"
 # Bind the upstream Python module and symbol-test shebang to one interpreter.
 MESON_BINARIES+= python
-MESON_BINARY.python= ${PYTHONBIN}
-REPLACE_PYTHON+= symbols-check.py gen_table_fourcc.py
+MESON_BINARY.python= ${TOOL_PYTHONBIN}
+REPLACE_TOOL_PYTHON+= symbols-check.py gen_table_fourcc.py
+.include "../../lang/python/application.mk"
 pre-configure:
-	${TEST} -x ${PYTHONBIN:Q}
-	${PYTHONBIN} -c 'import sys; assert sys.version_info[:2] == (3, 14)'
+	${TEST} -x ${TOOL_PYTHONBIN:Q}
+	${TOOL_PYTHONBIN} -c 'import sys; assert sys.version_info[:2] == (3, 14)'
 .include "../../devel/meson/build.mk"
 .include "../../mk/bsd.pkg.mk"

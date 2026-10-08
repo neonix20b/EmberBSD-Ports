@@ -1,0 +1,16 @@
+@comment $NetBSD: PLIST,v 1.8 2025/04/12 16:45:00 pgoyette Exp $
+${PYSITELIB}/${WHEEL_INFODIR}/METADATA
+${PYSITELIB}/${WHEEL_INFODIR}/RECORD
+${PYSITELIB}/${WHEEL_INFODIR}/WHEEL
+${PYSITELIB}/${WHEEL_INFODIR}/licenses/LICENSE.txt
+${PYSITELIB}/${WHEEL_INFODIR}/top_level.txt
+${PYSITELIB}/markupsafe/__init__.py
+${PYSITELIB}/markupsafe/__init__.pyc
+${PYSITELIB}/markupsafe/__init__.pyo
+${PYSITELIB}/markupsafe/_native.py
+${PYSITELIB}/markupsafe/_native.pyc
+${PYSITELIB}/markupsafe/_native.pyo
+${PYSITELIB}/markupsafe/_speedups.c
+${PYSITELIB}/markupsafe/_speedups.pyi
+${PYSITELIB}/markupsafe/_speedups.so
+${PYSITELIB}/markupsafe/py.typed
