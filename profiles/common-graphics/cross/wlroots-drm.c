@@ -257,20 +257,64 @@ deadline(void *argument)
 	return 0;
 }
 
+/* Select an explicit renderer policy before creating a display or session. */
+static const char *
+expected_renderer(int argc, char **argv)
+{
+	static const char *const forbidden[] = {
+		"LD_LIBRARY_PATH", "LD_PRELOAD", "LIBGL_DRIVERS_PATH",
+		"GBM_BACKENDS_PATH", "MESA_LOADER_DRIVER_OVERRIDE", "GALLIUM_DRIVER",
+		"WLR_RENDERER_FORCE_SOFTWARE", "WLR_RENDERER", "WLR_RENDER_DRM_DEVICE"
+	};
+	const char *expected, *software, *allowed;
+	size_t i;
+
+	if (argc != 1 && argc != 2)
+		return NULL;
+	expected = argc == 1 ? "llvmpipe" : argv[1];
+	if (strcmp(expected, "llvmpipe") != 0 && strcmp(expected, "virgl") != 0)
+		return NULL;
+	for (i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {
+		if (getenv(forbidden[i]) != NULL)
+			return NULL;
+	}
+	software = getenv("LIBGL_ALWAYS_SOFTWARE");
+	allowed = getenv("WLR_RENDERER_ALLOW_SOFTWARE");
+	if (strcmp(expected, "llvmpipe") == 0) {
+		if (software == NULL || strcmp(software, "1") != 0 ||
+		    allowed == NULL || strcmp(allowed, "1") != 0)
+			return NULL;
+	} else if (software != NULL || allowed != NULL) {
+		return NULL;
+	}
+	return expected;
+}
+
+static bool
+renderer_matches(const char *expected, const char *actual)
+{
+	size_t length = strlen(expected);
+
+	return actual != NULL && strncmp(actual, expected, length) == 0 &&
+	    (actual[length] == '\0' || actual[length] == ' ');
+}
+
 int
 main(int argc, char **argv)
 {
 	struct test test = { .executable = argv[0] };
 	struct wl_event_source *timer = NULL;
 	struct wlr_egl *egl;
-	const char *renderer;
+	const char *renderer, *expected;
 	bool listeners = false;
 	int result = EXIT_FAILURE;
 
 	setvbuf(stdout, NULL, _IOLBF, 0);
-	if (argc != 1 || getenv("LIBGL_ALWAYS_SOFTWARE") == NULL ||
-	    strcmp(getenv("LIBGL_ALWAYS_SOFTWARE"), "1") != 0)
+	expected = expected_renderer(argc, argv);
+	if (expected == NULL) {
+		fprintf(stderr, "Usage: wlroots-drm [llvmpipe|virgl] with matching renderer environment\n");
 		return EXIT_FAILURE;
+	}
 	wlr_log_init(WLR_DEBUG, NULL);
 	test.display = wl_display_create();
 	if (test.display == NULL)
@@ -297,8 +341,8 @@ main(int argc, char **argv)
 		goto done;
 	}
 	renderer = (const char *)glGetString(GL_RENDERER);
-	if (renderer == NULL || strstr(renderer, "llvmpipe") == NULL)
-		fail(&test, "explicit CPU llvmpipe renderer");
+	if (!renderer_matches(expected, renderer))
+		fail(&test, "actual renderer differs from explicit expected renderer");
 	printf("RENDERER: %s\n", renderer == NULL ? "(missing)" : renderer);
 	if (!eglMakeCurrent(wlr_egl_get_display(egl), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT))
 		fail(&test, "release query context");

@@ -106,8 +106,9 @@ runtime behavior are validated.
   Its [DRM/input package](profiles/common-graphics/cross/drm-input.md) also
   presents four verified frames at 1280x800 through a real libseat session
   and enumerates two wscons input devices. All 131 selected dependency checks
-  pass in the VM. Rendering remains llvmpipe; input events, VT switching,
-  application surfaces and an accelerated desktop remain unverified.
+  pass in the VM. The same package also passes four [VirGL DRM frames](profiles/common-graphics/cross/wlroots-virgl.md)
+  on the paired Metal host. Input events, VT switching, application surfaces
+  and a complete accelerated desktop remain unverified.
   A separate [guest VirGL check](profiles/common-graphics/cross/virgl-draw.md)
   passes four offscreen GLES lifecycles with this same Mesa/LLVM package
   stack and the paired ANGLE Metal host on Apple M3.
@@ -197,7 +198,7 @@ runtime behavior are validated.
   regressions, paired libdrm, wlroots and labwc recipes. Mesa26 headless
   softpipe tests now pass on A733; earlier Mesa21 native KMS/input checks
   remain separate. The installed common Mesa/LLVM package now passes CPU
-  rendering and libepoxy acceptance above. Guest VirGL runtime remains pending.
+  rendering, guest VirGL offscreen and DRM presentation acceptance above.
 - [UTM VirGL host source adaptations](probes/utm-virgl-host/README.md): the
   accepted upstream size-truncation fix is prepared for UTM's pinned 1.3.0
   renderer. Actual-source macOS/arm64 checks show compiled BASE RED and
@@ -237,8 +238,11 @@ runtime behavior are validated.
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
   Three [real QMP resets](probes/utm-virgl-host/qemu/reset.md) with a live guest
   2D GEM resource also pass, including four Metal renderer initializations.
-  In-flight 3D reset/display lifetimes and the accelerated guest session remain
-  unverified. The host profile defaults to OFF; guest VirGL stays disabled.
+  The [Cocoa context repair](probes/utm-virgl-host/qemu/cocoa-context.md) additionally
+  enables the installed guest's four-frame VirGL DRM check on Metal. In-flight
+  3D reset/display lifetimes and a complete accelerated session remain
+  unverified. The host profile defaults to OFF; only the separate EMBERVIRGL
+  kernel explicitly requests guest VirGL.
 - [Native Phosh session](probes/phosh/README.md): Phosh 0.58.0 builds and
   runs inside GNOME/X11 through Phoc and software-rendered Wayland.
   Stevia screen-keyboard input in English/Russian, a saved text document

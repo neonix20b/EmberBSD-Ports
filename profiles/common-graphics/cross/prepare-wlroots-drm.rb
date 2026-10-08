@@ -129,7 +129,7 @@ elf.scan(/\(NEEDED\).*\[([^\]]+)\]/).flatten.each do |n|
   abort "unrecorded consumer dependency: #{n}" unless runtime.keys.any? { |p| File.basename(p)==n } || File.file?("#{sysroot}/usr/lib/#{n}") || File.file?("#{sysroot}/lib/#{n}")
 end
 File.write("#{bundle}/source/inputs.sha256",hashes.map { |p,h| "#{h}  #{p}\n" }.join)
-File.write("#{bundle}/source/policy.json",JSON.pretty_generate({packages: expected, environment: {LIBGL_ALWAYS_SOFTWARE:'1',WLR_RENDERER_ALLOW_SOFTWARE:'1'}, scope:'Four real DRM modeset/presentation frames through libseat, GLES2 pixel readback and cleanup; input enumeration is not physical event acceptance.'})+"\n")
+File.write("#{bundle}/source/policy.json",JSON.pretty_generate({packages: expected, default_renderer: 'llvmpipe', renderer_modes: {llvmpipe: {LIBGL_ALWAYS_SOFTWARE:'1',WLR_RENDERER_ALLOW_SOFTWARE:'1'}, virgl: {}}, scope:'Four real DRM modeset/presentation frames through libseat, GLES2 pixel readback and cleanup with the explicitly selected actual renderer; input enumeration is not physical event acceptance.'})+"\n")
 hashes.each { |p,h| abort "input changed: #{p}" unless Digest::SHA256.file(p).hexdigest==h }
 artifacts=Dir.glob("#{bundle}/**/*").select { |p| File.file?(p) }.sort
 File.write("#{bundle}/artifacts.sha256",artifacts.map { |p| "#{Digest::SHA256.file(p).hexdigest}  #{p.delete_prefix(bundle+'/')}\n" }.join)

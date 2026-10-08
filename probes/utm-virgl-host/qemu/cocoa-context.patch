@@ -1,0 +1,53 @@
+# EmberBSD local, AI-assisted fix: preserve the caller's current GL context.
+# Applies after the pinned UTM v5.0.6 overlay on QEMU 10.0.12-utm.
+# Cocoa's original Mike Kronenberg copyright and MIT license remain unchanged.
+# Not submitted or accepted upstream. See cocoa-context.md for the causal trace.
+--- a/ui/cocoa.m
++++ b/ui/cocoa.m
+@@ -2261,18 +2261,40 @@
+ {
+ #ifdef CONFIG_EGL
+     if (egl_surface) {
+-        eglMakeCurrent(qemu_egl_display, egl_surface,
+-                       egl_surface, gl_view_ctx);
++        EGLDisplay previous_display = eglGetCurrentDisplay();
++        EGLContext previous_context = eglGetCurrentContext();
++        EGLSurface previous_draw = eglGetCurrentSurface(EGL_DRAW);
++        EGLSurface previous_read = eglGetCurrentSurface(EGL_READ);
++
++        if (!eglMakeCurrent(qemu_egl_display, egl_surface,
++                            egl_surface, gl_view_ctx)) {
++            error_report("cocoa: failed to make the display EGL context current");
++            exit(EXIT_FAILURE);
++        }
+         block();
+-        eglMakeCurrent(qemu_egl_display, EGL_NO_SURFACE,
+-                       EGL_NO_SURFACE, EGL_NO_CONTEXT);
++        /* EGL_NO_CONTEXT also implies EGL_NO_DISPLAY from the getter.
++         * Unbind from our valid display when there was no previous context. */
++        EGLDisplay restore_display = previous_context == EGL_NO_CONTEXT ?
++                                     qemu_egl_display : previous_display;
++        if (!eglMakeCurrent(restore_display, previous_draw,
++                            previous_read, previous_context)) {
++            error_report("cocoa: failed to restore the previous EGL context");
++            exit(EXIT_FAILURE);
++        }
+         return;
+     }
+ #endif
+ 
+-    CGLSetCurrentContext((CGLContextObj)gl_view_ctx);
++    CGLContextObj previous_context = CGLGetCurrentContext();
++    if (CGLSetCurrentContext((CGLContextObj)gl_view_ctx) != kCGLNoError) {
++        error_report("cocoa: failed to make the display CGL context current");
++        exit(EXIT_FAILURE);
++    }
+     block();
+-    CGLSetCurrentContext(NULL);
++    if (CGLSetCurrentContext(previous_context) != kCGLNoError) {
++        error_report("cocoa: failed to restore the previous CGL context");
++        exit(EXIT_FAILURE);
++    }
+ }
+ 
+ static CGLPixelFormatObj cocoa_gl_create_cgl_pixel_format(int bpp)

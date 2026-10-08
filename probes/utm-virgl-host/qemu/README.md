@@ -12,6 +12,8 @@ Their hashes and provenance are in [sources.tsv](sources.tsv) and
 official GitHub release asset digest. The complete overlay applies with zero
 fuzz and no offsets. The resulting files match the earlier checked projection
 before the accepted CREATE/backing/lifecycle/completion/wait files are copied.
+The subsequent [Cocoa context repair](cocoa-context.md) preserves the calling
+renderer context across display callbacks, including fenced scanout disable.
 Other QEMU and UI files retain the complete UTM overlay.
 
 This is a compatibility target selected by the UTM renderer/UI pairing.
@@ -126,5 +128,14 @@ does not extend this result to in-flight 3D commands or blocked display cleanup.
 
 The [bounded guest supervisor](run-guest-draw.rb) and [target instructions](../../../profiles/common-graphics/cross/virgl-draw.md)
 record the first four-cycle Mesa26 guest VirGL GLES acceptance on ANGLE Metal.
-The result covers offscreen shader/pixel lifecycles, not a visible compositor,
-live guest reset or general fault recovery.
+The default workload covers offscreen shader/pixel lifecycles. An explicit
+seventh argument, `wlroots-virgl`, adds QEMU USB input devices and requires the
+[installed wlroots DRM consumer](../../../profiles/common-graphics/cross/wlroots-virgl.md):
+four pixel-checked presentations, an active libseat session, two enumerated
+input devices and verified live package providers. Both modes retain the same
+host provider, timeout, snapshot and input-integrity guards.
+
+The DRM workload passes on Apple M3 after the [Cocoa context repair](cocoa-context.md),
+with the separately fixed guest PCI queue teardown. This is accelerated DRM
+presentation, not application surfaces, a complete compositor session, live
+3D reset or general fault recovery.

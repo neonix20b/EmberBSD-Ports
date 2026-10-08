@@ -34,7 +34,21 @@ EOF
     echo 'PASS: all live package providers are in the verified runtime manifest'
 }
 # End of provider checks; functions are exercised by wlroots consumer guard tests.
-[ "$#" = 3 ] || { echo 'Usage: run-wlroots-drm.sh BUNDLE /dev/dri/DEVICE NEW_LOGS' >&2; exit 2; }
+select_renderer() {
+    expected_renderer=${1-llvmpipe}
+    case "$expected_renderer" in llvmpipe|virgl) ;; *) echo 'Expected renderer must be llvmpipe or virgl' >&2; return 2;; esac
+}
+run_consumer() {
+    set -- env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/pkg/bin MESA_SHADER_CACHE_DISABLE=true \
+        LIBSEAT_BACKEND=seatd WLR_BACKENDS=drm,libinput WLR_DRM_DEVICES="$device"
+    if [ "$expected_renderer" = llvmpipe ]; then
+        set -- "$@" LIBGL_ALWAYS_SOFTWARE=1 WLR_RENDERER_ALLOW_SOFTWARE=1
+    fi
+    "$@" "$timeout" -k 5 60 "$bundle/bin/wlroots-drm" "$expected_renderer"
+}
+# End of mode functions; exercised as actual source by wlroots-drm-mode.rb.
+[ "$#" = 3 ] || [ "$#" = 4 ] || { echo 'Usage: run-wlroots-drm.sh BUNDLE /dev/dri/DEVICE NEW_LOGS [llvmpipe|virgl]' >&2; exit 2; }
+select_renderer "${4-llvmpipe}"
 bundle=$(CDPATH= cd -- "$1" && pwd -P)
 device=$2
 case "$device" in /dev/dri/*) ;; *) exit 2;; esac
@@ -61,11 +75,7 @@ done <<EOF
 $(awk '$2 == "=>" {print $3}' "$logs/ldd.log")
 EOF
 result=0
-env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/pkg/bin MESA_SHADER_CACHE_DISABLE=true \
-    LIBGL_ALWAYS_SOFTWARE=1 WLR_RENDERER_ALLOW_SOFTWARE=1 \
-    LIBSEAT_BACKEND=seatd WLR_BACKENDS=drm,libinput WLR_DRM_DEVICES="$device" \
-    "$timeout" -k 5 60 "$bundle/bin/wlroots-drm" \
-    > "$logs/wlroots-drm.log" 2>&1 || result=$?
+run_consumer > "$logs/wlroots-drm.log" 2>&1 || result=$?
 cat "$logs/wlroots-drm.log"
 if [ "$result" = 0 ]; then
     check_live_providers > "$logs/live-providers.log" 2>&1 || result=$?

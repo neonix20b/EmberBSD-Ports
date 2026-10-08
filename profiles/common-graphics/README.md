@@ -48,7 +48,10 @@ input events, VT switching, application surfaces, labwc and an accelerated
 session remain separate acceptance stages.
 The same installed stack also passes four [offscreen guest VirGL lifecycles](cross/virgl-draw.md)
 with the separate EMBERVIRGL kernel and paired ANGLE Metal host on Apple M3.
-This result does not qualify an accelerated compositor session.
+It now also passes four [accelerated wlroots DRM presentations](cross/wlroots-virgl.md)
+at 1280x800, with pixel checks and clean shutdown. This requires the paired
+Cocoa context repair and the guest PCI queue teardown fix. The CPU consumer
+still passes on the 2D device; a complete compositor session remains unaccepted.
 
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
@@ -229,7 +232,8 @@ Then rebuild and inspect affected consumers, including loaded dril/GBM/Qt
 plugins: exactly one Mesa/DRM/sharedLLVM/GCC16 runtime, no libglapi, old base
 GL3/EGL0/DRM3, build paths or loader overrides. NetBSD clients loading worker
 libraries need pthread at process startup. Consumer graphics checks,
-matched-kernel KMS/input identity and VirGL sessions remain runtime gates.
+application surfaces, physical input events, VT recovery and sustained
+VirGL sessions remain runtime gates.
 The [common media profile](../common-media/README.md) prepares FFmpeg9 for
 Qt Multimedia/KFileMetadata; native packages and playback remain unaccepted.
 Physical GPU acceleration and the complete Mobile workflow remain unverified.

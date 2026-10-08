@@ -3,8 +3,9 @@
 This is the next package stage after the accepted
 [headless GLES2 consumer](wlroots-package.md). It keeps the same canonical
 MesaLib 26.2.4nb2, libdrm 2.4.134nb1, Wayland 1.26.0nb1 and LLVM23 ABI.
-The installed package now passes a real DRM presentation test in an isolated
-EMBERGPU VM. Physical input events and a usable labwc session remain separate
+The installed package passes real DRM presentation with llvmpipe in an
+EMBERGPU VM and [VirGL on the paired Metal host](wlroots-virgl.md) with
+EMBERVIRGL. Physical input events and a usable labwc session remain separate
 acceptance stages.
 
 ## Selected sources and providers
@@ -152,11 +153,35 @@ sh /absolute/bundle/run-wlroots-drm.sh /absolute/bundle \
 ```
 
 The runner requires the real DRM and libinput backends plus an active libseat
-session. It selects llvmpipe explicitly, verifies package/library manifests,
+session. It selects llvmpipe by default, verifies package/library manifests,
 and checks live loaded providers. Four rendered frames must pass 1024-pixel
 GLES2 readback and matching DRM presentation events before cleanup. Timeout
 is bounded; missing output/input prerequisites fail rather than selecting a
 headless or pixman backend. This consumer does not receive application surfaces.
+
+An explicit fourth argument selects the experimental VirGL path with the same
+installed `drm-gles2` package and presentation/pixel checks:
+
+```sh
+sh /absolute/bundle/run-wlroots-drm.sh /absolute/bundle \
+    /dev/dri/card0 /absolute/new-virgl-drm-logs virgl
+```
+
+This requires the separate EMBERVIRGL kernel and the accepted paired QEMU
+classic profile with ANGLE Metal, as used by the [first guest draw](virgl-draw.md).
+The consumer's own optional argument is `[llvmpipe|virgl]`; omission preserves
+the CPU mode. CPU mode requires its two explicit software flags. VirGL mode
+forbids them, and both modes reject loader/driver overrides. The actual GLES
+renderer must match the selected name before allocator creation or modesetting.
+There is no fallback to llvmpipe or pixman when VirGL is unavailable. The
+runner retains its clean environment and 60-second limit plus five-second
+forced-kill grace period; host supervision remains a separate 120+5-second
+bound. `wlroots-drm-mode.rb` compiles the actual C admission/renderer predicates
+and exercises the real shell invocation functions; its synthetic policy data
+does not establish presentation. The separate [runtime acceptance](wlroots-virgl.md)
+confirms four accelerated DRM frames. CPU regression uses the 2D EMBERGPU
+device; on a VirGL-capable node Mesa can still select VirGL despite these
+software flags, and the expected-renderer guard correctly refuses that run.
 
 An isolated serial-console VM can use seatd's explicit `SEATD_VTBOUND=0` mode.
 That does not prove virtual-terminal switching. Supply actual QEMU USB
@@ -207,8 +232,9 @@ for the isolated root; no package library was replaced to run these checks.
 | Dependency bundle | `e6206b540be7934e8d4cc49d44c21dbacd1f2d62fd0cd4797e91355fc908ea06` |
 | Dependency serial log | `2d184e3e8d464d8750b86cf822dcce782e16dffb3b9eb1417e71c83aef486497` |
 
-This proves CPU llvmpipe rendering and DRM presentation in that VM. It does
-not establish GPU acceleration, input-event delivery, virtual-terminal
-switching, application surfaces, a labwc desktop, physical-board scanout or
-long-running compositor stability. The serial-console session explicitly used
+This original run proves CPU llvmpipe rendering and DRM presentation in that
+VM. The subsequent [VirGL result](wlroots-virgl.md) adds GPU rendering and
+scanout on the paired host. Neither establishes input-event delivery,
+virtual-terminal switching, application surfaces, a labwc desktop,
+physical-board scanout or long-running compositor stability. The serial-console session explicitly used
 `SEATD_VTBOUND=0`; no zero-device override or software pixman renderer was used.

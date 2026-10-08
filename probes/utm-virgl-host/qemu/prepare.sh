@@ -30,5 +30,12 @@ done
 # the full UTM overlay. No derived patch is re-applied to already patched code.
 (cd "$work/stages/qemu/wait" && find . -type f ! -name '*.orig' ! -name '*.rej') |
 while IFS= read -r path; do cp "$work/stages/qemu/wait/$path" "$work/src/$path"; done
+# Cocoa display callbacks must restore the renderer's current GL context before
+# the command dispatcher creates a completion fence (including scanout disable).
+[ "$(hash "$work/src/ui/cocoa.m")" = bfcf122c7e3fa913fbe42e08648f27bc89f00728454c97faba71b6fd84e7ad76 ] || { echo 'Cocoa baseline mismatch' >&2; exit 1; }
+[ "$(hash "$recipe/cocoa-context.patch")" = d604e2f7d26975f9a0cd7bf19ae5d48639382bdfec9a6ef4d4dc022a86baf04c ] || { echo 'Cocoa patch mismatch' >&2; exit 1; }
+patch -f -F 0 -d "$work/src" -p1 < "$recipe/cocoa-context.patch" > "$work/cocoa-context.log" 2>&1 || { cat "$work/cocoa-context.log" >&2; exit 1; }
+if grep -Ei 'fuzz|offset|FAILED|Reversed|previously applied|Skipping|malformed' "$work/cocoa-context.log"; then exit 1; fi
+[ "$(hash "$work/src/ui/cocoa.m")" = 56d4152d4beb1165675187ff9b015adc212b2844726140ec996dff66bd01bd2c ] || { echo 'Cocoa result mismatch' >&2; exit 1; }
 (cd "$work" && find src -type f ! -name '*.orig' ! -name '*.rej' -exec shasum -a 256 {} +) > "$work/source-sha256.txt"
 printf '%s\n' 'PASS: full QEMU tree with complete UTM overlay and accepted paired source.'

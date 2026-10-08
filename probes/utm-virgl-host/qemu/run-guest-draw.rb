@@ -6,7 +6,9 @@ require 'json'
 require 'fileutils'
 require 'open3'
 
-abort 'usage: run-guest-draw.rb QEMU_WORK RENDERER_WORK KERNEL ROOT_FFS ANGLE_FRAMEWORKS NEW_WORK' unless ARGV.size == 6
+abort 'usage: run-guest-draw.rb QEMU_WORK RENDERER_WORK KERNEL ROOT_FFS ANGLE_FRAMEWORKS NEW_WORK [offscreen|wlroots-virgl]' unless [6, 7].include?(ARGV.size)
+workload = ARGV.size == 7 ? ARGV.pop : 'offscreen'
+abort 'unknown guest workload' unless %w[offscreen wlroots-virgl].include?(workload)
 abort 'simple absolute paths required' unless ARGV.all? { |p| p.match?(%r{\A/[A-Za-z0-9_./-]+\z}) }
 qemu, renderer, kernel, root, frameworks = ARGV.first(5).map { |p| File.realpath(p) }
 work = File.expand_path(ARGV.last)
@@ -57,7 +59,8 @@ args = [binary, '-name', 'EmberBSD-VirGL-draw-isolated',
         '-device', 'virtio-blk-pci,drive=root',
         '-device', 'virtio-gpu-gl-pci,ember-classic-lifecycle=on',
         '-net', 'none', '-monitor', 'none']
-File.write(work + '/command.json', JSON.pretty_generate({environment: env, argv: args}) + "\n")
+args += ['-device', 'qemu-xhci', '-device', 'usb-kbd', '-device', 'usb-mouse'] unless workload == 'offscreen'
+File.write(work + '/command.json', JSON.pretty_generate({workload: workload, environment: env, argv: args}) + "\n")
 clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
 reaped = false
 pid = nil
@@ -106,14 +109,25 @@ abort 'Metal backend not selected' unless host_log.include?('ANGLE Metal Rendere
 (libraries + framework_files).each do |path|
   abort "accepted image not loaded: #{path}" unless host_log.include?(File.realpath(path))
 end
-abort 'guest draw runner failed or never completed' unless guest_log.scan(/^EMBER_VIRGL_EXIT=0\r?$/).length == 1 &&
-  guest_log.include?('EMBER_VIRGL_END') && !guest_log.include?('panic:') &&
-  guest_log.include?('PASS: installed VirGL shader/triangle readback and four GBM EGL lifecycles on renderD128')
-abort 'guest renderer proof missing' unless guest_log.scan(/^Cycle [1-4]: .*renderer virgl.*\r?$/).length == 4 &&
-  guest_log.include?('PASS: shader rejection, clear, triangle pixels and four EGL lifecycles')
+if workload == 'offscreen'
+  abort 'guest draw runner failed or never completed' unless guest_log.scan(/^EMBER_VIRGL_EXIT=0\r?$/).length == 1 &&
+    guest_log.include?('EMBER_VIRGL_END') && !guest_log.include?('panic:') &&
+    guest_log.include?('PASS: installed VirGL shader/triangle readback and four GBM EGL lifecycles on renderD128')
+  abort 'guest renderer proof missing' unless guest_log.scan(/^Cycle [1-4]: .*renderer virgl.*\r?$/).length == 4 &&
+    guest_log.include?('PASS: shader rejection, clear, triangle pixels and four EGL lifecycles')
+else
+  expected = workload.delete_prefix('wlroots-')
+  abort 'guest DRM runner failed or never completed' unless guest_log.scan(/^EMBER_WLROOTS_DRM_EXIT=0\r?$/).length == 1 &&
+    guest_log.include?('EMBER_WLROOTS_DRM_END') && !guest_log.include?('panic:') &&
+    guest_log.include?('PASS: four actual DRM presentations, GLES2 pixels, libseat session; 2 input devices enumerated; cleanup') &&
+    guest_log.include?('PASS: all live package providers are in the verified runtime manifest')
+  abort 'guest renderer differs from selected workload' unless guest_log.scan(/^RENDERER: #{Regexp.escape(expected)}(?: .*)?\r?$/).length == 1
+  frames = guest_log.scan(/^PRESENT: frame=([1-4]) seq=\d+ flags=0x[fF] refresh=\d+\r?$/).flatten
+  abort 'four distinct DRM presentations not confirmed' unless frames == %w[1 2 3 4]
+end
 input_hashes.each { |path, sha| abort "input changed: #{path}" unless hash(path) == sha }
 files = Dir.glob(work + '/**/*').select { |p| File.file?(p) }
 abort 'output budget exceeded' if files.sum { |p| File.size(p) } > 100 * 1024 * 1024
 File.write(work + '/outputs.sha256', files.sort.map { |path| "#{hash(path)}  #{path.delete_prefix(work + '/')}\n" }.join)
-puts 'PASS: isolated guest VirGL four-cycle GLES draw on Metal; input FFS unchanged'
+puts "PASS: isolated guest #{workload} workload on the verified Metal host; input FFS unchanged"
 puts 'Boundary: no guest 3D reset, fault recovery, visible compositor or sustained-run acceptance'
