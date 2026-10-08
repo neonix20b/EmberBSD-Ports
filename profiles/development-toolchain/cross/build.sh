@@ -106,8 +106,11 @@ for name in $patches; do
     [ "$name" != patch-gcc_Makefile.in ] || continue
     patch -f -N -F 0 -p0 -d "$work/src" < "$recipe/patches/$name"
 done > "$work/patch.log" 2>&1
+mkdir -p "$prefix/aarch64--netbsd/bin"
 for tool in ar as elfedit ld nm objcopy objdump ranlib readelf size strings strip; do
     cp "$tools/bin/aarch64--netbsd-$tool" "$prefix/bin/"
+    # GCC invokes objcopy for -gsplit-dwarf through its target-tool search path.
+    ln -s "../../bin/aarch64--netbsd-$tool" "$prefix/aarch64--netbsd/bin/$tool"
 done
 cd "$work/build"
 unset GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH CPATH CPLUS_INCLUDE_PATH C_INCLUDE_PATH
@@ -122,5 +125,6 @@ CC=${HOST_CC:-cc} CXX=${HOST_CXX:-c++} CFLAGS=-O2 CXXFLAGS=-O2 \
 "$tools/bin/nbgmake" install-gcc > "$work/install.log" 2>&1
 [ "$("$prefix/bin/aarch64--netbsd-gcc" -dumpfullversion)" = 16.2.0 ]
 [ "$("$prefix/bin/aarch64--netbsd-g++" -dumpmachine)" = aarch64--netbsd ]
+sh "$profile/cross/tests/split-dwarf.sh" "$prefix" "$work/split-dwarf"
 echo "GCC16 cross compiler built: $prefix"
 echo 'Compile the acceptance programs, then run them on EmberBSD before accepting the toolchain.'

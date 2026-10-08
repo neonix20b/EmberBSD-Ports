@@ -33,7 +33,9 @@ runtime behavior are validated.
   without a private frontend, and reversible board login/SSH and pkgsrc
   defaults select it. The [cross-compiler recipe](profiles/development-toolchain/cross/README.md)
   builds GCC16 on Apple Silicon macOS; cross-built C/C++20 consumers run on
-  Zero 3W with its installed GCC16 runtime. Common Qt/LLVM rebuilding and full-image integration
+  Zero 3W with its installed GCC16 runtime. Its installed tool-search layout
+  also passes split-DWARF generation without an `objcopy` path override.
+  Common Qt/LLVM rebuilding and full-image integration
   remain pending.
 - [Current common build tools](profiles/common-build-tools/README.md):
   [Mac cross packages](profiles/common-build-tools/cross/README.md) for

@@ -92,6 +92,14 @@ recorded paths. `HOST_CC`/`HOST_CXX` name the existing host compilers;
 host's online CPU count from `getconf`, with `sysctl` as a fallback.
 A failed stage returns nonzero.
 
+The installed prefix includes GCC's `aarch64--netbsd/bin` tool-search
+directory. This is required for the driver's `-gsplit-dwarf` invocation of
+`objcopy`, even when ordinary compilation already works. The build runs
+`tests/split-dwarf.sh CROSS_PREFIX NEW_WORK` with a clean PATH and no
+`-B` or compiler-search overrides. The resulting DWARF5 skeleton and DWO
+must both be readable and retain the named type. This contract passed on
+2026-10-08 with the current GMP-backed GCC16 prefix.
+
 ## Compile here, execute on EmberBSD
 
 ```sh
