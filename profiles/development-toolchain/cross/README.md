@@ -28,7 +28,7 @@ Provide these absolute paths without whitespace:
    headers/runtime. Preserve relative symlinks. Resolve links escaping the
    sysroot when creating the snapshot; never resolve them against the host.
 4. A host `TOOLDIR` produced by the fork's
-   [cross-build path](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/cross-build.md).
+   [cross-build path](https://github.com/oxtech-ember/EmberBSD/blob/main/ember/boot/cross-build.md).
    GNU make builds the compiler, and its AArch64 binutils are copied into the
    compiler prefix. Qualifying current binutils remains separate work.
 5. A new work directory with room for sources, objects and the compiler.

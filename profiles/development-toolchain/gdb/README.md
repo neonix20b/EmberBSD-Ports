@@ -20,7 +20,7 @@ See the [release directory](https://sourceware.org/pub/gdb/releases/) and
 [current upstream download page](https://sourceware.org/gdb/download/).
 
 The three `aarch64-netbsd-*` source files come from NetBSD's GDB import in
-[EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`](https://github.com/apovalixin/EmberBSD/tree/21cd2464c720159bec0a3ba352e4dee940a58b02/external/gpl3/gdb/dist/gdb).
+[EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`](https://github.com/oxtech-ember/EmberBSD/tree/21cd2464c720159bec0a3ba352e4dee940a58b02/external/gpl3/gdb/dist/gdb).
 Their Free Software Foundation copyright and GPLv3 notices are retained.
 EmberBSD's integration, repairs and test scripts are AI-assisted work.
 These patches have not been submitted or accepted upstream.
@@ -74,7 +74,7 @@ fallback to older dependencies.
 ## Acceptance on the target
 
 First generate the external-object fixtures with the OS repository's
-[CTF/DWARF contract](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/dtrace-dwarf.md).
+[CTF/DWARF contract](https://github.com/oxtech-ember/EmberBSD/blob/main/ember/boot/dtrace-dwarf.md).
 Use the complete output directory; `.dwo` and `types.sup` files must remain
 alongside their corresponding objects. Compile the live workload separately:
 

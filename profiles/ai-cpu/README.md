@@ -35,7 +35,7 @@ them. Keep enough disk space for the full pkgsrc checkout and working copy.
 
 ```sh
 git clone --recurse-submodules --shallow-submodules \
-  https://github.com/neonix20b/EmberBSD-Ports.git
+  https://github.com/oxtech-ember/EmberBSD-Ports.git
 cd EmberBSD-Ports
 work=/var/tmp/emberbsd-ai-build
 mkdir "$work"
@@ -78,7 +78,7 @@ pkg_admin -K "$work/pkgdb" check llama-cpp whisper-cpp
 ```
 
 Use `$work/runtime/bin` as `AI_BIN` in the
-[independent model example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/ai/local-inference).
+[independent model example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/ai/local-inference).
 Remove this installation with:
 
 ```sh
@@ -125,7 +125,7 @@ The VM's network remained available; the inference commands used local model
 files and a loopback HTTP connection. A physical disconnected-device trial
 is a separate acceptance step.
 
-The [local-document example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/ai/local-knowledge)
+The [local-document example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/ai/local-knowledge)
 extends this same installed engine with SQLite FTS5 retrieval and a model-selected
 verbatim quotation. On 2026-10-07 the AArch64 VM produced an actual grounded
 answer using one CPU thread. The application rejects missing evidence, forged

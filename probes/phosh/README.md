@@ -21,7 +21,7 @@ No success-returning replacement libraries are used.
 
 Copy this entire directory to an EmberBSD/NetBSD 11 development machine.
 Use an ordinary user and the installed pkgsrc GNOME environment from the
-[GNOME example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/desktop/gnome-utm).
+[GNOME example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/desktop/gnome-utm).
 Each work directory must be new, absolute and have an existing parent.
 Paths must contain only letters, digits, `_`, `.`, `/` and `-`.
 

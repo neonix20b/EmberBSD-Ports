@@ -112,6 +112,6 @@ Zink/OpenGL and a display compositor come after that test. A GPU firmware
 download, Mesa build, or successful Linux vendor example proves neither the
 native driver nor physical GPU execution under EmberBSD.
 
-Kernel work belongs in [EmberBSD](https://github.com/apovalixin/EmberBSD);
+Kernel work belongs in [EmberBSD](https://github.com/oxtech-ember/EmberBSD);
 model and Vulkan demonstrations belong in
-[Examples](https://github.com/neonix20b/EmberBSD-Examples).
+[Examples](https://github.com/oxtech-ember/EmberBSD-Examples).

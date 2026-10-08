@@ -1,7 +1,7 @@
 # EmberBSD Ports
 
 Source build recipes, portability patches and build probes for
-[EmberBSD](https://github.com/apovalixin/EmberBSD).
+[EmberBSD](https://github.com/oxtech-ember/EmberBSD).
 
 Sources are downloaded from their original upstream locations and verified
 against pinned hashes. This repository carries our recipes and patches,
@@ -57,11 +57,14 @@ runtime behavior are validated.
   matching LLVM/Clang/LLD 23.1.2 source
   recipes with upstream lit, scoped native Clang/GCC16 defaults, strict
   common selection and host source contracts. Focused native macro/selection
-  checks cover Python, LLVM family selection and real GCC16 config metadata;
-  native LLVM23/compiler-family checks, remaining packages,
-  ELF/JIT consumers and LLVM23/Mesa26 acceptance remain pending.
+  checks cover Python, LLVM family selection and real GCC16 config metadata.
+  The complete LLVM23 core package now passes normal packaging and installed
+  [C API/bitcode and four ORC JITLink lifecycles](profiles/common-build-tools/cross/llvm-api-tests.md)
+  on Zero 3W. Packaged upstream lit passes launcher and PASS/XFAIL/FAIL checks
+  in AArch64 UTM. Clang/LLD packaging and Mesa26/TinyGo consumers remain pending.
 - [Common graphics source packages](profiles/common-graphics/README.md):
-  canonical MesaLib 26.2.4nb1 and adapted libdrm 2.4.134nb1 compose the common
+  canonical MesaLib 26.2.4nb1, adapted libdrm 2.4.134nb1,
+  Wayland 1.26.0nb1 and wayland-protocols 1.49 compose the common
   GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.
   Source, export and dependency-selection checks cover X11/Wayland,
   EGL/GBM and classic VirGL/softpipe/llvmpipe. The complete core-only libdrm
@@ -69,8 +72,10 @@ runtime behavior are validated.
   upstream hash, skip-list and exported-symbol checks in AArch64 UTM.
   A [temporary Mesa26 cross diagnostic](profiles/common-graphics/cross/README.md#temporary-headless-mesa-diagnostic)
   passes software GLES shader/pixel checks and 30 upstream target test runs on
-  Orange Pi Zero 3W (A733). The full Mesa/LLVM profile, package registration,
-  consumer migration and guest GPU rendering remain unverified.
+  Orange Pi Zero 3W (A733). The installed
+  [Wayland package](profiles/common-graphics/cross/wayland.md) passes all 26
+  enabled upstream invocations there after the paired kernel IPC repairs.
+  Full Mesa packaging, consumer migration and guest GPU rendering remain unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -81,13 +86,13 @@ runtime behavior are validated.
   source adaptations and pkgsrc patch origins; physical SDR and IMU are unverified.
 - [Software radio flowgraphs](probes/gnuradio/README.md): GNU Radio 3.10.12.0
   reuses common FFTW/VOLK/fmt and passes three installed AArch64 VM contracts.
-  The [standalone BPSK example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/gnuradio-channel)
+  The [standalone BPSK example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/gnuradio-channel)
   recovers 2,048 payload bits through a noisy software channel and measures
   the expected errors without carrier correction. No physical SDR or GUI is required.
 - [Offline visual SLAM](probes/orb-slam3/README.md): ORB-SLAM3 v1.0 uses common
   Eigen 5.0.1/OpenCV 5.0.0 through a headless adaptation with worker shutdown,
   cancellation and missing-pose export regressions. Eight installed AArch64 VM
-  cases pass. The [RGB-D example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
+  cases pass. The [RGB-D example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
   tracks 573 TUM fr1/desk pairs with 1.71–1.76 cm translation ATE RMSE in two
   controlled runs. Cameras, IMU fusion, boards and sustained operation are unverified.
 - [Navigation source profiles](probes/gtsam/README.md): GTSAM 4.3.0,
@@ -253,29 +258,33 @@ submitted upstream or accepted upstream; AI assistance is not concealed.
 Distinguish a configured project, a compiled library, passing tests and
 a working application. Keep logs and downloaded artifacts outside Git.
 Examples that use these ports belong in
-[EmberBSD Examples](https://github.com/neonix20b/EmberBSD-Examples).
+[EmberBSD Examples](https://github.com/oxtech-ember/EmberBSD-Examples).
 
 ## Related EmberBSD projects
 
-[EmberBSD](https://github.com/apovalixin/EmberBSD#emberbsd-ecosystem) is the
+[EmberBSD](https://github.com/oxtech-ember/EmberBSD#emberbsd-ecosystem) is the
 central project and the entry point for the ecosystem.
 
-- [EmberBSD](https://github.com/apovalixin/EmberBSD) — OS, drivers, boards and system builds.
-- [EmberBSD-Examples](https://github.com/neonix20b/EmberBSD-Examples) — standalone demonstrations using these dependencies.
-- [EmberBSD-Runtime](https://github.com/neonix20b/EmberBSD-Runtime) — application execution and device operations; design stage.
-- [EmberBSD-SDK](https://github.com/neonix20b/EmberBSD-SDK) — application contracts and development tools; design stage.
-- [Ember-Agent-Skills](https://github.com/neonix20b/Ember-Agent-Skills) — instructions for AI coding assistants, ports and tested contributions.
+- [EmberBSD](https://github.com/oxtech-ember/EmberBSD) — OS, drivers, boards and system builds.
+- [EmberBSD-Examples](https://github.com/oxtech-ember/EmberBSD-Examples) — standalone demonstrations using these dependencies.
+- [EmberBSD-Runtime](https://github.com/oxtech-ember/EmberBSD-Runtime) — application execution and device operations; design stage.
+- [EmberBSD-SDK](https://github.com/oxtech-ember/EmberBSD-SDK) — application contracts and development tools; design stage.
+- [Ember-Agent-Skills](https://github.com/oxtech-ember/Ember-Agent-Skills) — instructions for AI coding assistants, ports and tested contributions.
 
 ## Connect developer skills
+
+[Ember-Agent-Skills](https://github.com/oxtech-ember/Ember-Agent-Skills#use-in-your-development-environment)
+provides portable Agent Skills packaged with Agent Plugins. Use the installation
+method supported by your development environment. Codex is one verified host.
 
 Use a Codex CLI with plugin support:
 
 ```sh
-codex plugin marketplace add neonix20b/Ember-Agent-Skills --ref main
+codex plugin marketplace add oxtech-ember/Ember-Agent-Skills --ref main
 codex plugin add emberbsd-development@ember-agent-skills
 ```
 
 Start a new conversation and ask `$emberbsd-repository-guide` to prepare a
 port, run the appropriate checks and open a tested contribution. Follow the
-[installation, verification and update guide](https://github.com/neonix20b/Ember-Agent-Skills#install-in-codex)
+[installation, verification and update guide](https://github.com/oxtech-ember/Ember-Agent-Skills#use-in-your-development-environment)
 for the complete procedure and other assistant environments.

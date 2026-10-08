@@ -8,7 +8,7 @@ the complete patched QEMU and renderer on ANGLE Metal. It is not an in-flight
 
 Use the [built QEMU and renderer](README.md), the matched EMBERGPU kernel and
 a separate 64 MiB FFS root prepared by the
-[kernel boot method](https://github.com/apovalixin/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md).
+[kernel boot method](https://github.com/oxtech-ember/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md).
 Never provide an existing VM disk. No guest account or network is needed.
 The QEMU profile is enabled only for this experiment; guest VirGL stays off.
 

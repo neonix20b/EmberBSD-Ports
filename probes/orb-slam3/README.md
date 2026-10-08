@@ -117,7 +117,7 @@ is CC BY 4.0 for data. Attribute J. Sturm, N. Engelhard, F. Endres,
 W. Burgard and D. Cremers, *A Benchmark for the Evaluation of RGB-D SLAM
 Systems*, IROS 2012. Dataset download is separate and is not stored in Git.
 
-The [standalone RGB-D example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
+The [standalone RGB-D example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/orb-slam3-rgbd)
 uses libpng 1.6.58 to decode original RGB and uint16 depth images. Two runs
 with OpenCV/DUtils seed zero tracked and exported all 573 associated frames,
 with fixed-scale SE(3) ATE RMSE 0.01762/0.01712 m and maximum error

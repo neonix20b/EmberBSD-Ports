@@ -68,7 +68,7 @@ consumer on EmberBSD/NetBSD 11.0 AArch64 (UTM, GCC 12.5.0). Headers and runtime
 reported the same exact source ID. `ldd` resolved SQLite to the selected
 `/usr/pkg/lib/libsqlite3.so`; no bundled SQLite implementation was used.
 
-The [local-document example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/ai/local-knowledge)
+The [local-document example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/ai/local-knowledge)
 also used this installed library for FTS5 retrieval, response JSON validation
 and an actual single-threaded llama.cpp answer. That is a separate application
 consumer, not merely a library configuration result.

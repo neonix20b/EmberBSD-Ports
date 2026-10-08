@@ -75,5 +75,5 @@ control, ECU, industrial device, hard real-time deadline or sustained operation.
 Use [robotics foundations](../robotics-foundations/README.md) for OpenCV/Eigen/gpsd,
 [media](../media/README.md) for file-based videoio, and
 [AI engines](../ai-engines/README.md) for CPU inference and speech processing.
-The [Zenoh/ROS 2 example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/zenoh-ros2)
+The [Zenoh/ROS 2 example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/zenoh-ros2)
 owns cross-device telemetry and command exchange.

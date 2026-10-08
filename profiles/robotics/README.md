@@ -1,7 +1,7 @@
 # Robotics: native Zenoh-Pico and ROS 2 integration
 
 This profile packages **Zenoh-Pico 1.10.1** for EmberBSD using pkgsrc.
-The [independent Examples scenario](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/zenoh-ros2)
+The [independent Examples scenario](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/zenoh-ros2)
 connects a simulated C controller to typed ROS 2 Jazzy messages on Ubuntu 24.04.
 ROS 2 itself is not installed on EmberBSD.
 
@@ -48,7 +48,7 @@ uses CMake/C; it does not require project-owned Python tooling.
 
 ```sh
 git clone --recurse-submodules --shallow-submodules \
-  https://github.com/neonix20b/EmberBSD-Ports.git
+  https://github.com/oxtech-ember/EmberBSD-Ports.git
 cd EmberBSD-Ports
 work=/var/tmp/ember-robotics-build
 mkdir "$work"

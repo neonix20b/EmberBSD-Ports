@@ -3,7 +3,7 @@
 LiteRT 2.2.0 runs `.tflite` models through its C API and C++ wrappers.
 This profile cross-builds a shared CPU runtime and the companion
 [LiteRT-LM 0.18.0 engine](../litert-lm/) for EmberBSD/NetBSD 11 AArch64.
-It belongs to [EmberBSD](https://github.com/apovalixin/EmberBSD).
+It belongs to [EmberBSD](https://github.com/oxtech-ember/EmberBSD).
 
 The source profile passes installed C/C++ and Engine contracts on a physical
 NetBSD 11/AArch64 A733 board. See [validation and model identity](VALIDATION.md).

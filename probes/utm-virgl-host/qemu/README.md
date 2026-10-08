@@ -71,7 +71,7 @@ separately through all 1863 build steps.
 The complete executable linked with libepoxy 1.5.10 and the patched renderer
 1.3.0. All original UTM Cocoa/Metal code and actual VirtGPU translation units
 compiled together. A private VM then booted the complete
-[EMBERGPU kernel](https://github.com/apovalixin/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
+[EMBERGPU kernel](https://github.com/oxtech-ember/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
 with a 64 MiB temporary FFS root containing the documented rescue utilities,
 libdrm and GEM/PRIME tests. The root runs its tests and calls `halt -p`.
 No existing VM disk or network was used. `-snapshot` preserves the input image.

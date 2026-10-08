@@ -100,7 +100,7 @@ mixed Mesa/libdrm/input/LLVM/C++ runtimes and legacy shared-libglapi links.
 Supply affected Qt, GNOME and Xorg consumer objects as further arguments for
 their separate migration audit. Never add fake SONAME compatibility links.
 
-After building, run the [Examples EGL/session checks](https://github.com/neonix20b/EmberBSD-Examples/tree/main/desktop/wayland-utm):
+After building, run the [Examples EGL/session checks](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/desktop/wayland-utm):
 64 allocation/render/destruction cycles checking every pixel with both softpipe
 and llvmpipe, normal exit/unload, GLX, native input and client sharing.
 Record actual paths again in live processes. A staged loader audit does not
@@ -222,5 +222,5 @@ base libdrm.so.3 while this private build provides libdrm.so.2. Loading both
 would mix the DRM stacks. wlroots retains its built-in KMS plane handling.
 This probe does not provide a GNOME Wayland port or a new
 display manager. See the OS's
-[VirtIO-GPU design](https://github.com/apovalixin/EmberBSD/blob/main/ember/boot/utm-virgl-design.md)
+[VirtIO-GPU design](https://github.com/oxtech-ember/EmberBSD/blob/main/ember/boot/utm-virgl-design.md)
 for the staged runtime acceptance checks.

@@ -44,7 +44,7 @@ probe or recipe documentation before making changes.
 - Keep the public overview of EmberBSD current when a substantial port,
   example, validation result, regression or support withdrawal changes it.
   Update this repository's affected descriptions and review
-  [the central README](https://github.com/apovalixin/EmberBSD#what-this-fork-adds-to-netbsd-11),
+  [the central README](https://github.com/oxtech-ember/EmberBSD#what-this-fork-adds-to-netbsd-11),
   even when no OS code changed. Explain the user benefit and our adaptation
   or verified scenario, link to public instructions, and name the test
   platform and validation level. Distinguish packages from source probes,

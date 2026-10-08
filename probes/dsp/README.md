@@ -44,7 +44,7 @@ liquid-dsp have no Python requirement in these configurations.
 
 Build GNU Radio after FFTW and VOLK, using their prefixes as documented in
 its profile. The selected C++ runtime, block, analog, FFT, filter, digital
-and channel libraries support the [BPSK channel example](https://github.com/neonix20b/EmberBSD-Examples/tree/main/robotics/gnuradio-channel).
+and channel libraries support the [BPSK channel example](https://github.com/oxtech-ember/EmberBSD-Examples/tree/main/robotics/gnuradio-channel).
 Its upstream build uses Python/Mako; the installed C++ flowgraph does not.
 
 Separate work prefixes isolate source validation. They are not permanent
