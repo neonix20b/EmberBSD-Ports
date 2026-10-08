@@ -93,6 +93,9 @@ runtime behavior are validated.
   NIR cases remain disabled. The nb2 XCB pkg-config correction preserves
   byte-identical Mesa libraries. Installed [libepoxy](profiles/common-graphics/cross/epoxy.md)
   passes real dispatch through those providers and four pure upstream tests.
+  The same Mesa/LLVM providers pass [GBM/PRIME/EGLImage pixel interchange](profiles/common-graphics/cross/gbm.md)
+  through native VirtGPU buffers in an isolated AArch64 VM, with verified
+  live libraries and explicit llvmpipe rendering.
   Other consumer migrations, visible sessions and guest GPU rendering remain
   unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
