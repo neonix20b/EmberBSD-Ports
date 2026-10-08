@@ -1,5 +1,6 @@
 # Origin: EmberBSD (AI-assisted), current native AArch64 debugger.
 DISTNAME=	gdb-18.1
+PKGREVISION=	1
 CATEGORIES=	devel
 MASTER_SITES=	https://sourceware.org/pub/gdb/releases/
 EXTRACT_SUFX=	.tar.xz

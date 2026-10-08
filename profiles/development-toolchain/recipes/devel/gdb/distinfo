@@ -7,4 +7,4 @@ SHA1 (patch-ember-netbsd-aarch64) = 7b0cab04c22a29f7e6957ac8e2de660fd1299f06
 SHA1 (patch-ember-netbsd-iconv) = be9557c560eecf03e4140e7c7eeecea04fb18ac0
 SHA1 (patch-ember-supplementary-bounds) = 04e6c16c609ee5c738b07c2327513da3741dac88
 SHA1 (patch-ember-gstack) = de1ae3fc899a0c646d7d38e6b5fa03864abf4010
-SHA1 (patch-ember-dwarf-variants) = 259671e13dbc233910fecdcf665393acd1fb355f
+SHA1 (patch-ember-dwarf-variants) = 7ff3212a7ede2f1a6ee065c22ac16dd35762e581

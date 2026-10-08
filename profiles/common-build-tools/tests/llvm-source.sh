@@ -67,7 +67,7 @@ for input in llvm/include/llvm/Analysis/CMakeLists.txt clang/CMakeLists.txt \
     clang/include/clang/Basic/CMakeLists.txt; do
     printf '%s\n' "$source/$input" >> "$work/extract-list"
 done
-# All six payloads have safe pkgsrc patch paths; decompress the archive once.
+# All payloads have safe pkgsrc patch paths; decompress the archive once.
 tar -xf "$distfiles/$archive" -C "$work/source" -T "$work/extract-list"
 for project in llvm clang; do
     for delta in "$profile/recipes/lang/$project"/patches/patch-*; do

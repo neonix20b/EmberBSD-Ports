@@ -5,6 +5,7 @@ set -eu
 [ "$#" = 4 ] || { echo "Usage: $0 GDB_ARCHIVE GCC16_PREFIX SYSROOT NEW_WORK" >&2; exit 2; }
 archive=$1 compiler=$2 sysroot=$3 work=$4
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+recipe=$here/../recipes/devel/gdb
 for path do
     case "$path" in /*) ;; *) echo 'Absolute paths required.' >&2; exit 2 ;; esac
     case "$path" in *[!A-Za-z0-9_./-]*) echo 'Use paths without shell metacharacters.' >&2; exit 2 ;; esac
@@ -18,23 +19,36 @@ cross=$compiler/bin/aarch64--netbsd
 [ "$("$cross-gcc" -dumpfullversion)" = 16.2.0 ]
 [ "$("$cross-gcc" -dumpmachine)" = aarch64--netbsd ]
 for name in g++ ar ranlib strip readelf; do [ -x "$cross-$name" ]; done
-for library in libgmp.so libmpfr.so libexpat.so libreadline.so; do
+for library in libgmp.so libmpfr.so libexpat.so libreadline.so libzstd.so; do
     [ -e "$sysroot/usr/pkg/lib/$library" ]
 done
 [ -e "$sysroot/usr/pkg/gcc16/lib/libstdc++.so.7" ]
 [ -f "$sysroot/usr/include/sys/ptrace.h" ]
+[ -f "$sysroot/usr/pkg/lib/pkgconfig/libzstd.pc" ]
+# pkg-config runs on the build host, but reads only target metadata.
+export PKG_CONFIG=${PKG_CONFIG:-pkg-config}
+command -v "$PKG_CONFIG" >/dev/null
+export PKG_CONFIG_SYSROOT_DIR=$sysroot
+export PKG_CONFIG_LIBDIR=$sysroot/usr/pkg/lib/pkgconfig:$sysroot/usr/pkg/share/pkgconfig:$sysroot/usr/lib/pkgconfig
+export PKG_CONFIG_PATH=
+"$PKG_CONFIG" --atleast-version=1.4.0 libzstd
 mkdir "$work"
 mkdir "$work/source" "$work/build" "$work/stage"
 tar -xf "$archive" -C "$work/source" --strip-components=1
-for name in netbsd-aarch64 supplementary-bounds netbsd-iconv; do
-    patch -f -N -F 0 -d "$work/source" -p1 < "$here/patches/$name.patch"
+# Use the package's canonical patch set, including its shared patch symlinks.
+for patch_file in "$recipe"/patches/patch-*; do
+    [ -f "$patch_file" ]
+    patch -f -N -F 0 -d "$work/source" -p1 < "$patch_file"
 done > "$work/patch.log" 2>&1
 {
     uname -srm
     "$cross-gcc" --version
-    shasum -a 256 "$archive" "$0" "$here/libtool-sysroot.sh" "$here"/patches/*.patch
+    shasum -a 256 "$archive" "$0" "$here/libtool-sysroot.sh" "$recipe"/patches/patch-*
+    "$PKG_CONFIG" --version
+    "$PKG_CONFIG" --modversion libzstd
+    shasum -a 256 "$sysroot/usr/pkg/lib/pkgconfig/libzstd.pc"
     shasum -a 256 "$compiler/libexec/gcc/aarch64--netbsd/16.2.0/cc1plus"
-    for library in libgmp.so libmpfr.so libexpat.so libreadline.so; do
+    for library in libgmp.so libmpfr.so libexpat.so libreadline.so libzstd.so; do
         shasum -a 256 "$sysroot/usr/pkg/lib/$library"
     done
 } > "$work/inputs.txt"
@@ -54,7 +68,7 @@ build=$(sh "$work/source/config.guess")
     --target=aarch64--netbsd --prefix=/usr/pkg --disable-binutils \
     --disable-gas --disable-ld --disable-gprof --disable-sim \
     --disable-gdbserver --disable-nls --without-python --without-guile \
-    --without-debuginfod --without-intel-pt --without-babeltrace --without-zstd \
+    --without-debuginfod --without-intel-pt --without-babeltrace --with-zstd \
     --with-gmp="$sysroot/usr/pkg" --with-mpfr="$sysroot/usr/pkg" \
     --with-libexpat-prefix="$sysroot/usr/pkg" --disable-rpath --with-system-zlib \
     --with-system-readline --with-curses --with-separate-debug-dir=/usr/libdata/debug \
@@ -66,6 +80,7 @@ sh "$here/libtool-sysroot.sh" "$work/build/gdb/libtool" "$sysroot"
 "$cross-strip" "$work/stage/usr/pkg/bin/gdb"
 "$cross-readelf" -h -d "$work/stage/usr/pkg/bin/gdb" > "$work/elf.txt"
 grep -q 'AArch64' "$work/elf.txt"
+grep -q 'NEEDED.*libzstd[.]so' "$work/elf.txt"
 if grep -E '(RPATH|RUNPATH).*(/Users/|/private/|/tmp/)' "$work/elf.txt"; then
     echo 'Host path leaked into target runtime search path.' >&2; exit 1
 fi

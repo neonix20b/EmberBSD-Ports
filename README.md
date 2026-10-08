@@ -37,16 +37,21 @@ runtime behavior are validated.
   also passes split-DWARF generation without an `objcopy` path override.
   Common Qt/LLVM rebuilding and full-image integration
   remain pending.
-  [GDB 18.1](profiles/development-toolchain/gdb/README.md) is cross-built and
+  [GDB 18.1nb1](profiles/development-toolchain/gdb/README.md) is cross-built and
   installed in the AArch64 VM, with split/supplementary DWARF, Unicode and
   live register/signal-unwinding checks. Its [pkgsrc recipe](profiles/development-toolchain/gdb/package.md)
   replaces `devel/gdb` and adds zstd, bounded DWARF procedure calls and
-  current location-list handling. The OS-owned
+  current location-list handling. Its 72 entry-value checks cover arithmetic,
+  reconstructed registers, typed float/SIMD values and unavailable history. The OS-owned
   [development image](https://github.com/oxtech-ember/EmberBSD/tree/main/ember/image)
   passes offline package installation and live split-DWARF32/64 debugging
   after a normal AArch64 VM reboot;
   the [expanded matrix](profiles/development-toolchain/gdb/dwarf-variants.md)
-  records tested formats and remaining valid-expression gaps.
+  records 32 format cases, 24 expression cases and 14 agent-compiler checks.
+  The common [LLVM 23.1.2nb1 package](profiles/common-build-tools/cross/llvm-dwp-tests.md)
+  creates and repacks mixed DWARF32/64 DWP files, including type units and
+  shared indexed tables. Its installed tool passes 104 cases with live GDB
+  values; existing C API, bitcode and ORC JIT consumers still pass.
 - [Current common build tools](profiles/common-build-tools/README.md):
   [Mac cross packages](profiles/common-build-tools/cross/README.md) for
   pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and

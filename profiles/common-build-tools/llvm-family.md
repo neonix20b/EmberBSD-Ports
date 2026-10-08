@@ -7,6 +7,11 @@ Python314 lit for the common Mesa26/TinyGo dependency closure. It extends
 cross-builds on macOS and passes installed C API and ORC JITLink acceptance
 on Zero 3W. Clang/LLD packages and Mesa/TinyGo consumers remain separate
 gates; core acceptance does not establish an installed compiler family.
+The `llvm-23.1.2nb1` revision also carries the shared
+[DWARF32/64 DWP package-index repair](cross/llvm-dwp-tests.md), with mixed-width,
+type-unit, live-debugger and malformed-input checks in the AArch64 VM.
+Its installed 104-case matrix and the existing C API/ORC consumers pass
+without loader overrides; package integrity covers all 2,789 payload entries.
 
 ## One family and development payload
 
@@ -59,6 +64,7 @@ or accepted upstream. Removed patches remain in the pinned pkgsrc history.
 | MachOLayoutBuilder.cpp, MachOWriter.cpp | Drop alignment/raw-size fixes already upstream. |
 | Hexagon RDFCopy.cpp/RDFCopy.h | Drop comparator fixes, including their RDFCopyBase.h location. |
 | utils/llvm-lit/CMakeLists.txt | Drop installed build-launcher hunk; package upstream lit separately. |
+| lib/DWP/DWP.cpp | Correct unit/string widths and indexed type contributions; bound malformed metadata reads. |
 
 Clang Gnu.cpp RCSv1.5 retains Solaris's configured GCC prefix substitution in
 GCCInstallationDetector::AddDefaultGCCPrefixes. It does not select GCC16 on
@@ -117,7 +123,7 @@ sh profiles/common-build-tools/tests/source-profile.sh \
     /absolute/verified-distfiles /absolute/new-work llvm-source
 ```
 
-The named gate verifies all four distinfo records and six patches through actual
+The named gate verifies all four distinfo records and the complete patch set through actual
 pkgsrc checksum.awk, full zero-fuzz forward series, corrupt/raw-RCS/missing/
 reversed/repeated failures, exact exports and refused existing/unknown/missing-patch
 exports. Accepted Python/Meson/GCC recipe bytes are compared without rerunning

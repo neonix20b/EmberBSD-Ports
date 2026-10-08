@@ -1,4 +1,4 @@
-# GDB 18.1 package
+# GDB 18.1nb1 package
 
 The development profile replaces `devel/gdb` with the current
 [canonical recipe](../recipes/devel/gdb). Sources still come from the
@@ -38,8 +38,8 @@ Keep a rollback copy of an existing standalone debugger outside PATH.
 Install the archive and its complete dependency closure through `pkg_add`:
 
 ```sh
-PKG_PATH=/absolute/packages pkg_add -U /absolute/packages/gdb-18.1.tgz
-pkg_admin check gdb-18.1
+PKG_PATH=/absolute/packages pkg_add -U /absolute/packages/gdb-18.1nb1.tgz
+pkg_admin check gdb-18.1nb1
 /usr/pkg/bin/gdb -nx -nh -batch -ex 'show version'
 ```
 
@@ -62,18 +62,25 @@ must finish first-boot installation, confirm package integrity and exercise
 the installed debugger after a normal reboot. Neither this package nor the
 bounded DWARF matrix establishes universal DWARF conformance.
 
-## Accepted package and image
+## Installed revision nb1
 
-On 2026-10-08 the macOS cross-built package passed the normal pkgsrc checks,
-native installation and all 42 registered file checks in NetBSD 11/AArch64.
-The installed debugger passed the external-DWARF and live ABI suite, the
-[expanded matrix](dwarf-variants.md), and `gstack` attachment to a live process.
-The expression runner retains two known `DW_OP_entry_value` failures.
+On 2026-10-08, a clean macOS/GCC16 cross build produced `gdb-18.1nb1.tgz`.
+Normal pkgsrc file, interpreter, permissions, PIE/RELRO, RPATH and work-reference
+checks passed. The archive's 42 recorded MD5 values matched its payload.
+Native `pkg_add -U` replaced the prior package in NetBSD 11/AArch64 UTM;
+`pkg_admin check` passed all 42 files. The installed ELF, package ELF and
+cross-build stage were byte-identical:
+`f70bf959a177e413d511c02808bfd5485765e2e37800fe8ab33ca8341f4f0b42`.
+Package SHA256:
+`ad9ab3038745e541cd0c4a870e9ec0337347de86f7d278711f995f1230b0fb49`.
 
-The archive SHA256 is
-`a04fabdc497b7cc1f7a4c653d5834f545a47a36b92d17fede505fc9e8ef5419c`;
-the installed ELF SHA256 is
-`eb1c0bb10217764350b530fdf089b288f18a3ad913e0fa14da517645d9b55356`.
-The OS-owned image passed offline installation of all eleven closure packages,
-integrity checks, live DWARF5 split-DWARF32/64 debugging and a normal reboot in
-QEMU/HVF. The linked image guide records its inputs, image hash and limits.
+The installed `/usr/bin/gdb` passed all 32 compiler-produced format cases,
+24 expression/location cases, 14 agent-expression checks and 72 entry-state
+checks. There are no expected-gap exemptions in these runners. The separate
+external/ABI suite passed eight split/supplementary objects, seven malformed
+supplement rejections, Unicode, live FP registers and signal-frame unwinding
+in both offset widths. Missing historical inputs remain unavailable.
+
+The original revision's `gstack` live attachment and offline image acceptance
+are retained as earlier evidence. Acceptance of the current image is recorded
+in the linked OS image guide; installed package checks alone do not prove it.

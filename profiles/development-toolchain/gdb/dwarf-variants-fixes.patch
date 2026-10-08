@@ -1,8 +1,38 @@
-Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitted upstream.
+Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF expression/location fixes; not submitted upstream.
 
 --- a/gdb/dwarf2/expr.h
 +++ b/gdb/dwarf2/expr.h
-@@ -242,6 +242,10 @@
+@@ -201,13 +201,29 @@
+   /* Frame information used for the evaluation.  */
+   frame_info_ptr m_frame = nullptr;
+ 
++  /* True while evaluating an entry operand whose historical state must
++     be reconstructed.  Never read current registers or memory in this mode.  */
++  bool m_entry_value = false;
++
++  /* An entry operand has stricter semantics even at the first instruction.  */
++  bool m_in_entry_value = false;
++
+   /* Compilation unit used for the evaluation.  */
++
+   dwarf2_per_cu *m_per_cu = nullptr;
+ 
+   /* Property address info used for the evaluation.  */
+   const struct property_addr_info *m_addr_info = nullptr;
+ 
+   void eval (gdb::array_view<const gdb_byte> expr);
++
++  /* Evaluate an entry operand with an empty stack and the same recursion
++     budget, returning its single value.  */
++  value *entry_value (gdb::array_view<const gdb_byte> expr);
++
++  /* Read a register in the current or reconstructed entry context.  */
++  value *read_register (int dwarf_reg, type *type);
++
+   struct type *address_type () const;
+   void push (struct value *value, bool in_stack_memory);
+   bool stack_empty_p () const;
+@@ -242,6 +258,10 @@
       subroutine.  */
    void dwarf_call (cu_offset die_cu_off);
  
@@ -15,7 +45,19 @@ Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitte
       If DEREF_SIZE is not -1 then use DW_AT_call_data_value instead of
 --- a/gdb/dwarf2/expr.c
 +++ b/gdb/dwarf2/expr.c
-@@ -885,7 +885,7 @@
+@@ -875,17 +875,17 @@
+ 
+   frame_info_ptr frame = this->m_frame;
+ 
+-  auto get_pc_from_frame = [frame] ()
++  auto get_pc_from_frame = [frame, entry = this->m_entry_value] ()
+     {
+       ensure_have_frame (frame, "DW_OP_call");
+-      return get_frame_address_in_block (frame);
++      return entry ? get_frame_func (frame) : get_frame_address_in_block (frame);
+     };
+ 
+   dwarf2_locexpr_baton block
      = dwarf2_fetch_die_loc_cu_off (die_cu_off, this->m_per_cu,
  				   this->m_per_objfile, get_pc_from_frame);
  
@@ -24,7 +66,7 @@ Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitte
    gdb_assert (block.per_cu == this->m_per_cu);
  
    this->eval (block.expr ());
-@@ -894,6 +894,31 @@
+@@ -894,13 +894,43 @@
  /* See expr.h.  */
  
  void
@@ -32,10 +74,10 @@ Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitte
 +{
 +  ensure_have_per_cu (this->m_per_cu, "DW_OP_call_ref");
 +  frame_info_ptr frame = this->m_frame;
-+  auto get_pc_from_frame = [frame] ()
++  auto get_pc_from_frame = [frame, entry = this->m_entry_value] ()
 +    {
 +      ensure_have_frame (frame, "DW_OP_call_ref");
-+      return get_frame_address_in_block (frame);
++      return entry ? get_frame_func (frame) : get_frame_address_in_block (frame);
 +    };
 +
 +  dwarf2_locexpr_baton block
@@ -56,7 +98,239 @@ Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitte
  dwarf_expr_context::read_mem (gdb_byte *buf, CORE_ADDR addr,
  			      size_t length)
  {
-@@ -2329,6 +2354,19 @@
+   if (length == 0)
+     return;
+ 
++  if (this->m_entry_value)
++    throw_error (NO_ENTRY_VALUE_ERROR,
++                 _("DW_OP_entry_value: entry-time memory is unavailable"));
++
+   /* Prefer the passed-in memory, if it exists.  */
++
+   if (this->m_addr_info != nullptr)
+     {
+       if (addr >= this->m_addr_info->addr
+@@ -988,13 +1018,19 @@
+   scoped_restore save_addr_size = make_scoped_restore (&this->m_addr_size);
+   this->m_addr_size = this->m_per_cu->addr_size ();
+ 
++  /* Call-site expressions describe the caller at the call, rather than
++     the caller's own entry.  A nested entry_value will re-enter that mode.  */
++  scoped_restore save_entry = make_scoped_restore (&this->m_entry_value, false);
++  scoped_restore save_in_entry
++    = make_scoped_restore (&this->m_in_entry_value, false);
+   this->eval (expr);
+ }
+ 
+ /* See expr.h.  */
+ 
+ value *
+-dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
++dwarf_expr_context::fetch_result
++ (struct type *type, struct type *subobj_type,
+ 				  LONGEST subobj_offset, bool as_lval)
+ {
+   value *retval = nullptr;
+@@ -1486,7 +1522,7 @@
+   buf = gdb_read_sleb128 (buf, buf_end, &offset);
+   if (buf == NULL)
+     return -1;
+-  if (offset != 0)
++  if (offset != 0 || buf == buf_end)
+     return -1;
+ 
+   if (*buf == DW_OP_deref)
+@@ -1592,6 +1628,9 @@
+ static bool
+ trivial_entry_value (frame_info_ptr frame)
+ {
++  if (frame == nullptr)
++    return false;
++
+   bool innermost_frame = frame_relative_level (frame) == 0;
+ 
+   /* Get pc corresponding to frame.  Use get_frame_address_in_block to make
+@@ -1602,6 +1641,78 @@
+   return innermost_frame && at_first_insn;
+ }
+ 
++/* See expr.h.  */
++
++value *
++dwarf_expr_context::read_register (int dwarf_reg, type *type)
++{
++  ensure_have_frame (this->m_frame, "DW_OP_entry_value register");
++  gdbarch *arch = get_frame_arch (this->m_frame);
++  if (!this->m_entry_value)
++    return value_from_register
++      (type, dwarf_reg_to_regnum_or_error (arch, dwarf_reg), this->m_frame);
++
++  /* Isolate call-site evaluation from the expression consuming this
++     register.  In particular, do not let it consume the operand stack.  */
++  dwarf_expr_context ctx (this->m_per_objfile, this->m_addr_size);
++  ctx.m_frame = this->m_frame;
++  ctx.m_per_cu = this->m_per_cu;
++  ctx.m_recursion_depth = this->m_recursion_depth;
++  ctx.m_max_recursion_depth = this->m_max_recursion_depth;
++  call_site_parameter_u kind_u;
++  kind_u.dwarf_reg = dwarf_reg;
++  ctx.push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG, kind_u, -1);
++  if (ctx.m_stack.size () != 1 || !ctx.m_pieces.empty ()
++      || (ctx.m_location != DWARF_VALUE_MEMORY
++          && ctx.m_location != DWARF_VALUE_STACK))
++    error (_("DW_OP_entry_value: call value must produce exactly one value"));
++
++  /* Call values describe register bits.  Preserve them for regval_type,
++     including floating-point base types, rather than converting numerically.  */
++  value *result = ctx.fetch (0);
++  auto contents = result->contents ();
++  if (type->length () > contents.size ())
++    throw_error (NO_ENTRY_VALUE_ERROR,
++                 _("DW_OP_entry_value: complete entry register is unavailable"));
++  size_t offset = (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG
++                   ? contents.size () - type->length () : 0);
++  return value_from_contents (type, contents.data () + offset);
++}
++
++/* See expr.h.  */
++
++value *
++dwarf_expr_context::entry_value (gdb::array_view<const gdb_byte> expr)
++{
++  dwarf_expr_context ctx (this->m_per_objfile, this->m_addr_size);
++  ctx.m_frame = this->m_frame;
++  ctx.m_per_cu = this->m_per_cu;
++  ctx.m_recursion_depth = this->m_recursion_depth;
++  ctx.m_max_recursion_depth = this->m_max_recursion_depth;
++  ctx.m_entry_value = !trivial_entry_value (this->m_frame);
++  ctx.m_in_entry_value = true;
++
++  /* Preserve the existing call_data_value reconstruction.  General memory
++     reads have no entry snapshot and must not read the current inferior.  */
++  CORE_ADDR deref_size;
++  call_site_parameter_u kind_u;
++  kind_u.dwarf_reg = dwarf_block_to_dwarf_reg_deref (expr, &deref_size);
++  if (ctx.m_entry_value && kind_u.dwarf_reg != -1)
++    ctx.push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG, kind_u,
++                                   deref_size == -1 ? m_addr_size : deref_size);
++  else
++    ctx.eval (expr);
++
++  if (ctx.m_stack.size () != 1 || !ctx.m_pieces.empty ())
++    error (_("DW_OP_entry_value: operand must produce exactly one value"));
++  if (ctx.m_location == DWARF_VALUE_REGISTER)
++    return ctx.read_register (value_as_long (ctx.fetch (0)), address_type ());
++  if (ctx.m_location != DWARF_VALUE_MEMORY
++      && ctx.m_location != DWARF_VALUE_STACK)
++    error (_("DW_OP_entry_value: operand must produce exactly one value"));
++  return ctx.fetch (0);
++}
++
+ /* The engine for the expression evaluator.  Using the context in this
+    object, evaluate the expression EXPR.  */
+ 
+@@ -1649,9 +1760,46 @@
+ 	 loop.  In that case, quitting is the only way out.  */
+       QUIT;
+ 
++      /* Check fixed operands before forming pointers or reading bytes.  */
++      int operand_size = 0;
++      switch (op)
++        {
++        case DW_OP_addr: operand_size = this->m_addr_size; break;
++        case DW_OP_const1u: case DW_OP_const1s: case DW_OP_pick:
++        case DW_OP_deref_size: case DW_OP_deref_type:
++        case DW_OP_GNU_deref_type: operand_size = 1; break;
++        case DW_OP_const2u: case DW_OP_const2s: case DW_OP_call2:
++        case DW_OP_bra: case DW_OP_skip: operand_size = 2; break;
++        case DW_OP_const4u: case DW_OP_const4s: case DW_OP_call4:
++        case DW_OP_GNU_parameter_ref: operand_size = 4; break;
++        case DW_OP_const8u: case DW_OP_const8s: operand_size = 8; break;
++        case DW_OP_implicit_pointer: case DW_OP_GNU_implicit_pointer:
++        case DW_OP_GNU_variable_value:
++          ensure_have_per_cu (this->m_per_cu, "DWARF DIE reference");
++          operand_size = this->m_per_cu->ref_addr_size ();
++          break;
++        default: break;
++        }
++      if (op_end - op_ptr < operand_size)
++        error (_("Truncated DWARF expression operand"));
++
++      if (this->m_in_entry_value && op == DW_OP_push_object_address)
++        error (_("DW_OP_push_object_address is not meaningful in DW_OP_entry_value"));
++      if (this->m_entry_value)
++        switch (op)
++          {
++          case DW_OP_fbreg: case DW_OP_call_frame_cfa:
++          case DW_OP_GNU_variable_value: case DW_OP_GNU_parameter_ref:
++          case DW_OP_GNU_push_tls_address: case DW_OP_form_tls_address:
++            throw_error (NO_ENTRY_VALUE_ERROR,
++                         _("DW_OP_entry_value: entry-time frame state is unavailable"));
++          default: break;
++          }
++
+       switch (op)
+ 	{
+ 	case DW_OP_lit0:
++
+ 	case DW_OP_lit1:
+ 	case DW_OP_lit2:
+ 	case DW_OP_lit3:
+@@ -1836,7 +1984,7 @@
+ 	    uint64_t len;
+ 
+ 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &len);
+-	    if (op_ptr + len > op_end)
++	    if (len > (ULONGEST) (op_end - op_ptr))
+ 	      error (_("DW_OP_implicit_value: too few bytes available."));
+ 	    this->m_len = len;
+ 	    this->m_data = op_ptr;
+@@ -1912,7 +2060,10 @@
+ 	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
+ 	    ensure_have_frame (this->m_frame, "DW_OP_breg");
+ 
+-	    result = read_addr_from_reg (this->m_frame, op - DW_OP_breg0);
++	    result = (this->m_entry_value
++		      ? value_as_address (read_register (op - DW_OP_breg0,
++						 address_type))
++		      : read_addr_from_reg (this->m_frame, op - DW_OP_breg0));
+ 	    result += offset;
+ 	    result_val = value_from_ulongest (address_type, result);
+ 	  }
+@@ -1923,7 +2074,9 @@
+ 	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
+ 	    ensure_have_frame (this->m_frame, "DW_OP_bregx");
+ 
+-	    result = read_addr_from_reg (this->m_frame, reg);
++	    result = (this->m_entry_value
++		      ? value_as_address (read_register (reg, address_type))
++		      : read_addr_from_reg (this->m_frame, reg));
+ 	    result += offset;
+ 	    result_val = value_from_ulongest (address_type, result);
+ 	  }
+@@ -2251,6 +2404,8 @@
+ 	case DW_OP_skip:
+ 	  offset = extract_signed_integer (op_ptr, 2, byte_order);
+ 	  op_ptr += 2;
++	  if (offset < -(op_ptr - expr.data ()) || offset > op_end - op_ptr)
++	    error (_("DWARF expression branch out of range"));
+ 	  op_ptr += offset;
+ 	  goto no_push;
+ 
+@@ -2263,7 +2418,11 @@
+ 	    val = fetch (0);
+ 	    dwarf_require_integral (val->type ());
+ 	    if (value_as_long (val) != 0)
+-	      op_ptr += offset;
++	      {
++		if (offset < -(op_ptr - expr.data ()) || offset > op_end - op_ptr)
++		  error (_("DWARF expression branch out of range"));
++		op_ptr += offset;
++	      }
+ 	    pop ();
+ 	  }
+ 	  goto no_push;
+@@ -2329,6 +2488,19 @@
  	  }
  	  goto no_push;
  
@@ -76,6 +350,102 @@ Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitte
  	case DW_OP_GNU_variable_value:
  	  {
  	    ensure_have_per_cu (this->m_per_cu, "DW_OP_GNU_variable_value");
+@@ -2349,67 +2521,13 @@
+ 	case DW_OP_GNU_entry_value:
+ 	  {
+ 	    uint64_t len;
+-	    CORE_ADDR deref_size;
+-	    union call_site_parameter_u kind_u;
+-
+ 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &len);
+-	    if (op_ptr + len > op_end)
++	    if (len > (ULONGEST) (op_end - op_ptr))
+ 	      error (_("DW_OP_entry_value: too few bytes available."));
+-
+-	    auto entry_value_expr = gdb::make_array_view (op_ptr, len);
+-	    kind_u.dwarf_reg = dwarf_block_to_dwarf_reg (entry_value_expr);
+-	    if (kind_u.dwarf_reg != -1)
+-	      {
+-		op_ptr += len;
+-
+-		if (trivial_entry_value (this->m_frame))
+-		  {
+-		    /* We can assume that DW_OP_entry_value (expr) == expr.
+-		       Handle DW_OP_regx, place register value on the
+-		       stack.  */
+-		    gdbarch *f_arch = get_frame_arch (this->m_frame);
+-		    int dwarf_regnum = kind_u.dwarf_reg;
+-		    int gdb_regnum
+-		      = dwarf_reg_to_regnum_or_error (f_arch, dwarf_regnum);
+-		    result_val
+-		      = value_from_register (address_type, gdb_regnum,
+-					     this->m_frame);
+-		    break;
+-		  }
+-
+-		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
+-						  kind_u,
+-						  -1 /* deref_size */);
+-		goto no_push;
+-	      }
+-
+-	    kind_u.dwarf_reg = dwarf_block_to_dwarf_reg_deref (entry_value_expr,
+-							       &deref_size);
+-	    if (kind_u.dwarf_reg != -1)
+-	      {
+-		if (deref_size == -1)
+-		  deref_size = this->m_addr_size;
+-		op_ptr += len;
+-
+-		if (trivial_entry_value (this->m_frame))
+-		  {
+-		    /* We can assume that DW_OP_entry_value (expr) == expr.
+-		       Handle as DW_OP_bregx;DW_OP_deref_size.  */
+-		    CORE_ADDR addr
+-		      = read_addr_from_reg (this->m_frame, kind_u.dwarf_reg);
+-		    result_val = this->deref (addr, deref_size);
+-		    break;
+-		  }
+-
+-		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
+-						  kind_u, deref_size);
+-		goto no_push;
+-	      }
+-
+-	    error (_("DWARF-2 expression error: DW_OP_entry_value is "
+-		     "supported only for single DW_OP_reg* "
+-		     "or for DW_OP_breg*(0)+DW_OP_deref*"));
++	    result_val = this->entry_value (gdb::make_array_view (op_ptr, len));
++	    op_ptr += len;
+ 	  }
++	  break;
+ 
+ 	case DW_OP_GNU_parameter_ref:
+ 	  {
+@@ -2434,7 +2552,11 @@
+ 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
+ 	    cu_offset type_die_cu_off = (cu_offset) uoffset;
+ 
++	    if (op_ptr == op_end)
++	      error (_("Truncated DWARF expression operand"));
+ 	    n = *op_ptr++;
++	    if (op_end - op_ptr < n)
++	      error (_("Truncated DWARF expression operand"));
+ 	    data = op_ptr;
+ 	    op_ptr += n;
+ 
+@@ -2457,10 +2579,7 @@
+ 	    ensure_have_frame (this->m_frame, "DW_OP_regval_type");
+ 
+ 	    struct type *type = get_base_type (type_die_cu_off);
+-	    int regnum
+-	      = dwarf_reg_to_regnum_or_error (get_frame_arch (this->m_frame),
+-					      reg);
+-	    result_val = value_from_register (type, regnum, this->m_frame);
++	    result_val = read_register (reg, type);
+ 	  }
+ 	  break;
+ 
 --- a/gdb/dwarf2/loc.c
 +++ b/gdb/dwarf2/loc.c
 @@ -84,6 +84,9 @@

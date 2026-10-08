@@ -23,16 +23,17 @@ location-list interpretation. Base CRT objects can carry older DWARF CUs
 alongside the fixture CU, so an executable's first CU is not necessarily
 the tested source unit.
 
-Transfer the complete fixture directory and the four target scripts to
-the AArch64 VM. Prepare four indexed packages using the corrected LLVM
-`llvm-dwp` 23.1.2 described below. Generate the two zstd inputs with LLVM
-`llvm-objcopy` 23.1.2: the accepted Binutils 2.47 build lacks zstd compression.
-A temporary packager and its libraries may be used privately; remove them
-after packaging. Never pass its loader overrides to GDB acceptance.
+Transfer the complete fixture directory and the target scripts to the AArch64
+VM. Use the shared [LLVM family](../../common-build-tools/llvm-family.md),
+including the corrected packaged `llvm-dwp` and `llvm-objcopy`.
+The canonical DWP correction and its broader regression are described in
+[the LLVM DWP tests](../../common-build-tools/cross/llvm-dwp-tests.md).
+The accepted Binutils 2.47 build lacks zstd compression, so LLVM's object copier
+creates the two zstd inputs.
 
 ```sh
-OBJCOPY=/absolute/llvm-objcopy \
-    sh dwarf-variants-package.sh /absolute/llvm-dwp /absolute/fixtures
+OBJCOPY=/usr/pkg/bin/llvm-objcopy \
+    sh dwarf-variants-package.sh /usr/pkg/bin/llvm-dwp /absolute/fixtures
 sh dwarf-variants-target.sh /usr/pkg/bin/gdb /absolute/fixtures \
     /absolute/new-results
 sh dwarf-variants-limits.sh /usr/pkg/bin/gdb /absolute/fixtures \
@@ -48,35 +49,6 @@ cross-build path must not exist on the test target; do not mount it there.
 Use a fresh build directory to regenerate inputs before repackaging.
 On macOS, create transfer archives with `COPYFILE_DISABLE=1 tar --no-xattrs`
 to avoid AppleDouble files being mistaken for standalone DWO inputs.
-
-### DWARF64 packager correction
-
-Unmodified LLVM 23.1.2 rejects the GCC DWARF64 inputs before GDB sees them.
-DWARF4 reports `top level DIE is not a compile unit`; DWARF5 reports an
-unknown abbreviation code. The header reader uses four-byte abbreviation
-offsets and four-byte length fields even after detecting DWARF64. String
-lookup and merging also assume four-byte string offsets.
-
-`dwarf-variants-llvm-dwp.patch` corrects those widths for the fixture tool.
-`dwarf-variants-dwp-build.sh` compiles its three translation units privately
-against the selected LLVM 23.1.2 library and generated headers. It neither
-edits nor installs the shared LLVM build. Use the same current GCC16 and
-sysroot as the LLVM build; pass the LLVM project source root and its CMake
-build directory:
-
-```sh
-sh profiles/development-toolchain/gdb/dwarf-variants-dwp-build.sh \
-    /absolute/current-gcc16/bin/aarch64--netbsd-gcc /absolute/sysroot \
-    /absolute/llvm-project-23.1.2.src /absolute/llvm-build \
-    /absolute/new-private-dwp
-```
-
-If LLVM is not installed on the target, stage this tool, current
-`llvm-objcopy`, and their existing `libLLVM.so.23.1` privately. Set
-`LD_LIBRARY_PATH` only for the packaging command, then remove the temporary
-tools and library. This pending upstream patch has been exercised on the
-four two-CU C packages here. It is not a claim about every DWP producer,
-mixed-width contribution, very large package, or type-unit package.
 
 ## Matrix
 
@@ -117,7 +89,9 @@ address range in its second CU, so breakpoint lookup does not preload it.
 The AX compiler independently bounds nested calls, frame-base expressions
 and CFA expressions to 256 levels; tracepoint collection can bypass the
 symbol-requirement scanner, so the scanner's guard is insufficient.
-The patch has not been submitted or accepted upstream. Compilation alone
+The patch also evaluates general [entry-value operands](entry-value.md) with
+reconstructed register state and a separate nested stack. The patch has not
+been submitted or accepted upstream. Compilation alone
 is not acceptance; compare the installed debugger before and after it.
 
 `dwarf-variants-ax.sh` adds 14 agent-compiler checks: eight successful
@@ -135,11 +109,11 @@ or shared object; it is not an arbitrary reference into another module.
 
 ## Remaining limits
 
-Upstream GDB 18.1's `gdb/dwarf2/expr.c` accepts `DW_OP_entry_value` only for
-specific register or register-plus-dereference expressions. The valid
-constant-expression case deliberately exposes that narrower evaluator;
-fixing the three operations above does not remove it. General entry-time
-memory/register reconstruction requires a separate design and tests.
+General entry expressions and reconstructible register arithmetic are covered
+by [the entry-value regression](entry-value.md). Historical memory without a
+snapshot or matching `DW_AT_call_data_value`, missing register call values and
+historical frame/TLS state remain unavailable. Current memory/register values
+do not substitute for missing entry state.
 
 The source also names narrower boundaries: skeletonless type units in DWP
 without `.gdb_index`, `.debug_types` in an alternate/supplementary DWZ
@@ -147,7 +121,15 @@ object, and imported units within type units. Those source findings are
 not executable coverage claims for this suite. Standalone supplementary
 forms retain their separate acceptance in `test-target.sh`.
 
-## Measured result
+## Installed revision nb1
+
+The clean cross-built GDB 18.1nb1 package passed all 32 format, 24 expression,
+14 agent-compiler and 72 entry-value checks through `/usr/bin/gdb` in the
+AArch64 UTM VM on 2026-10-08. Its installed ELF matches the archive and stage;
+[package.md](package.md) records both hashes and the separate external/ABI
+acceptance. The two earlier constant entry-value gaps now pass.
+
+## Original package measurement
 
 Native acceptance on NetBSD 11/AArch64 in UTM, 2026-10-08, used GCC 16.2.0
 inputs and the installed `/usr/bin/gdb` wrapper for the GDB 18.1 package.
@@ -167,14 +149,11 @@ Four additional DWP runs explicitly stopped in the helper CU and read
 exit. All four passed. The target runner includes this assertion for each
 DWP case; the evidence preserves these later transcripts separately.
 
-Both known gaps are the valid constant `DW_OP_entry_value` expression,
-in DWARF32 and DWARF64. The exact diagnostic is:
+The original package exposed constant `DW_OP_entry_value` as two known gaps.
+GDB 18.1nb1 removes that syntax restriction; the entry-value runner records its
+separate RED/GREEN result. The expression runner now requires both constant
+cases to return 42 and has no expected-gap exemption.
 
-```text
-DWARF-2 expression error: DW_OP_entry_value is supported only for single DW_OP_reg* or for DW_OP_breg*(0)+DW_OP_deref*
-```
-
-The expression runner deliberately returns nonzero while these gaps remain.
 The unpatched AX recursion controls ran with CPU/core bounds and exposed
 call2/call4 stack exhaustion. The repaired cases emit the specific AX
 recursion-limit diagnostic. The archived evidence includes each transcript,

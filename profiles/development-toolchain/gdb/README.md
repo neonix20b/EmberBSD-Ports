@@ -32,9 +32,11 @@ These patches have not been submitted or accepted upstream.
 | `supplementary-bounds.patch` | Bound the filename and ULEB checksum length, enforce supplementary roles, reject inconsistent lengths and safely compare empty checksums |
 | `netbsd-iconv.patch` | Use NetBSD's real Unicode/iconv implementation instead of upstream's ASCII-only fallback |
 
-The package also carries the [DWARF expression/location-list patch](dwarf-variants.md)
+Both build routes use the canonical package patch set, including the
+[DWARF expression/location-list patch](dwarf-variants.md),
+[entry-state reconstruction](entry-value.md),
 and a POSIX-shell adaptation for `gstack`. Package and standalone build
-options are recorded separately below; the package enables zstd compression.
+options are recorded below; both enable zstd compression.
 
 The signal unwinder follows NetBSD's `x28` ucontext pointer and libc's
 `setcontext` trampoline. `abi-layout.c` checks the imported constants against
@@ -47,20 +49,21 @@ Use the [current GCC16 cross prefix](../cross/README.md) with its repaired
 GMP 6.3 host dependency. A previous bootstrap prefix linked to GMP 6.2.1 is
 not interchangeable with the accepted compiler, even if both print 16.2.0.
 Provide a complete AArch64 NetBSD 11 sysroot with GCC16 CRT/C++ runtime,
-GMP 6.3, MPFR 4.2.2, Expat and Readline 8.3 development files.
+GMP 6.3, MPFR 4.2.2, Expat, Readline 8.3 and zstd development files.
 Record their package revisions and the compiler's input receipt.
 
 ```sh
-GMAKE=/absolute/host/bin/gmake JOBS=4 \
+GMAKE=/absolute/host/bin/gmake PKG_CONFIG=/absolute/host/bin/pkg-config JOBS=2 \
     sh profiles/development-toolchain/gdb/cross-build.sh \
     /absolute/gdb-18.1.tar.xz /absolute/current-gcc16-prefix \
     /absolute/sysroot /absolute/new-gdb-work
 ```
 
-GNU make, a build-host C/C++ compiler, shell tools, Bison and Texinfo are
+GNU make, host pkg-config, a build-host C/C++ compiler, Bison and Texinfo are
 build dependencies. Paths must be absolute and contain no whitespace or
 shell metacharacters. The script verifies the archive before extraction,
-applies patches with zero fuzz and records input/output hashes.
+applies the canonical recipe patches with zero fuzz and records input/output
+hashes. Host pkg-config reads only sysroot metadata, including `libzstd.pc`.
 It never executes a target ELF on the Mac or installs into a shared prefix.
 The bundled Libtool infers runtime paths from absolute dependency locations.
 `libtool-sysroot.sh` removes the sysroot prefix only from those inferred
@@ -71,8 +74,8 @@ stripped; the unstripped build output remains available for diagnosis.
 The C configure probes use GNU C17 because upstream's ptrace return-type
 probe relies on pre-C23 non-prototype declarations. The compiler stays
 GCC16, with its DWARF5 default. No hardcoded ptrace type answers are supplied.
-Target GMP, MPFR, Expat, Readline, curses, zlib and liblzma are reused. Python/Guile
-scripting, debuginfod, Intel PT, Babeltrace, zstd and gdbserver are not enabled
+Target GMP, MPFR, Expat, Readline, curses, zlib, liblzma and zstd are reused.
+Python/Guile scripting, debuginfod, Intel PT, Babeltrace and gdbserver are not enabled
 in this focused CLI build. This is an explicit feature boundary, not a
 fallback to older dependencies.
 
@@ -111,6 +114,11 @@ directory, outside executable search paths. The build script stages files
 only; installation and the active selection remain explicit deployment steps.
 VM acceptance does not establish physical-board debugging, kernel core dump
 support, every DWARF form or the full upstream GDB testsuite.
+
+The current standalone helper shares the accepted package patches and requires
+zstd. Its updated patch application and target pkg-config metadata were checked;
+a complete new standalone rebuild has not been repeated. The package remains
+the accepted installable route.
 
 ## Verified result
 
