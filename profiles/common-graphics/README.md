@@ -58,7 +58,9 @@ checks. Four installed AArch64 VM cycles pass font selection, shaping, CPU
 rasterization and PNG roundtrip with causal negative controls. Installed
 [libsfdo and session D-Bus](cross/desktop-support.md) pass four unchanged upstream
 lookup/parser tests and actual bus ownership, method replies, errors and shutdown
-in AArch64. labwc client surfaces and full SVG remain separate acceptance.
+in AArch64. A [Rust 1.99 cross-std probe](../../probes/rust-cross-std/README.md)
+passes target TLS/unwind and C-library consumers for the future SVG path.
+labwc client surfaces and full SVG remain separate acceptance.
 
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled

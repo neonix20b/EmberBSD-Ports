@@ -4,6 +4,9 @@ This is the package-building and installed text-rendering stage for the common
 labwc stack. It uses the accepted macOS-to-AArch64 tools and one target
 `/usr/pkg`. Text shaping, CPU rasterization and PNG roundtrips pass on AArch64.
 It does not establish a working labwc session or SVG support.
+The [Rust 1.99 std-only cross probe](../../../probes/rust-cross-std/README.md)
+now passes allocation, threads, TLS destructors, unwind and C `dlopen` consumers
+in AArch64; normal Rust/cargo-c and full librsvg packaging remain separate.
 The accepted wlroots renderer and DRM scenarios remain documented in
 [wlroots](wlroots.md) and [DRM/input](drm-input.md).
 
