@@ -1,0 +1,389 @@
+$NetBSD$
+
+Origin: EmberBSD (AI-assisted), actual software GBM node selection.
+Mesa KMS software rendering needs primary-node CREATE_DUMB and MAP_DUMB.
+Retry only after EGL identifies its software device, retaining the caller's
+primary authorization. Render-only callers fail; hardware paths are unchanged.
+Keep caller, renderer and allocator GEM tables separate through the existing
+reopen/lease/auth path. Clean up partially initialized private EGL displays.
+No kernel permission changes or environment-based driver guesses.
+Not submitted upstream.
+
+--- include/render/egl.h.orig
++++ include/render/egl.h
+@@ -20,6 +20,7 @@
+ 		// Device extensions
+ 		bool EXT_device_drm;
+ 		bool EXT_device_drm_render_node;
++		bool MESA_device_software;
+ 
+ 		// Client extensions
+ 		bool EXT_device_query;
+--- include/util/fd.h.orig
++++ include/util/fd.h
+@@ -5,4 +5,7 @@
+ 
+ bool set_cloexec(int fd, bool cloexec);
+ 
++/* Separate GEM handle table, preserving the caller's DRM authentication. */
++int reopen_drm_node(int drm_fd, bool allow_render_node);
++
+ #endif
+--- render/egl.c.orig
++++ render/egl.c
+@@ -11,6 +11,7 @@
+ #include <xf86drm.h>
+ #include "render/egl.h"
+ #include "util/env.h"
++#include "util/fd.h"
+ 
+ static enum wlr_log_importance egl_log_importance_to_wlr(EGLint type) {
+ 	switch (type) {
+@@ -85,6 +86,8 @@
+ 	return false;
+ }
+ 
++static void egl_destroy(struct wlr_egl *egl, bool terminate_display);
++
+ static void load_egl_proc(void *proc_ptr, const char *name) {
+ 	void *proc = (void *)eglGetProcAddress(name);
+ 	if (proc == NULL) {
+@@ -327,7 +330,9 @@
+ 
+ 		// The only way a non-DRM device is selected is when the user
+ 		// explicitly picks software rendering
+-		if (check_egl_ext(device_exts_str, "EGL_MESA_device_software")) {
++		egl->exts.MESA_device_software =
++			check_egl_ext(device_exts_str, "EGL_MESA_device_software");
++		if (egl->exts.MESA_device_software) {
+ 			if (allow_software || env_parse_bool("WLR_RENDERER_ALLOW_SOFTWARE")) {
+ 				wlr_log(WLR_INFO, "Using software rendering");
+ 			} else {
+@@ -404,6 +409,7 @@
+ 	if (!egl_init_display(egl, display, allow_software)) {
+ 		if (egl->exts.KHR_display_reference) {
+ 			eglTerminate(display);
++			egl->display = EGL_NO_DISPLAY;
+ 		}
+ 		return false;
+ 	}
+@@ -536,15 +542,11 @@
+ static int open_render_node(int drm_fd) {
+ 	char *render_name = drmGetRenderDeviceNameFromFd(drm_fd);
+ 	if (render_name == NULL) {
+-		// This can happen on split render/display platforms, fallback to
+-		// primary node
+-		render_name = drmGetPrimaryDeviceNameFromFd(drm_fd);
+-		if (render_name == NULL) {
+-			wlr_log_errno(WLR_ERROR, "drmGetPrimaryDeviceNameFromFd failed");
++		if (drmGetNodeTypeFromFd(drm_fd) != DRM_NODE_PRIMARY) {
++			wlr_log(WLR_ERROR, "No render node and no caller-provided primary FD");
+ 			return -1;
+ 		}
+-		wlr_log(WLR_DEBUG, "DRM device '%s' has no render node, "
+-			"falling back to primary node", render_name);
++		return reopen_drm_node(drm_fd, false);
+ 	}
+ 
+ 	int render_fd = open(render_name, O_RDWR | O_CLOEXEC);
+@@ -583,26 +585,50 @@
+ 	}
+ 
+ 	if (egl->exts.KHR_platform_gbm && drm_fd >= 0) {
+-		int gbm_fd = open_render_node(drm_fd);
+-		if (gbm_fd < 0) {
+-			wlr_log(WLR_ERROR, "Failed to open DRM render node");
+-			goto error;
+-		}
++		bool primary_retry = false;
++		for (;;) {
++			// A software KMS winsys needs primary-node CREATE/MAP_DUMB.
++			// Reopen/authenticate a separate GEM handle table from the caller.
++			int gbm_fd = primary_retry ? reopen_drm_node(drm_fd, false) :
++				open_render_node(drm_fd);
++			if (gbm_fd < 0) {
++				wlr_log_errno(WLR_ERROR, "Failed to open DRM GBM node");
++				goto error;
++			}
+ 
+-		egl->gbm_device = gbm_create_device(gbm_fd);
+-		if (!egl->gbm_device) {
+-			close(gbm_fd);
+-			wlr_log(WLR_ERROR, "Failed to create GBM device");
+-			goto error;
+-		}
++			egl->gbm_device = gbm_create_device(gbm_fd);
++			if (!egl->gbm_device) {
++				close(gbm_fd);
++				wlr_log(WLR_ERROR, "Failed to create GBM device");
++				goto error;
++			}
+ 
+-		if (egl_init(egl, EGL_PLATFORM_GBM_KHR, egl->gbm_device, allow_software)) {
+-			wlr_log(WLR_DEBUG, "Using EGL_PLATFORM_GBM_KHR");
+-			return egl;
+-		}
++			if (egl_init(egl, EGL_PLATFORM_GBM_KHR, egl->gbm_device, allow_software)) {
++				if (egl->exts.MESA_device_software &&
++						drmGetNodeTypeFromFd(gbm_fd) == DRM_NODE_RENDER) {
++					// This new private GBM display has never been exposed to callers.
++					// Terminate it even without EGL_KHR_display_reference before retry.
++					egl_destroy(egl, true);
++					if (primary_retry || drmGetNodeTypeFromFd(drm_fd) != DRM_NODE_PRIMARY) {
++						wlr_log(WLR_ERROR, "Software GBM requires a caller-provided DRM primary FD");
++						return NULL;
++					}
++					wlr_log(WLR_DEBUG, "Retrying software GBM with the supplied primary FD");
++					egl = egl_create();
++					if (egl == NULL) {
++						return NULL;
++					}
++					primary_retry = true;
++					continue;
++				}
++				wlr_log(WLR_DEBUG, "Using EGL_PLATFORM_GBM_KHR");
++				return egl;
++			}
+ 
+-		gbm_device_destroy(egl->gbm_device);
+-		close(gbm_fd);
++			// egl_init may have initialized the display/formats without a context.
++			egl_destroy(egl, true);
++			return NULL;
++		}
+ 	} else {
+ 		wlr_log(WLR_DEBUG, "KHR_platform_gbm not supported");
+ 	}
+@@ -645,7 +671,7 @@
+ 	return egl;
+ }
+ 
+-void wlr_egl_destroy(struct wlr_egl *egl) {
++static void egl_destroy(struct wlr_egl *egl, bool terminate_display) {
+ 	if (egl == NULL) {
+ 		return;
+ 	}
+@@ -653,11 +679,14 @@
+ 	wlr_drm_format_set_finish(&egl->dmabuf_render_formats);
+ 	wlr_drm_format_set_finish(&egl->dmabuf_texture_formats);
+ 
+-	eglMakeCurrent(egl->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+-	eglDestroyContext(egl->display, egl->context);
+-
+-	if (egl->exts.KHR_display_reference) {
+-		eglTerminate(egl->display);
++	if (egl->display != EGL_NO_DISPLAY) {
++		eglMakeCurrent(egl->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++		if (egl->context != EGL_NO_CONTEXT) {
++			eglDestroyContext(egl->display, egl->context);
++		}
++		if (terminate_display) {
++			eglTerminate(egl->display);
++		}
+ 	}
+ 
+ 	eglReleaseThread();
+@@ -671,6 +700,10 @@
+ 	free(egl);
+ }
+ 
++void wlr_egl_destroy(struct wlr_egl *egl) {
++	egl_destroy(egl, egl && egl->exts.KHR_display_reference);
++}
++
+ EGLDisplay wlr_egl_get_display(struct wlr_egl *egl) {
+ 	return egl->display;
+ }
+@@ -1038,7 +1071,8 @@
+ }
+ 
+ int wlr_egl_dup_drm_fd(struct wlr_egl *egl) {
+-	int fd = dup_egl_device_drm_fd(egl);
++	// Software GBM must retain the primary node used by its KMS winsys.
++	int fd = egl->exts.MESA_device_software ? -1 : dup_egl_device_drm_fd(egl);
+ 	if (fd >= 0) {
+ 		return fd;
+ 	}
+--- render/allocator/allocator.c.orig
++++ render/allocator/allocator.c
+@@ -12,6 +12,12 @@
+ #include "render/allocator/drm_dumb.h"
+ #include "render/allocator/shm.h"
+ #include "render/wlr_renderer.h"
++#include "util/fd.h"
++
++#if WLR_HAS_GLES2_RENDERER
++#include <wlr/render/gles2.h>
++#include "render/egl.h"
++#endif
+ 
+ #if WLR_HAS_GBM_ALLOCATOR
+ #include "render/allocator/gbm.h"
+@@ -32,70 +38,6 @@
+ 	wl_signal_init(&alloc->events.destroy);
+ }
+ 
+-/* Re-open the DRM node to avoid GEM handle ref'counting issues. See:
+- * https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
+- */
+-static int reopen_drm_node(int drm_fd, bool allow_render_node) {
+-	if (drmIsMaster(drm_fd)) {
+-#if !defined(__NetBSD__)
+-		// Only recent kernels support empty leases
+-		uint32_t lessee_id;
+-		int lease_fd = drmModeCreateLease(drm_fd, NULL, 0, O_CLOEXEC, &lessee_id);
+-		if (lease_fd >= 0) {
+-			return lease_fd;
+-		} else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
+-			wlr_log_errno(WLR_ERROR, "drmModeCreateLease failed");
+-			return -1;
+-		}
+-#endif
+-		wlr_log(WLR_DEBUG, "drmModeCreateLease failed, "
+-			"falling back to plain open");
+-	}
+-
+-	char *name = NULL;
+-	if (allow_render_node) {
+-		name = drmGetRenderDeviceNameFromFd(drm_fd);
+-	}
+-	if (name == NULL) {
+-		// Either the DRM device has no render node, either the caller wants
+-		// a primary node
+-		name = drmGetDeviceNameFromFd2(drm_fd);
+-		if (name == NULL) {
+-			wlr_log(WLR_ERROR, "drmGetDeviceNameFromFd2 failed");
+-			return -1;
+-		}
+-	}
+-
+-	int new_fd = open(name, O_RDWR | O_CLOEXEC);
+-	if (new_fd < 0) {
+-		wlr_log_errno(WLR_ERROR, "Failed to open DRM node '%s'", name);
+-		free(name);
+-		return -1;
+-	}
+-
+-	free(name);
+-
+-	// If we're using a DRM primary node and we are DRM master (e.g. because
+-	// we're running under the DRM backend), we need to use the legacy DRM
+-	// authentication mechanism to have the permission to manipulate DRM dumb
+-	// buffers.
+-	if (drmIsMaster(drm_fd) && drmGetNodeTypeFromFd(new_fd) == DRM_NODE_PRIMARY) {
+-		drm_magic_t magic;
+-		if (drmGetMagic(new_fd, &magic) < 0) {
+-			wlr_log_errno(WLR_ERROR, "drmGetMagic failed");
+-			close(new_fd);
+-			return -1;
+-		}
+-
+-		if (drmAuthMagic(drm_fd, magic) < 0) {
+-			wlr_log_errno(WLR_ERROR, "drmAuthMagic failed");
+-			close(new_fd);
+-			return -1;
+-		}
+-	}
+-
+-	return new_fd;
+-}
+ 
+ struct wlr_allocator *wlr_allocator_autocreate(struct wlr_backend *backend,
+ 		struct wlr_renderer *renderer) {
+@@ -109,7 +51,14 @@
+ 	    ((drm_fd = wlr_renderer_get_drm_fd(renderer)) >= 0)) {
+ #if WLR_HAS_GBM_ALLOCATOR
+ 		wlr_log(WLR_DEBUG, "Trying to create gbm allocator");
+-		int gbm_fd = reopen_drm_node(drm_fd, true);
++		bool allow_render_node = true;
++#if WLR_HAS_GLES2_RENDERER
++		if (wlr_renderer_is_gles2(renderer)) {
++			struct wlr_egl *egl = wlr_gles2_renderer_get_egl(renderer);
++			allow_render_node = !egl->exts.MESA_device_software;
++		}
++#endif
++		int gbm_fd = reopen_drm_node(drm_fd, allow_render_node);
+ 		if (gbm_fd < 0) {
+ 			return NULL;
+ 		}
+--- util/fd.c.orig
++++ util/fd.c
+@@ -1,4 +1,9 @@
++#include <errno.h>
+ #include <fcntl.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <xf86drm.h>
++#include <xf86drmMode.h>
+ #include <wlr/util/log.h>
+ 
+ #include "util/fd.h"
+@@ -20,3 +25,68 @@
+ 	}
+ 	return true;
+ }
++
++/* Re-open the DRM node to avoid GEM handle ref'counting issues. See:
++ * https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
++ */
++int reopen_drm_node(int drm_fd, bool allow_render_node) {
++	if (drmIsMaster(drm_fd)) {
++#if !defined(__NetBSD__)
++		// Only recent kernels support empty leases
++		uint32_t lessee_id;
++		int lease_fd = drmModeCreateLease(drm_fd, NULL, 0, O_CLOEXEC, &lessee_id);
++		if (lease_fd >= 0) {
++			return lease_fd;
++		} else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
++			wlr_log_errno(WLR_ERROR, "drmModeCreateLease failed");
++			return -1;
++		}
++#endif
++		wlr_log(WLR_DEBUG, "drmModeCreateLease failed, "
++			"falling back to plain open");
++	}
++
++	char *name = NULL;
++	if (allow_render_node) {
++		name = drmGetRenderDeviceNameFromFd(drm_fd);
++	}
++	if (name == NULL) {
++		// Either the DRM device has no render node, either the caller wants
++		// a primary node
++		name = drmGetDeviceNameFromFd2(drm_fd);
++		if (name == NULL) {
++			wlr_log(WLR_ERROR, "drmGetDeviceNameFromFd2 failed");
++			return -1;
++		}
++	}
++
++	int new_fd = open(name, O_RDWR | O_CLOEXEC);
++	if (new_fd < 0) {
++		wlr_log_errno(WLR_ERROR, "Failed to open DRM node '%s'", name);
++		free(name);
++		return -1;
++	}
++
++	free(name);
++
++	// If we're using a DRM primary node and we are DRM master (e.g. because
++	// we're running under the DRM backend), we need to use the legacy DRM
++	// authentication mechanism to have the permission to manipulate DRM dumb
++	// buffers.
++	if (drmIsMaster(drm_fd) && drmGetNodeTypeFromFd(new_fd) == DRM_NODE_PRIMARY) {
++		drm_magic_t magic;
++		if (drmGetMagic(new_fd, &magic) < 0) {
++			wlr_log_errno(WLR_ERROR, "drmGetMagic failed");
++			close(new_fd);
++			return -1;
++		}
++
++		if (drmAuthMagic(drm_fd, magic) < 0) {
++			wlr_log_errno(WLR_ERROR, "drmAuthMagic failed");
++			close(new_fd);
++			return -1;
++		}
++	}
++
++	return new_fd;
++}

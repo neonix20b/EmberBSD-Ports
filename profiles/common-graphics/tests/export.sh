@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Origin: EmberBSD; AI-assisted canonical export and failure checks.
 set -eu
-[ "$#" -eq 1 ] || { echo "Usage: $0 NEW_WORK" >&2; exit 2; }
+preflight_only=no
+if [ "${1:-}" = --preflight-only ]; then preflight_only=yes; shift; fi
+[ "$#" -eq 1 ] || { echo "Usage: $0 [--preflight-only] NEW_WORK" >&2; exit 2; }
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 mkdir "$1"
 work=$(CDPATH= cd -- "$1" && pwd)
@@ -19,9 +21,12 @@ ln -s "$root/probes" "$work/source/probes"
 cp -R "$root/pkgsrc" "$work/source/pkgsrc"
 script=$work/source/scripts/prepare-pkgsrc.sh
 profile=$work/source/profiles/common-graphics
+negative_count=0
 negative() {
     if sh "$script" "$work/rejected" common-graphics > "$work/$1.log" 2>&1; then exit 1; fi
     [ ! -e "$work/rejected" ]
+    negative_count=$((negative_count + 1))
+    printf 'PASS: preflight refusal %s\n' "$1"
 }
 pkg=$profile/recipes/graphics/MesaLib
 mv "$pkg/Makefile" "$pkg/Makefile.saved"
@@ -58,8 +63,8 @@ cp "$profile/sources.tsv" "$work/saved-manifest"
 sed 's/bce5f7fb/00000000/' "$work/saved-manifest" > "$profile/sources.tsv"
 negative altered-manifest
 cp "$work/saved-manifest" "$profile/sources.tsv"
-for dependency in x11/xorgproto devel/libudev-bsd; do
-    # These unpatched upstream recipes still need their exact source pins.
+for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do
+    # Every added consumer/dependency needs its exact source pin.
     awk -F '\t' -v dep="$dependency" 'BEGIN { OFS="\t" }
         $1 == dep { $3="0000000000000000000000000000000000000000000000000000000000000000" }
         { print }' "$work/saved-manifest" > "$profile/sources.tsv"
@@ -69,8 +74,28 @@ for dependency in x11/xorgproto devel/libudev-bsd; do
     negative "missing-${dependency##*/}-recipe"
     mv "$work/dependency-Makefile" "$profile/recipes/$dependency/Makefile"
 done
+xkb=$profile/recipes/x11/libxkbcommon
+cp "$xkb/distinfo" "$work/xkb-distinfo"
+mv "$xkb/patches/patch-meson-legacy-root" "$work/xkb-legacy-root"
+sed '/SHA1 (patch-meson-legacy-root)/d' "$work/xkb-distinfo" > "$xkb/distinfo"
+negative omitted-xkb-runtime-patch
+mv "$work/xkb-legacy-root" "$xkb/patches/patch-meson-legacy-root"
+cp "$work/xkb-distinfo" "$xkb/distinfo"
+wlroots=$profile/recipes/wayland/wlroots
+cp "$wlroots/distinfo" "$work/wlroots-distinfo"
+mv "$wlroots/patches/patch-software-primary-node" "$work/wlroots-software-node"
+sed '/SHA1 (patch-software-primary-node)/d' "$work/wlroots-distinfo" > "$wlroots/distinfo"
+negative omitted-wlroots-software-node-patch
+mv "$work/wlroots-software-node" "$wlroots/patches/patch-software-primary-node"
+cp "$work/wlroots-distinfo" "$wlroots/distinfo"
 if sh "$script" "$work/unknown" unknown > "$work/unknown.log" 2>&1; then exit 1; fi
 [ ! -e "$work/unknown" ]
+negative_count=$((negative_count + 1))
+printf 'PASS: preflight refusal unknown-mode\n'
+if [ "$preflight_only" = yes ]; then
+    printf 'PASS: %s preflight refusal checks; full export/composition was not run\n' "$negative_count"
+    exit 0
+fi
 # Failure after archive creation must preserve its status and clean the tempfile.
 REAL_CP=$(command -v cp); export REAL_CP
 cat > "$work/bin/cp" <<'SH'
@@ -94,11 +119,11 @@ for mode in default development-toolchain common-build-tools common-graphics com
     else sh "$script" "$tree" "$mode" > "$work/$mode.log" 2>&1; fi
     case "$mode" in
         common-graphics|common-media|plasma-mobile)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
             cmp "$profile/mk.conf" "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
             cmp "$profile/sources.tsv" "$tree/EMBERBSD-COMMON-GRAPHICS-SOURCES" ;;
         *)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)

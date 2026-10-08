@@ -1,13 +1,16 @@
 # Migrate current wlroots and labwc to common graphics
 
-The next consumers are [wlroots 0.20.2](https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/0.20.2)
+The selected consumers are [wlroots 0.20.2](https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/0.20.2)
 and [labwc 0.20.2](https://github.com/labwc/labwc/releases/tag/0.20.2).
 Their upstream release APIs were checked on 2026-10-08. The pinned pkgsrc
 already contains these releases. The older native Wayland probe retains
 0.19.3/0.9.7 for its historical evidence; it is not the new package provider.
 
-The current installed [Mesa/libepoxy result](epoxy.md) proves surfaceless CPU
-rendering. It does not establish a usable wlroots GLES2 output. In wlroots
+The installed [Mesa/libepoxy result](epoxy.md) proves surfaceless CPU
+rendering. The subsequent [canonical wlroots package](wlroots-package.md)
+passes four guarded GLES2/GBM headless cycles in the isolated EMBERGPU VM,
+including a run after dropping UID/GID to 65534. This remains an interim
+consumer gate before full DRM/input and labwc migration. In wlroots
 0.20.2, `render/gles2/renderer.c` requires `EGL_EXT_image_dma_buf_import`
 and advertises DMA-BUF render targets. Its shared-memory allocator cannot
 satisfy that renderer. `WLR_RENDERER_FORCE_SOFTWARE` selects a software EGL
@@ -77,8 +80,9 @@ the selected wlroots GLES2 experiment, not an independent compositor result.
 
 ## Dependency and cross-build boundary
 
-The minimum wlroots core adds pixman 0.46.4, libxkbcommon 1.13.2 and
-xkeyboard-config 2.48 to the accepted Mesa/DRM/Wayland packages. These are
+The minimum wlroots core adds pixman 0.46.4, libxkbcommon 1.13.2nb1,
+xkeyboard-config 2.48nb1 and build-only input-headers 1.31.3 to the accepted
+Mesa/DRM/Wayland packages. These are
 current stable versions from their upstream tags; xkbcommon 1.14 beta is
 excluded. Pixman is also a core region dependency; linking it does not mean
 the acceptance test may select its renderer instead of GLES2.

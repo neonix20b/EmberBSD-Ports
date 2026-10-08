@@ -35,6 +35,14 @@ EGL lifecycles on Zero 3W. The first downstream consumer,
 EGL/GLES dispatch cycles plus four selected upstream tests there. Live
 providers resolve to the installed common Mesa/LLVM closure.
 
+The current [wlroots 0.20.2nb4 consumer](cross/wlroots-package.md) also passes
+four GLES2/GBM headless lifecycles in an isolated AArch64 VirtGPU VM, repeated
+after dropping root privileges. Its 1024-pixel oracle covers rectangles and
+a texture; a real KMS framebuffer import and GEM_CLOSE leave the renderer's
+buffer usable. The package fixes software primary-node selection and private
+EGL cleanup without changing kernel permissions. DRM scanout, input, labwc
+and an accelerated session still require separate acceptance.
+
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
 upstream invocations on Zero 3W with the paired kernel IPC fixes. The common
 [LLVM23 core](../common-build-tools/llvm-family.md) passes installed C API and

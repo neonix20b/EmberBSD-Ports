@@ -1,0 +1,40 @@
+$NetBSD$
+
+Origin: EmberBSD (AI-assisted), cross runtime directory selection.
+Upstream 1.13.2 provides overrides for the main and extension XKB roots but
+not the legacy root. pkgconf can prepend the cross sysroot to xkb_base.
+Add the missing explicit runtime override while preserving native autodetection.
+Not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -51,6 +51,8 @@ add_project_arguments(cc.get_supported_arguments(cflags), language: 'c')
+ # misconfigured setups.
+ # Try both un- and versioned pkg-config (xkeyboard-config < 2.45).
+ XKB_LEGACY_ROOT = ''
++XKB_LEGACY_OVERRIDE = get_option('xkb-legacy-root')
++if XKB_LEGACY_OVERRIDE == ''
+ foreach v: ['-2', '']
+     xkeyboard_config_dep = dependency(f'xkeyboard-config@v@', required: false)
+     if xkeyboard_config_dep.found()
+@@ -65,6 +67,9 @@ foreach v: ['-2', '']
+         break
+     endif
+ endforeach
++else
++    XKB_LEGACY_ROOT = XKB_LEGACY_OVERRIDE
++endif
+ if XKB_LEGACY_ROOT == ''
+     # Fallback to the legacy X11 directory
+     XKB_LEGACY_ROOT = get_option('prefix')/get_option('datadir')/'X11'/'xkb'
+--- meson_options.txt.orig
++++ meson_options.txt
+@@ -1,3 +1,8 @@
++option(
++    'xkb-legacy-root',
++    type: 'string',
++    description: 'Legacy X11 XKB runtime root [default=xkeyboard-config install path]',
++)
+ option(
+     'xkb-config-root',
+     type: 'string',

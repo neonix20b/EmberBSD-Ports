@@ -96,6 +96,10 @@ runtime behavior are validated.
   The same Mesa/LLVM providers pass [GBM/PRIME/EGLImage pixel interchange](profiles/common-graphics/cross/gbm.md)
   through native VirtGPU buffers in an isolated AArch64 VM, with verified
   live libraries and explicit llvmpipe rendering.
+  [wlroots 0.20.2nb4](profiles/common-graphics/cross/wlroots-package.md) now
+  uses this same stack for GLES2 rendering, KMS framebuffer import and
+  headless presentation. Four root and four unprivileged lifecycles pass
+  all 1024 pixels and preserve renderer buffers after caller GEM_CLOSE.
   Other consumer migrations, visible sessions and guest GPU rendering remain
   unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
