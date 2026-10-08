@@ -91,6 +91,7 @@ static void *get_display(void *opaque)
 #include "native-clear.h"
 #include "native-draw.h"
 #include "native-context-errors.h"
+#include "native-query.h"
 /* Check resolved images, not just the linker's intended install names. */
 static void check_image(const char *symbol, const char *directory, const char *file)
 {
@@ -177,6 +178,7 @@ int main(int argc, char **argv)
             die("live reinitialization was accepted");
         check_decoder_results();
         check_context_errors(1);
+        check_query_outputs();
         uint32_t version = 0, size = 0;
         virgl_renderer_get_cap_set(1, &version, &size);
         if (!version || !size) die("classic capset");

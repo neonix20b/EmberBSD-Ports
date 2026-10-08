@@ -48,6 +48,11 @@ this profile even when upstream `check-gl-errors` is disabled. Legacy initializa
 retains its existing policy. This local, AI-assisted MIT adaptation is not
 submitted or accepted upstream; it does not cover unreported backend failures.
 
+The [query-result repair](query-results.md) checks complete output backing at
+creation and completion, and preserves errors and fence ownership when a
+pending query fails during classic polling. Native Metal and causal software
+regressions cover their respective boundaries.
+
 ## Reproduction
 
 Requirements: macOS/arm64, Apple Clang, shell, Ruby, ripgrep, AWK, tar, patch,
@@ -174,7 +179,7 @@ Eleven guards reject invalid work paths, missing/altered archives, patch/manifes
 drift, and changed source/header/DSO files before native execution.
 
 The native renderer warns that ARB/KHR robustness is absent. The short successful
-run does not qualify recovery from GPU faults. Further backend failures, delayed query writes,
+run does not qualify recovery from GPU faults. Further backend failures, concurrent query access,
 further draw paths, staging/MSAA, initialized blitter lifetime and no-touch-after-revoke
 qualification remain open. The full QEMU build and bounded 2D boot are checked
 separately; live QEMU decoder-error delivery, reset/BH/display integration, guest

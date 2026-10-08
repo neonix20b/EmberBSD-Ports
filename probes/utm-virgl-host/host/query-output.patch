@@ -1,0 +1,149 @@
+# Origin: EmberBSD (AI-assisted), complete query result bounds and retained backing lifetime.
+# SPDX-License-Identifier: MIT
+# Applies after context-errors.patch to the pinned UTM renderer; not submitted upstream.
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -123,6 +123,7 @@
+    struct vrend_context *ctx;
+    int sub_ctx_id;
+    struct vrend_resource *res;
++   uint32_t res_handle;
+    bool fake_samples_passed;
+    bool invalid;
+ };
+@@ -11933,6 +11934,11 @@
+ 
+    /* Queries must progress even when no guest fence retires this poll. */
+    vrend_renderer_check_queries();
++   if (vrend_state.ember_classic_wait && vrend_state.ember_wait_failed) {
++      /* Keep even a signaled prefix owned until cleanup after query failure. */
++      list_splice(&retired_fences, &vrend_state.fence_list);
++      return;
++   }
+ 
+    if (list_is_empty(&retired_fences))
+       return;
+@@ -11979,11 +11985,38 @@
+ }
+ 
+ 
+-static bool vrend_check_query(struct vrend_query *query)
++/* Validate the entire result before writing any part of a retained buffer. */
++static bool vrend_query_buffer_fits(const struct vrend_resource *res)
++{
++   size_t remaining = sizeof(struct virgl_host_query_state);
++
++   if (res->base.width0 < remaining)
++      return false;
++   if (!res->iov)
++      return res->ptr != NULL;
++   for (uint32_t i = 0; i < res->num_iovs; i++) {
++      if (res->iov[i].iov_len && !res->iov[i].iov_base)
++         return false;
++      if (res->iov[i].iov_len >= remaining)
++         return true;
++      remaining -= res->iov[i].iov_len;
++   }
++   return false;
++}
++
++/* Zero means pending; a negative error also removes the query from polling. */
++static int vrend_check_query(struct vrend_query *query)
+ {
+    struct virgl_host_query_state state;
+    bool ret;
+ 
++   /* Backing may have been replaced since CREATE_QUERY or the last poll. */
++   if (!vrend_query_buffer_fits(query->res)) {
++      vrend_report_context_error(query->ctx, VIRGL_ERROR_CTX_ILLEGAL_RESOURCE,
++                                 query->res_handle);
++      return -EINVAL;
++   }
++
+    state.result_size = vrend_is_timer_query(query->gltype) ? 8 : 4;
+ 
+    if (!query->invalid) {
+@@ -12006,14 +12039,10 @@
+    state.query_state = VIRGL_QUERY_STATE_DONE;
+ 
+    if (query->res->iov) {
+-      if (vrend_write_to_iovec(query->res->iov, query->res->num_iovs, 0,
+-                               (const void *) &state, sizeof(state)) != sizeof(state))
+-         virgl_error("Query state does not fit IOV size\n");
++      vrend_write_to_iovec(query->res->iov, query->res->num_iovs, 0,
++                           (const char *)&state, sizeof(state));
+    } else {
+-      if (query->res->base.width0 >= sizeof(state) )
+-         *((struct virgl_host_query_state *) query->res->ptr) = state;
+-      else
+-         virgl_error("Query state does not fit buffer size\n");
++      memcpy(query->res->ptr, &state, sizeof(state));
+    }
+ 
+    return true;
+@@ -12069,9 +12098,14 @@
+       if (!vrend_hw_switch_context_with_sub(query->ctx, query->sub_ctx_id)) {
+          virgl_warn("Failed to switch to context (%d) with sub (%d) for query %u\n",
+                       query->ctx->ctx_id, query->sub_ctx_id, query->id);
+-      }
+-      else if (!vrend_check_query(query)) {
+-         continue;
++         if (vrend_state.ember_classic_wait)
++            vrend_state.ember_wait_failed = true;
++      } else {
++         int ret = vrend_check_query(query);
++         if (!ret)
++            continue;
++         if (ret < 0 && vrend_state.ember_classic_wait)
++            vrend_state.ember_wait_failed = true;
+       }
+ 
+       list_delinit(&query->waiting_queries);
+@@ -12151,7 +12185,8 @@
+ {
+    bool fake_samples_passed = false;
+    struct vrend_resource *res = vrend_renderer_ctx_res_lookup(ctx, res_handle);
+-   if (!res || !has_bit(res->storage_bits, VREND_STORAGE_HOST_SYSTEM_MEMORY)) {
++   if (!res || !has_bit(res->storage_bits, VREND_STORAGE_HOST_SYSTEM_MEMORY) ||
++       !vrend_query_buffer_fits(res)) {
+       vrend_report_context_error(ctx, VIRGL_ERROR_CTX_ILLEGAL_RESOURCE, res_handle);
+       return EINVAL;
+    }
+@@ -12181,6 +12216,7 @@
+    q->index = query_index;
+    q->ctx = ctx;
+    q->sub_ctx_id = ctx->sub->sub_ctx_id;
++   q->res_handle = res_handle;
+    q->fake_samples_passed = fake_samples_passed;
+ 
+    vrend_resource_reference(&q->res, res);
+@@ -12334,7 +12370,7 @@
+                             UNUSED uint32_t wait)
+ {
+    struct vrend_query *q;
+-   bool ret;
++   int ret;
+ 
+    q = vrend_object_lookup(ctx->sub->object_hash, handle, VIRGL_OBJECT_QUERY);
+    if (!q)
+@@ -12349,7 +12385,7 @@
+ 
+    atomic_store(&vrend_state.has_waiting_queries,
+                 !list_is_empty(&vrend_state.waiting_query_list));
+-   return 0;
++   return ret < 0 ? -ret : 0;
+ }
+ 
+ #define COPY_QUERY_RESULT_TO_BUFFER(resid, offset, pvalue, size, multiplier) \
+--- a/src/virglrenderer.c
++++ b/src/virglrenderer.c
+@@ -172,6 +172,9 @@
+    if (!res)
+       return;
+ 
++   /* Retained pipe objects must not keep the caller's retired backing. */
++   virgl_resource_detach_iov(res);
++
+    args.callback = detach_resource;
+    args.data = res;
+    virgl_context_foreach(&args);

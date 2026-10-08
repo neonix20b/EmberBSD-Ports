@@ -16,7 +16,8 @@ check "$recipe/epoxy-files.tsv" 38c1d601a2d0d5748e55cd5164a366ab21d9d79689ccf8e6
 check "$recipe/blitter-null-context.patch" a244fb2a4e77248318bcefee05a47b8ae34a8a2bc1c6c462d8460f3acd8cb8ac
 check "$recipe/decoder-truncated-error.patch" c3fba68e356a76e48f8ed83414146b2201fb2b564aff1375d0e3e39f2e2b3683
 check "$recipe/context-errors.patch" cb3cb01527c9e5cd99331804be09cfc78c4c35c9381088df5f03e85cc0bf27c9
-check "$recipe/renderer-files.tsv" 1d47dd6ff414793466b665dfbe69f587148777197bc1bb83b9a5fa8fc6873278
+check "$recipe/query-output.patch" bd90f4c45d61976499fa7d59900adcea70284afd46949b40baa9163b1c482a99
+check "$recipe/renderer-files.tsv" 951bde5712891678c2914a2ab4e24589eb7e677042bc660765d5495d10e11caa
 check "$recipe/ANGLE-LICENSE" bf4da21bd20bcfb5b60b7ecc67fa864a79be049e21d6178076887f178dd6c71a
 mkdir "$work"
 sh "$recipe/../prepare-wait.sh" "$renderer" "$inputs" "$work/stages" > "$work/prepare-wait.log" 2>&1 || { cat "$work/prepare-wait.log" >&2; exit 1; }
@@ -55,6 +56,7 @@ verify_files "$work/renderer" "$recipe/renderer-files.tsv" input
 apply "$work/renderer" "$recipe/blitter-null-context.patch" "$work/blitter-patch.log"
 apply "$work/renderer" "$recipe/decoder-truncated-error.patch" "$work/decoder-patch.log"
 apply "$work/renderer" "$recipe/context-errors.patch" "$work/context-errors-patch.log"
+apply "$work/renderer" "$recipe/query-output.patch" "$work/query-output-patch.log"
 verify_files "$work/renderer" "$recipe/renderer-files.tsv" output
 (cd "$work" && find renderer epoxy khronos -type f ! -name '*.orig' ! -name '*.rej' -exec shasum -a 256 {} \;) > "$work/source-sha256.txt"
 printf '%s\n' 'PASS: full renderer and libepoxy 1.5.10 prepared; no build or installed host changes.'
