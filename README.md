@@ -113,9 +113,11 @@ runtime behavior are validated.
   passes four offscreen GLES lifecycles with this same Mesa/LLVM package
   stack and the paired ANGLE Metal host on Apple M3.
   Current [text and image dependencies](profiles/common-graphics/cross/labwc-dependencies.md),
-  including GLib 2.90.1, HarfBuzz 14.6.0 and Cairo 1.18.6, cross-build with
-  normal package checks. Target text rendering, Pango/labwc and full SVG
-  acceptance remain separate stages.
+  including GLib 2.90.1, Pango 1.58.2, HarfBuzz 14.6.0 and Cairo 1.18.6,
+  cross-build with normal package checks. Four installed AArch64 VM cycles
+  pass real font selection, text shaping, CPU rasterization and PNG roundtrip,
+  with causal negative controls. labwc client surfaces and full SVG remain
+  separate acceptance stages.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,

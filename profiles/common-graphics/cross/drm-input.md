@@ -117,9 +117,9 @@ headers, with controlled reversions of the old timestamp API and missing
 ioctl prototype. Both controls fail, while the adapted source compiles.
 These checks do not substitute for target input events.
 
-The exporter requires all 23 source pins, including the subsequent
+The exporter requires all 25 source pins, including the subsequent
 [text/image dependencies](labwc-dependencies.md), each approved patch and the
-native metadata helper. Its preflight-only mode exercises 58 refusals without
+native metadata helper. Its preflight-only mode exercises 63 refusals without
 allocating a complete pkgsrc tree. The full mode additionally checks the six
 profile compositions and cleans each disposable export before the next one.
 

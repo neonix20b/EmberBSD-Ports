@@ -101,7 +101,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             $1 != "converters/fribidi" &&
             $1 != "graphics/png" &&
             $1 != "graphics/freetype2" &&
-            $1 != "archivers/lzo") ||
+            $1 != "archivers/lzo" && $1 != "x11/libXt" && $1 != "devel/pango") ||
             $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz)$/ ||
             length($3) != 64 || $3 !~ /^[0-9a-f]+$/ ||
             $4 !~ /^https:\/\// || seen[$1]++ { bad=1 }
@@ -116,7 +116,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             !seen["converters/fribidi"] ||
             !seen["graphics/png"] ||
             !seen["graphics/freetype2"] ||
-            !seen["archivers/lzo"]) exit 1 }
+            !seen["archivers/lzo"] || !seen["x11/libXt"] || !seen["devel/pango"]) exit 1 }
     ' "$graphics/sources.tsv" || { echo 'Invalid common graphics manifest.' >&2; exit 2; }
     while IFS="$(printf '\t')" read -r recipe archive sha url; do
         case "$recipe" in
@@ -143,11 +143,13 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             converters/fribidi) pin='fribidi-1.0.17.tar.xz:6949dcde27d41cebad1fd741fcafc36d55a1020d2d872d4a6eb3914caabbada2:https://github.com/fribidi/fribidi/releases/download/v1.0.17/fribidi-1.0.17.tar.xz' ;;
             graphics/png) pin='libpng-1.6.59.tar.xz:d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389:https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz' ;;
             graphics/freetype2) pin='freetype-2.14.3.tar.xz:36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f:https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz' ;;
+            devel/pango) pin='pango-1.58.2.tar.xz:342385b6ca3b7c73455d7c80a13b7dbe4489e00bc3bd4c5bd6ed4dce421e374a:https://download.gnome.org/sources/pango/1.58/pango-1.58.2.tar.xz' ;;
+            x11/libXt) pin='libXt-1.3.1.tar.xz:e0a774b33324f4d4c05b199ea45050f87206586d81655f8bef4dba434d931288:https://xorg.freedesktop.org/archive/individual/lib/libXt-1.3.1.tar.xz' ;;
             archivers/lzo) pin='lzo-2.10.tar.gz:c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072:https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz' ;;
         esac
         [ "$archive:$sha:$url" = "$pin" ] || { echo "Incorrect common graphics source pin: $recipe" >&2; exit 2; }
     done < "$graphics/sources.tsv"
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
         source=$graphics/recipes/$recipe
         recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk'
         case "$recipe" in
@@ -165,6 +167,8 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             converters/fribidi) approved='patch-bin_Makefile.am patch-bin_Makefile.in' ;;
             graphics/png) approved='patch-libpng-config.in patch-pngpriv.h' ;;
             graphics/freetype2) approved='patch-builds_unix_freetype-config.in patch-builds_unix_unix-cc.in' ;;
+            devel/pango) approved='patch-pango_pangocairo-coretextfont.c patch-pango_pangocairo-coretextfontmap.c patch-pango_pangocoretext-private.h patch-pango_pangocoretext.c patch-pangocairo-coretext.h' ;;
+            x11/libXt) approved='patch-include_X11_Xtos.h patch-util_Makefile.in' ;;
             archivers/lzo) approved='patch-aa patch-src_lzo1f__d.ch' ;;
             devel/glib2-tools) approved='' ;;
             devel/glib2-introspection) approved='' ;;
@@ -285,7 +289,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         "$destination/EMBERBSD-CROSS-MK.CONF"
 fi
 if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done
