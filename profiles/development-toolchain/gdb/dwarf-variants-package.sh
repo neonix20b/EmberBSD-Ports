@@ -8,6 +8,8 @@ objcopy=${OBJCOPY:-/usr/pkg/bin/gobjcopy}
 readelf=${READELF:-/usr/pkg/bin/greadelf}
 fixtures=$(CDPATH= cd -- "$fixtures" && pwd)
 "$dwp" --version > "$fixtures/dwp-version.txt"
+"$objcopy" --version > "$fixtures/objcopy-version.txt"
+"$readelf" --version > "$fixtures/package-readelf-version.txt"
 cd "$fixtures"
 for version in 4 5; do
     for width in 32 64; do

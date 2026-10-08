@@ -9,6 +9,12 @@ gdb=$1 fixtures=$2 work=$3
 mkdir "$work"
 work=$(CDPATH= cd -- "$work" && pwd)
 fixtures=$(CDPATH= cd -- "$fixtures" && pwd)
+[ "$(wc -l < "$fixtures/cases.tsv" | tr -d ' ')" = 32 ] || {
+    echo 'Expected all 32 prepared cases; run the package script first.' >&2
+    exit 2
+}
+ulimit -c 0
+ulimit -t 15
 "$gdb" --version > "$work/version.txt"
 grep -q '18.1' "$work/version.txt"
 readelf=${READELF:-/usr/pkg/bin/greadelf}
@@ -21,6 +27,24 @@ break *variant_stop_one
 break *variant_stop_two
 run
 printf "FIRST=%d ID=%ld FLAGS=%u TRACKED=%d\n", local, record.id, record.flags, tracked
+backtrace
+continue
+printf "SECOND=%d ID=%ld FLAGS=%u TRACKED=%d\n", local, record.id, record.flags, tracked
+backtrace
+continue
+quit
+COMMANDS
+cat > "$work/dwp.commands" <<'COMMANDS'
+set pagination off
+set confirm off
+break *variant_stop_one
+break *variant_stop_two
+break variant_touch
+run
+printf "FIRST=%d ID=%ld FLAGS=%u TRACKED=%d\n", local, record.id, record.flags, tracked
+backtrace
+continue
+printf "HELPER_INPUT=%d\n", *value
 backtrace
 continue
 printf "SECOND=%d ID=%ld FLAGS=%u TRACKED=%d\n", local, record.id, record.flags, tracked
@@ -44,8 +68,10 @@ failed=0
 while read -r name language; do
     log=$work/$name.log
     mkdir -p "$(dirname -- "$log")"
+    commands=$work/$language.commands
     case $name in
     dwp-*)
+        commands=$work/dwp.commands
         [ -e "$fixtures/$name.dwp" ]
         if find "$fixtures/${name%/program}" -name '*.dwo' | grep .; then
             echo 'Standalone DWO files must be unavailable in DWP acceptance.' >&2
@@ -55,7 +81,7 @@ while read -r name language; do
     esac
     status=PASS
     if ! (cd "$fixtures"; "$gdb" -nx -nh -batch "$name" \
-        -ex "directory $fixtures" -x "$work/$language.commands") > "$log" 2>&1; then
+        -ex "directory $fixtures" -x "$commands") > "$log" 2>&1; then
         status=FAIL
     fi
     if grep -Ei 'Dwarf Error|internal-error|Cannot handle|could not convert|error:' "$log" > /dev/null; then
@@ -71,6 +97,9 @@ while read -r name language; do
         grep -q 'VariantBase' "$log" || status=FAIL
         ;;
     *) echo "Invalid test language: $language" >&2; exit 2 ;;
+    esac
+    case $name in
+    dwp-*) grep -q 'HELPER_INPUT=41' "$log" || status=FAIL ;;
     esac
     grep -q '#1 .*main' "$log" || status=FAIL
     grep -q 'exited normally' "$log" || status=FAIL
