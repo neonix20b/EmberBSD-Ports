@@ -93,6 +93,9 @@ runtime behavior are validated.
   NIR cases remain disabled. The nb2 XCB pkg-config correction preserves
   byte-identical Mesa libraries. Installed [libepoxy](profiles/common-graphics/cross/epoxy.md)
   passes real dispatch through those providers and four pure upstream tests.
+  After the common [LLVM23.1.2nb1 revision update](profiles/common-graphics/cross/mesa-runtime-rebind.md),
+  fresh Mesa and libepoxy rendering checks pass on Zero 3W; the earlier
+  37-test result is retained separately.
   The same Mesa/LLVM providers pass [GBM/PRIME/EGLImage pixel interchange](profiles/common-graphics/cross/gbm.md)
   through native VirtGPU buffers in an isolated AArch64 VM, with verified
   live libraries and explicit llvmpipe rendering.
