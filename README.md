@@ -41,7 +41,10 @@ runtime behavior are validated.
   installed in the AArch64 VM, with split/supplementary DWARF, Unicode and
   live register/signal-unwinding checks. Its [pkgsrc recipe](profiles/development-toolchain/gdb/package.md)
   replaces `devel/gdb` and adds zstd, bounded DWARF procedure calls and
-  current location-list handling. Image assembly belongs to the OS repository;
+  current location-list handling. The OS-owned
+  [development image](https://github.com/oxtech-ember/EmberBSD/tree/main/ember/image)
+  passes offline package installation and live split-DWARF32/64 debugging
+  after a normal AArch64 VM reboot;
   the [expanded matrix](profiles/development-toolchain/gdb/dwarf-variants.md)
   records tested formats and remaining valid-expression gaps.
 - [Current common build tools](profiles/common-build-tools/README.md):

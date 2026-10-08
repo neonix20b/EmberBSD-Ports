@@ -61,3 +61,19 @@ Package checks alone do not establish a bootable image. Image acceptance
 must finish first-boot installation, confirm package integrity and exercise
 the installed debugger after a normal reboot. Neither this package nor the
 bounded DWARF matrix establishes universal DWARF conformance.
+
+## Accepted package and image
+
+On 2026-10-08 the macOS cross-built package passed the normal pkgsrc checks,
+native installation and all 42 registered file checks in NetBSD 11/AArch64.
+The installed debugger passed the external-DWARF and live ABI suite, the
+[expanded matrix](dwarf-variants.md), and `gstack` attachment to a live process.
+The expression runner retains two known `DW_OP_entry_value` failures.
+
+The archive SHA256 is
+`a04fabdc497b7cc1f7a4c653d5834f545a47a36b92d17fede505fc9e8ef5419c`;
+the installed ELF SHA256 is
+`eb1c0bb10217764350b530fdf089b288f18a3ad913e0fa14da517645d9b55356`.
+The OS-owned image passed offline installation of all eleven closure packages,
+integrity checks, live DWARF5 split-DWARF32/64 debugging and a normal reboot in
+QEMU/HVF. The linked image guide records its inputs, image hash and limits.
