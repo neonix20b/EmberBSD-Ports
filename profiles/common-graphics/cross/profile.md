@@ -36,6 +36,10 @@ absolute `EMBERBSD_CROSS_BUILD_CC`. The pkgsrc recipe appends its own
 `CC_FOR_BUILD` assignment. Its empty Darwin default otherwise clears the host
 compiler selection, and upstream finds the target `gcc` wrapper for `makekeys`.
 The generator must run on macOS while reading the target xorgproto headers.
+Cross libxshmfence exposes the already selected host `libtoolize` through
+pkgsrc's tool creation mechanism. The pinned pkgsrc has no `USE_TOOLS`
+mapping for that program, and its cross PATH excludes `TOOLBASE/bin`.
+The recipe's real `autoreconf` therefore needs this scoped tool declaration.
 
 CMake dependencies also receive the NetBSD system/processor and sysroot.
 Their library, include and package searches are confined to the sysroot and
@@ -134,6 +138,16 @@ against the actual target xorgproto headers:
 BMAKE=/absolute/host/bin/bmake ruby ../tests/x11-makekeys.rb \
     /absolute/prepared-pkgsrc /absolute/graphics-cross.mk.conf \
     /absolute/libX11-1.8.13 /absolute/new-makekeys-test-work
+```
+
+For libxshmfence, the focused regression generates the actual pkgsrc tools
+and runs upstream `autoreconf -vif` on a private copy of the prepared source.
+It preserves the cross PATH and checks that native recursion stays unchanged:
+
+```sh
+BMAKE=/absolute/host/bin/bmake ruby ../tests/x11-autoreconf.rb \
+    /absolute/prepared-pkgsrc /absolute/graphics-cross.mk.conf \
+    /absolute/libxshmfence-1.3.3 /absolute/new-autoreconf-test-work
 ```
 
 For scanner consumers, supply the verified patched upstream source trees:
