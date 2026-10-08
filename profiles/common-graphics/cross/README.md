@@ -12,6 +12,10 @@ the build host using the target build's actual metadata. The separate
 [complete cross composition](profile.md) selects host tools and target
 dependencies without changing the native profile.
 
+The full Mesa package now passes normal cross packaging and sysroot installation.
+[Installed package acceptance](mesa-package.md) prepares the EGL/GLES consumer
+and 37 upstream target invocations against its canonical runtime libraries.
+
 [Wayland 1.26 and protocols 1.49](wayland.md) use a matching host scanner,
 separate native metadata and the installed target libraries. Their target
 tests are independent of the temporary Mesa diagnostic described below.
@@ -88,6 +92,34 @@ Examples GEM/PRIME probe, which passed malformed requests and 32 process
 lifetime cycles. The [kernel receipt](https://github.com/oxtech-ember/EmberBSD/blob/main/sys/external/bsd/drm2/virtio/kernel-boot.md)
 records this separate serial-only boot. It does not establish a visible
 console, accelerated rendering, the UTM desktop or package registration.
+
+On 2026-10-08 the normal libdrm 2.4.134nb1 package was installed on physical
+Zero 3W with the full Mesa/LLVM23 closure. The actual pkgsrc-built `hash`,
+`drmsl` and exported-symbol tests passed against `/usr/pkg/lib/libdrm.so.2.134.0`,
+without loader overrides. `drmdevice` returned 77 because `EMBER64 #4` has
+no attached DRM device. This is installed-library acceptance, not GPU execution.
+
+To repeat that installed check, copy `output/tests/{hash,drmsl,drmdevice}`,
+`symbols-check.py` and `core-symbols.txt` from the same verified pkgsrc build
+into a private target directory. Record and verify their hashes after transfer.
+In that directory, use the installed package's recorded DSO hash and run:
+
+```sh
+unset LD_LIBRARY_PATH LD_PRELOAD
+for program in hash drmsl drmdevice; do
+    ldd "./$program" > "$program.ldd.log"
+    loaded=$(awk '$1 == "-ldrm.2" && $2 == "=>" { p=$3; n++ }
+        END { if (n != 1) exit 1; print p }' "$program.ldd.log") || exit 1
+    test "$(realpath "$loaded")" = /usr/pkg/lib/libdrm.so.2.134.0 || exit 1
+done
+timeout 30 ./hash
+timeout 30 ./drmsl
+timeout 30 /usr/pkg/bin/python3.14 ./symbols-check.py \
+    --lib /usr/pkg/lib/libdrm.so.2.134.0 \
+    --symbols-file ./core-symbols.txt --nm /usr/bin/nm
+# Preserve drmdevice's result: 77 means no device, not rendering success.
+timeout 30 ./drmdevice
+```
 
 ## Temporary headless Mesa diagnostic
 

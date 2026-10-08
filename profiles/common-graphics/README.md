@@ -16,7 +16,15 @@ libdrm payload on macOS with GCC16. All 26 staged entries match PLIST, and
 hash, drmsl and symbol checks pass in AArch64 UTM. Device enumeration is
 skipped on the current framebuffer-only kernel. Its normal libdrm package
 and wayland-protocols package now also build and install into the cross sysroot.
-Their installed target acceptance and Mesa consumer migration remain separate gates.
+Installed libdrm passes hash, drmsl and symbol checks on Zero 3W, resolving
+the exact packaged library without loader overrides. Device enumeration
+returns 77 on its framebuffer-only kernel; see the [repeat commands](cross/README.md).
+
+The full [installed Mesa package](cross/mesa-package.md) passes four EGL/GLES
+shader and pixel lifecycles through llvmpipe/LLVM23 on Zero 3W, reporting
+EGL 1.5 and GLES 3.2. All 37 upstream test invocations exit zero; utility
+tests report one internal skip and NIR nine disabled cases. Downstream
+consumer migration and visible X11/Wayland sessions remain separate gates.
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
 upstream invocations on Zero 3W with the paired kernel IPC fixes. The common
@@ -106,8 +114,9 @@ another disabled client module is a migration blocker. Adapted revision
 identity requirement. The canonical recipe omits pkgsrc's native-X11
 avoid-duplicate skip, so actual dependency selection still builds libdrm.
 
-Mesa's PLIST is **source-derived and unvalidated natively**. The libdrm list
-matches the complete cross-staged payload and passes normal package checks.
+Both Mesa and libdrm PLISTs match their complete cross-staged payloads and
+pass normal package checks. Mesa's installed CPU rendering and upstream
+tests pass the separate [target acceptance](cross/mesa-package.md).
 Mesa's GL/EGL/
 GLES/GBM/DRM SONAME closure is GL1/EGL1/GLESv1_CM1/GLESv2 2/GBM1/DRM2,
 plus `libgallium-26.2.4.so`, the GBM backend and upstream dril driver links.
@@ -180,18 +189,18 @@ selection, export composition and temporary-archive failure cleanup.
 
 ## Target package and consumer acceptance remain mandatory
 
-Accept the common Python/Meson/LLVM23 packages first. Cross-build libdrm and
-Mesa, or use the preserved native profile, with upstream tests in an isolated
-final-prefix package root. Execute the target tests on NetBSD.
-Resolve both source-derived PLISTs against actual DESTDIR contents with normal
-`check-files`, package, shared-library/RPATH/WRKREF and installed pkg_admin
-checks. No skip list exempts a file from this gate.
+The common LLVM23 runtime and complete Mesa26 cross package now pass target
+API, normal packaging and installed CPU-rendering checks. Mesa's cross build
+also passes eight host source/ELF tests. Repeat the installed tests with the
+[package runner](cross/mesa-package.md) and verify package ownership.
+Normal `check-files`, shared-library/RPATH/WRKREF and installed pkg_admin checks
+remain required for subsequent rebuilds. No skip list exempts a file.
 
 Then rebuild and inspect affected consumers, including loaded dril/GBM/Qt
 plugins: exactly one Mesa/DRM/sharedLLVM/GCC16 runtime, no libglapi, old base
 GL3/EGL0/DRM3, build paths or loader overrides. NetBSD clients loading worker
-libraries need pthread at process startup. Real softpipe/llvmpipe/ORC lifecycle
-and graphics checks, matched-kernel KMS/input identity and VirGL sessions
-remain runtime gates. The [common media profile](../common-media/README.md) prepares FFmpeg9 for
-Qt Multimedia/KFileMetadata; native packages and playback remain unaccepted. Physical boards, full graphics acceleration and the complete
-Mobile workflow remain unverified.
+libraries need pthread at process startup. Consumer graphics checks,
+matched-kernel KMS/input identity and VirGL sessions remain runtime gates.
+The [common media profile](../common-media/README.md) prepares FFmpeg9 for
+Qt Multimedia/KFileMetadata; native packages and playback remain unaccepted.
+Physical GPU acceleration and the complete Mobile workflow remain unverified.
