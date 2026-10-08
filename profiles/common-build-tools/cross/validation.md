@@ -8,7 +8,7 @@ complete `gcc16-16.2.0nb1` package. No desktop was required.
 
 This is VM execution evidence for the named packages. The first three used
 a bootstrap GCC12.5 kernel; Binutils used the GCC16/DWARF5 kernel built from
-EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`; Python used the same kernel.
+EmberBSD `21cd2464c720159bec0a3ba352e4dee940a58b02`; Python and Meson/Ninja used the same kernel.
 These results do not claim a complete GCC16-built userland, LLVM23 package acceptance or
 execution of these new packages on a board.
 
@@ -19,6 +19,7 @@ execution of these new packages on a board.
 | Libtool 2.6.2 | Verified original source, maintained/generated patch equivalence; cross package checks and installation; C11/C++20 shared/static consumers, exceptions through a DSO, selected GCC16 runtime, libtoolize, shlibtool and uninstall. |
 | Binutils 2.47nb1 | Mac cross build, full package checks and target installation/integrity; GNU as/ld and archive consumers, DWARF5/64 source lookup, split debug data and stripping, C++20 DSO exceptions, GNU CTF, translated diagnostics and unresolved-symbol errors. |
 | Python 3.14.8 | Mac cross build, package checks and target installation/integrity; config-tool and pkg-config C++ embedding, C extensions with ordinary/tagged/stable-ABI filenames, selected runtime and consistent build-details; all 21 selected upstream suites, 5,615 tests run, 478 skipped by upstream conditions. |
+| Meson 1.12.1 / Ninja 1.13.2 | Mac cross packaging, normal target installation/integrity; C/C++ shared/static consumers, exceptions through a DSO, Python embedding and browse interpreter, incremental/reconfigured builds, compiler-error propagation, staged/installed RPATH and external pkg-config consumer. Meson's upstream InternalTests ran 78 cases: 77 passed, one skipped for unavailable JSON-schema modules. |
 
 Package SHA256 values identify the actual VM inputs:
 
@@ -28,6 +29,8 @@ m4-1.4.21.tgz        026972df19145afe7806e6d0eec3450edfd0d542b26789e3652a34491a9
 libtool-base-2.6.2.tgz 0862a6c6ab789dd880c017da93ac72fe1f0cb59e19460c9f0b6fb9148a8776e6
 binutils-2.47nb1.tgz b07db836b965be43f8f9304c3e22fef385e500ad32ed14ad75beaa6bad5098af
 python314-3.14.8.tgz 672b7237f0524304a040961c63e4a00b373ad1b249a09e7ef3ba4387809f5e87
+ninja-build-1.13.2.tgz 34990246030305f76a1042f52b9210cb51212c689baa1ff43a28c28fb1aa36db
+meson-1.12.1.tgz     ec095a2f57dfdf5344c79b7a95a8e1a8618add1aad8010e3a4c2e50db6470fd0
 ```
 
 The original-source hashes and URLs are in [sources.tsv](../sources.tsv).
@@ -43,6 +46,11 @@ DWARF32 line table. The same object fails with the saved original addr2line
 and resolves correctly with nb1. A matching CU64/line64 control is unchanged.
 All six installed acceptance groups passed, including both line-table
 formats and the GNU nm diagnostic loaded from its installed catalog.
+Meson acceptance also selects current GNU as/ld explicitly, with strict
+compiler/linker warnings. Base ld 2.42 fails the identical shared-library
+object because it emits unused compatibility-symbol warnings; GNU ld 2.47
+passes. Installed consumers load the selected GCC16 libstdc++.so.7 without
+loader-path overrides. This is not default-tool migration or LTO acceptance.
 
 Python uses the normal target loader, without library-path overrides. Its
 upstream cases exercise TLS, ctypes/libffi, SQLite, UUID, decimal, readline,
@@ -69,3 +77,11 @@ installation/update and same-version reinstall, target ownership paths,
 script suppression, preservation of another package's parent directory,
 partial-extraction rollback and unchanged native replacement behavior. These are
 host-side package-manager checks, not execution of target binaries.
+
+Native host bootstrap checks also pass: explicit current CMake/CPack and
+msgfmt selection, unchanged defaults without opt-in, rejection of invalid
+tools, pkgsrc job limits and compiled C/C++/libintl consumers. The
+gettext-tools 1.0nb1 host package links its direct XML dependency and passes
+installed XML/ITS translation. This does not accept a target CMake or gettext
+package. The exact cross patch export matches 41 files from pinned pkgsrc
+with zero fuzz. These adaptations retain full package checks and NLS.

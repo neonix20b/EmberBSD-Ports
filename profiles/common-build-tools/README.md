@@ -4,7 +4,8 @@ This profile prepares one common Python 3.14.8, Meson 1.12.1 and matching
 LLVM/Clang/LLD 23.1.2 with upstream lit for the
 GCC 16 / LLVM 23 / Mesa 26 dependency closure. The [Python package](python.md)
 cross-builds on macOS and passes installed AArch64 VM consumers and 21 selected
-upstream suites. Complete Meson/LLVM packages and their consumers remain pending.
+upstream suites. Meson/Ninja also pass installed C/C++ consumers and focused
+upstream tests in that VM. Complete LLVM packages and consumers remain pending.
 Source preparation, host contracts and focused native macro/selection checks
 pass. This is not an installed Mesa stack.
 
@@ -233,9 +234,10 @@ for the bounded result; this is not a native Python package acceptance.
 Use staged packages and normal pkgsrc checks; do not bypass missing files,
 WRKREF, RPATH, checksum, dependency or upstream test failures.
 
-- Meson: installed CLI/upstream tests, explicit native/cross LLVM selection,
-  real installed shared-library fixture with transitive PREFIX dependencies,
-  build-path/X-padding removal, intended install_rpath and clean execution.
+- Meson: remaining upstream groups, explicit native/cross selection against
+  installed LLVM23 and a shared-library fixture with transitive PREFIX dependencies.
+  Installed C/C++ consumers, basic install-RPATH and the focused upstream group
+  are [accepted in the AArch64 VM](cross/validation.md).
 - Common consumers: current setuptools/wheel/Cython dependencies, LLVM23
   generators, Mesa26 configuration/build/tests and their ELF/runtime closure.
 

@@ -1,7 +1,9 @@
 Origin: EmberBSD (AI-assisted), not submitted upstream.
 Repair cross-host platform selection and collect direct ELF requirements
 from the target sysroot instead of invoking the build host loader.
-Native dependency selection and native ldd metadata remain unchanged.
+Native ldd metadata and default host-tool selection remain unchanged.
+Explicit host CMake/msgfmt selection breaks bootstrap cycles; gettext links
+its direct XML dependency on Darwin. Cross Ninja executes native build tools.
 
 --- a/archivers/zstd/Makefile
 +++ b/archivers/zstd/Makefile
@@ -29,6 +31,136 @@ Native dependency selection and native ldd metadata remain unchanged.
  CONFIGURE_ENV+=		CC_FOR_BUILD=${TOOLS_CMD.native-cc:Q}
  TOOLS_CREATE+=		native-cc
  TOOLS_SCRIPT.native-cc=	exec ${NATIVE_CC} "$$@"
+--- a/devel/ninja-build/Makefile
++++ b/devel/ninja-build/Makefile
+@@ -53,8 +53,21 @@
+ INSTALLATION_DIRS+=	share/bash-completion/completions
+ INSTALLATION_DIRS+=	share/zsh/site-functions
+ 
++.if ${USE_CROSS_COMPILE:tl} == "yes"
++# Origin: EmberBSD (AI-assisted). Generate for the target, execute the host
++# Ninja, and never run the newly linked target executable during bootstrap.
++TOOL_DEPENDS+=		${PKGNAME}:../../devel/ninja-build
++# The installed browse tool uses the selected target interpreter by name.
++DEPENDS+=		${PYDEPENDENCY}
++do-build:
++	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${TOOL_PYTHONBIN} ./configure.py \
++	    --platform=${LOWER_OPSYS} --host=${NATIVE_OPSYS:tl} \
++	    --with-python=python${PYVERSSUFFIX}
++	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${TOOLBASE}/bin/ninja -j${_MAKE_JOBS_N:U1} ninja
++.else
+ do-build:
+ 	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${PYTHONBIN} ./configure.py --bootstrap
++.endif
+ 
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/ninja \
+--- a/devel/cmake/build.mk
++++ b/devel/cmake/build.mk
+@@ -50,9 +50,42 @@
+ .include "../../mk/bsd.fast.prefs.mk"
+ 
+ CMAKE_REQD?=	0
+-.for version in ${CMAKE_REQD}
++# Origin: EmberBSD (AI-assisted), reuse a verified current build-host CMake.
++.if defined(EMBERBSD_BUILD_CMAKE)
++.  if empty(EMBERBSD_BUILD_CMAKE:M/*) || !exists(${EMBERBSD_BUILD_CMAKE})
++PKG_FAIL_REASON+= "EMBERBSD_BUILD_CMAKE must name an existing absolute host executable"
++.  else
++_EMBERBSD_CMAKE_VERSION!= if test -x ${EMBERBSD_BUILD_CMAKE:Q} && \
++    ember_cmake_banner=$$(${EMBERBSD_BUILD_CMAKE:Q} --version); then \
++    printf '%s\n' "$$ember_cmake_banner" | \
++    ${AWK} '/^cmake version [0-9]/ { print $$3; exit }'; fi
++.    for version in 4.4.4 ${CMAKE_REQD}
++_EMBERBSD_CMAKE_SUPPORTED!= ${PKG_ADMIN} pmatch 'cmake>='${version:Q} \
++    cmake-${_EMBERBSD_CMAKE_VERSION:Q} && echo yes || echo no
++.      if ${_EMBERBSD_CMAKE_SUPPORTED} != "yes"
++PKG_FAIL_REASON+= "EMBERBSD_BUILD_CMAKE must successfully report CMake >=${version}"
++.      endif
++.    endfor
++# The tools framework requests CPack together with CMake.
++_EMBERBSD_BUILD_CPACK=${EMBERBSD_BUILD_CMAKE:H}/cpack
++_EMBERBSD_CPACK_VERSION!= if test -x ${_EMBERBSD_BUILD_CPACK:Q} && \
++    ember_cpack_banner=$$(${_EMBERBSD_BUILD_CPACK:Q} --version); then \
++    printf '%s\n' "$$ember_cpack_banner" | \
++    ${AWK} '/^cpack version [0-9]/ { print $$3; exit }'; fi
++.    if empty(_EMBERBSD_CPACK_VERSION) || ${_EMBERBSD_CPACK_VERSION} != ${_EMBERBSD_CMAKE_VERSION}
++PKG_FAIL_REASON+= "EMBERBSD_BUILD_CMAKE requires matching executable CPack alongside it"
++.    endif
++TOOLS_PLATFORM.cmake=${EMBERBSD_BUILD_CMAKE}
++TOOLS_PLATFORM.cpack=${_EMBERBSD_BUILD_CPACK}
++_TOOLS_USE_PKGSRC.cmake=no
++_TOOLS_USE_PKGSRC.cpack=no
++USE_TOOLS+=	cmake
++.  endif
++.else
++.  for version in ${CMAKE_REQD}
+ TOOL_DEPENDS+=	cmake>=${version}:../../devel/cmake
+-.endfor
++.  endfor
++.endif
+ 
+ # Declare that this package is using cmake, for bl3 files to know
+ # to add to CMAKE_CONFIGURE_ARGS.
+--- a/devel/gettext-tools/Makefile
++++ b/devel/gettext-tools/Makefile
+@@ -3,6 +3,7 @@
+ .include "../../devel/gettext/Makefile.common"
+ 
+ PKGNAME=	${DISTNAME:S/-/-tools-/}
++PKGREVISION=	1
+ COMMENT=	Tools for providing messages in different languages
+ 
+ DISTINFO_FILE=	${.CURDIR}/../../devel/gettext/distinfo
+--- a/devel/gettext/distinfo
++++ b/devel/gettext/distinfo
+@@ -12,4 +12,6 @@
+ SHA1 (patch-gettext-tools_configure) = 64a1e6cabd7d244c5dc6a33008f26bf61beaa245
+ SHA1 (patch-gettext-tools_gnulib-lib_Makefile.in) = 1e2ae3e92fa4b530649ec938cffee6743219ce1c
+ SHA1 (patch-gettext-tools_po_Makefile.in.in) = a425dd4b5e9705438d01f4ebb92e4c74f0ec1579
++SHA1 (patch-gettext-tools_src_Makefile.am) = 89b7b617e7231833d547bb43415b9c17ff17e797
++SHA1 (patch-gettext-tools_src_Makefile.in) = d4f92f0923fa5110989ab12030283bdddf9ef32d
+ SHA1 (patch-gettext-tools_tests_Makefile.in) = af9c9ecbecfafc1c34d0bd3347d3d399122aaa80
+--- a/devel/gettext/patches/patch-gettext-tools_src_Makefile.am
++++ b/devel/gettext/patches/patch-gettext-tools_src_Makefile.am
+@@ -0,0 +1,17 @@
++$NetBSD$
++
++Origin: EmberBSD (AI-assisted), not submitted upstream.
++Link direct XML users to libxml2; Darwin cannot rely on indirect dylib exports.
++Keep maintained and generated makefiles equivalent.
++
++--- gettext-tools/src/Makefile.am.orig
+++++ gettext-tools/src/Makefile.am
++@@ -481,7 +481,7 @@
++ # write-po.c use iconv().
++ libgettextsrc_la_LDFLAGS = \
++   -release @VERSION@ \
++-  ../gnulib-lib/libgettextlib.la $(LTLIBUNISTRING) $(LT_LIBTEXTSTYLE) @LTLIBINTL@ @LTLIBICONV@ -lc -no-undefined
+++  ../gnulib-lib/libgettextlib.la $(LTLIBXML) $(LTLIBUNISTRING) $(LT_LIBTEXTSTYLE) @LTLIBINTL@ @LTLIBICONV@ -lc -no-undefined
++ 
++ # OS/2 does not support a DLL name longer than 8 characters.
++ if OS2
+--- a/devel/gettext/patches/patch-gettext-tools_src_Makefile.in
++++ b/devel/gettext/patches/patch-gettext-tools_src_Makefile.in
+@@ -0,0 +1,17 @@
++$NetBSD$
++
++Origin: EmberBSD (AI-assisted), not submitted upstream.
++Link direct XML users to libxml2; Darwin cannot rely on indirect dylib exports.
++Keep maintained and generated makefiles equivalent.
++
++--- gettext-tools/src/Makefile.in.orig
+++++ gettext-tools/src/Makefile.in
++@@ -4972,7 +4972,7 @@
++ # Need @LTLIBICONV@ because po-charset.c, read-po-lex.c, msgl-iconv.c,
++ # write-po.c use iconv().
++ libgettextsrc_la_LDFLAGS = -release @VERSION@ \
++-	../gnulib-lib/libgettextlib.la $(LTLIBUNISTRING) \
+++	../gnulib-lib/libgettextlib.la $(LTLIBXML) $(LTLIBUNISTRING) \
++ 	$(LT_LIBTEXTSTYLE) @LTLIBINTL@ @LTLIBICONV@ -lc -no-undefined \
++ 	$(am__append_8) $(am__append_9) $(am__append_10)
++ 
 --- a/mk/platform/NetBSD.mk
 +++ b/mk/platform/NetBSD.mk
 @@ -235,7 +235,7 @@
@@ -250,6 +382,39 @@ Native dependency selection and native ldd metadata remain unchanged.
  		fi;							\
  		linklibs=`${AWK} '/.*\.so(\.[0-9]+)*$$/ { print "${DESTDIR}${PREFIX}/" $$0 }' ${_PLIST_NOKEYWORDS}`; \
  		for i in $$linklibs; do					\
+--- a/mk/tools/gettext.mk
++++ b/mk/tools/gettext.mk
+@@ -55,8 +55,28 @@
+ CHECK_BUILTIN.gettext:=	yes
+ .    include "../../devel/gettext-lib/builtin.mk"
+ CHECK_BUILTIN.gettext:=	no
+-.    if ${USE_BUILTIN.gettext:U:tl} == no
+-_TOOLS_USE_PKGSRC.msgfmt=	yes
++# Origin: EmberBSD (AI-assisted). An explicit current host msgfmt avoids
++# the Python -> xz -> gettext-tools -> Python bootstrap cycle. Its executable
++# selection is independent of the target or host libintl provider.
++.    if defined(EMBERBSD_BUILD_MSGFMT)
++.      if empty(EMBERBSD_BUILD_MSGFMT:M/*) || !exists(${EMBERBSD_BUILD_MSGFMT})
++PKG_FAIL_REASON+= "EMBERBSD_BUILD_MSGFMT must name an existing absolute host executable"
++.      else
++_EMBERBSD_MSGFMT_VERSION!= if test -x ${EMBERBSD_BUILD_MSGFMT:Q} && \
++    ember_msgfmt_banner=$$(${EMBERBSD_BUILD_MSGFMT:Q} --version); then \
++    printf '%s\n' "$$ember_msgfmt_banner" | \
++    ${AWK} '/^msgfmt [(]GNU gettext-tools[)] [0-9]/ { print $$4; exit }'; fi
++_EMBERBSD_MSGFMT_SUPPORTED!= ${PKG_ADMIN} pmatch 'gettext>=1.0' \
++    gettext-${_EMBERBSD_MSGFMT_VERSION:Q} && echo yes || echo no
++.        if ${_EMBERBSD_MSGFMT_SUPPORTED} != "yes"
++PKG_FAIL_REASON+= "EMBERBSD_BUILD_MSGFMT requires executable GNU gettext-tools 1.0 or newer"
++.        else
++TOOLS_PLATFORM.msgfmt=${EMBERBSD_BUILD_MSGFMT}
++_TOOLS_USE_PKGSRC.msgfmt= no
++.        endif
++.      endif
++.    elif ${USE_BUILTIN.gettext:U:tl} == no
++_TOOLS_USE_PKGSRC.msgfmt= yes
+ .    endif
+ 
+ _TOOLS_USE_PKGSRC.msgfmt?=	no
 --- a/mk/tools/replace.mk
 +++ b/mk/tools/replace.mk
 @@ -140,7 +140,12 @@

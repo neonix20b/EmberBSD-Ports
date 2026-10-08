@@ -3,8 +3,9 @@
 This opt-in path builds ordinary NetBSD 11/AArch64 pkgsrc packages with the
 [GCC 16.2 cross compiler](../../development-toolchain/cross/README.md).
 The compiler and build tools execute on macOS; installed packages are tested
-on EmberBSD. Python is among the [accepted target packages](validation.md).
-This does not yet establish a complete GCC16-built OS or accept Meson/LLVM packages.
+on EmberBSD. Python, Meson and Ninja are among the
+[accepted target packages](validation.md). A complete GCC16-built OS and
+LLVM23 package acceptance remain pending.
 
 Use the `common-build-tools` export from the parent profile. It preserves the
 pinned pkgsrc revision and obtains original upstream archives with recipe
@@ -51,7 +52,8 @@ DISTDIR=/absolute/distfiles
 MAKE_JOBS=4
 # Optional when these host tools are already installed:
 TOOLS_PLATFORM.makeinfo=/absolute/host-texinfo/bin/makeinfo
-TOOLS_PLATFORM.msgfmt=/absolute/host-gettext/bin/msgfmt
+EMBERBSD_BUILD_MSGFMT=/absolute/host-gettext/bin/msgfmt
+EMBERBSD_BUILD_CMAKE=/absolute/host-cmake/bin/cmake
 # Optional matching host interpreter for the Python target package:
 EMBERBSD_CROSS_BUILD_PYTHON=/absolute/python3.14
 .include "/absolute/EmberBSD-Ports/profiles/common-build-tools/cross/mk.conf"
@@ -77,9 +79,24 @@ host compiler paths when necessary. They reach upstream configure as
 `CC_FOR_BUILD` and `CXX_FOR_BUILD`; target wrappers still compile the package.
 Host tool dependencies read the host bootstrap MAKECONF, so interpreter and
 tool choices needed by those dependencies belong there as well.
+`EMBERBSD_BUILD_MSGFMT` accepts an existing absolute GNU gettext-tools 1.0+
+executable whose version command succeeds. It breaks the native
+Python → xz → gettext-tools → Python bootstrap cycle without disabling NLS
+or changing the selected libintl. Without this opt-in, pkgsrc's original
+msgfmt dependency choice is retained. Put the setting in the host bootstrap
+MAKECONF too, so recursively built host packages see it.
+`EMBERBSD_BUILD_CMAKE` similarly selects an existing CMake 4.4.4+ and matching
+CPack alongside it. Both version commands must succeed, and all package
+`CMAKE_REQD` floors still apply. The tools framework exposes the selected
+pair through its normal wrappers. Keep this setting in the host MAKECONF
+too. Clean a package's work directory after changing cached tool choices.
 The [Python recipe](../python.md) validates the matching host interpreter and
 keeps installed extension metadata on the target side. SQLite and zstd
 receive explicit target platform settings during cross compilation.
+Cross Ninja uses the matching native Ninja and Python to generate and build
+for the target platform. Its normal native bootstrap is retained; the cross
+build does not execute the newly linked target binary. The target package
+declares its Python dependency for the installed browse tool.
 
 ## What the cross adaptation checks
 
@@ -106,6 +123,16 @@ Run `tests/cross-pkgsrc.sh` against a staged pkgconf package. It exercises real
 pkgsrc parsing, native dependency recursion, ELF metadata and failure cases.
 `tests/cross-tools.sh` checks tool composition, refusal of existing output,
 missing host tools and the constrained target Info utility selection.
+`tests/host-msgfmt.sh` checks the opt-in on native/cross pkgsrc configurations,
+preserved defaults and libintl, rejection of invalid tools and a real
+translated plural/context catalog consumer on the Mac host.
+`tests/host-cmake.sh` checks the native/cross selection, preserved defaults,
+version and companion-tool guards, and a compiled/installed host C/C++ consumer.
+`tests/host-gettext-xml.sh` checks installed XML translation after the direct
+libxml2 link repair in gettext-tools 1.0nb1. Maintained and generated makefiles
+carry the same change; the macOS host package retains its XML functionality.
+`tests/ninja-cross.sh` checks native/target command separation and pkgsrc's
+parallel-build limit, including an unset job count and `MAKE_JOBS_SAFE=no`.
 `tests/cross-generators.sh` checks native/cross Libtool auxiliary selection
 and executes C/C++ generators through the real configure environment. It
 also rejects missing compiler exports and invalid compiler paths.
@@ -128,6 +155,16 @@ Target acceptance scripts in this directory require a new output directory:
   GNU CTF and unresolved-symbol errors; see [Binutils](../binutils.md).
 - `run-python-tests.sh`: installed C/C++ consumers, extension loading,
   build-details agreement and focused upstream Python suites.
+- `run-meson-tests.sh`: installed Meson/Ninja with Python314, explicit GCC16
+  and Binutils 2.47; C/C++ shared/static libraries, Python embedding,
+  incremental builds, error propagation, browse interpreter and installed RPATH.
+
+The Meson check retains `werror=true`. Base ld 2.42 emits compatibility
+warnings for unused libc/libm symbols and fails the shared-library link;
+installed GNU ld 2.47 passes the same object and flags. The test selects
+current GNU as/ld through GCC specs; GCC's bootstrap defaults and collect2/LTO
+remain separate migration gates. The upstream `unittests.internaltests`
+group also runs in the VM with Python314; see [the validation record](validation.md).
 
 Pkgconf builds its test binaries as upstream `noinst_PROGRAMS` during `all`.
 Copy the actual `WRKSRC/.libs/test-api-*` and `.libs/test-runner` ELF files;

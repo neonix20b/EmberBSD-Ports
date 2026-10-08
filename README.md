@@ -45,8 +45,10 @@ runtime behavior are validated.
   acceptance, with GCC bootstrap-tool default migration still pending.
   [Python 3.14.8](profiles/common-build-tools/python.md) also cross-builds and
   passes installed C/C++ embedding, extension loading and 21 upstream suites
-  on the AArch64 VM. The profile also provides
-  coherent Meson 1.12.1 and LLVM/Clang/LLD 23.1.2 source
+  on the AArch64 VM. Meson 1.12.1 and Ninja 1.13.2 cross packages pass
+  installed C/C++ builds, Python embedding, incremental/error handling and
+  install-RPATH checks with explicit current GNU as/ld. The profile provides
+  matching LLVM/Clang/LLD 23.1.2 source
   recipes with upstream lit, scoped native Clang/GCC16 defaults, strict
   common selection and host source contracts. Focused native macro/selection
   checks cover Python, LLVM family selection and real GCC16 config metadata;
