@@ -81,6 +81,8 @@ external/ABI suite passed eight split/supplementary objects, seven malformed
 supplement rejections, Unicode, live FP registers and signal-frame unwinding
 in both offset widths. Missing historical inputs remain unavailable.
 
-The original revision's `gstack` live attachment and offline image acceptance
-are retained as earlier evidence. Acceptance of the current image is recorded
-in the linked OS image guide; installed package checks alone do not prove it.
+The original revision's `gstack` live attachment remains earlier evidence.
+The current OS image installs all eighteen GDB/LLVM closure packages offline.
+Both first boot and a normal reboot pass the complete selected GDB matrix,
+104 LLVM DWP checks and the OS CTF suites against installed tools. The linked
+OS image guide records its source revisions, pristine image hash and limits.
