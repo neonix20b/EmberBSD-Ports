@@ -31,6 +31,12 @@ host builds and their dependencies to the host configuration. It does not
 apply target platform, prefix or graphics-provider checks to host Mako or
 MarkupSafe. The ordinary native graphics profile remains strict.
 
+For cross libX11, the profile also binds `NATIVE_CC` to the common profile's
+absolute `EMBERBSD_CROSS_BUILD_CC`. The pkgsrc recipe appends its own
+`CC_FOR_BUILD` assignment. Its empty Darwin default otherwise clears the host
+compiler selection, and upstream finds the target `gcc` wrapper for `makekeys`.
+The generator must run on macOS while reading the target xorgproto headers.
+
 CMake dependencies also receive the NetBSD system/processor and sysroot.
 Their library, include and package searches are confined to the sysroot and
 buildlink tree; program searches use the build host. This prevents packages
@@ -118,6 +124,17 @@ select NetBSD/AArch64 and find real target headers/libraries separately from
 host programs. Both valid explicit timer statuses pass through unchanged;
 missing and invalid statuses fail before configuration. This checks cache
 selection, not the target kernel probe itself.
+
+The libX11 regression uses the complete composed cross MAKECONF and verified
+upstream libX11 source. It checks the last real `CC_FOR_BUILD` assignment,
+native dependency preservation, then compiles and runs upstream `makekeys`
+against the actual target xorgproto headers:
+
+```sh
+BMAKE=/absolute/host/bin/bmake ruby ../tests/x11-makekeys.rb \
+    /absolute/prepared-pkgsrc /absolute/graphics-cross.mk.conf \
+    /absolute/libX11-1.8.13 /absolute/new-makekeys-test-work
+```
 
 For scanner consumers, supply the verified patched upstream source trees:
 
