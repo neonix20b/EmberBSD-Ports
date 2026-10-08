@@ -65,6 +65,9 @@ build-script shebangs. `PYTHONBIN` continues to describe the target interpreter.
 Mesa substitutes that exact host executable into its existing interpreter
 list; its real version/import checks remain active. Libdrm's Python entry and
 Mesa's LLVM entry are emitted by pkgsrc into the actual Meson cross file.
+The cross recipe also records the target `nm` there, so all five ELF ABI
+checks select the explicit cross tool. Native recipes retain their normal
+tool search.
 No cross-file response stub or fallback package provider is introduced.
 
 Build the matching scanner with [build-wayland-scanner.sh](build-wayland-scanner.sh).
@@ -128,6 +131,21 @@ select NetBSD/AArch64 and find real target headers/libraries separately from
 host programs. Both valid explicit timer statuses pass through unchanged;
 missing and invalid statuses fail before configuration. This checks cache
 selection, not the target kernel probe itself.
+
+After preparing the canonical Mesa source and configuring its real pkgsrc
+build, the SSP regression compiles the original and patched colour-matrix TU
+with the actual compile command and pkgsrc wrapper. The original must fail
+at fortified `memcpy`; the patched ELF must retain `_FORTIFY_SOURCE=2` and
+the macro. The nm regression then inspects all five real ABI test commands
+and decodes the resulting AArch64 object with the selected cross tool:
+
+```sh
+ruby ../tests/mesa-ssp.rb /absolute/mesa-26.2.4.tar.xz \
+    /absolute/pkgsrc-work/mesa-26.2.4/output /absolute/new-ssp-test-work
+ruby ../tests/mesa-cross-nm.rb /absolute/pkgsrc-work/mesa-26.2.4/output \
+    /absolute/cross-tools/bin/aarch64--netbsd-nm \
+    /absolute/new-ssp-test-work/patched.o /absolute/new-nm-test-work
+```
 
 The libX11 regression uses the complete composed cross MAKECONF and verified
 upstream libX11 source. It checks the last real `CC_FOR_BUILD` assignment,

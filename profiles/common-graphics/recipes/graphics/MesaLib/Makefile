@@ -57,6 +57,9 @@ PKGCONFIG_OVERRIDE+=	output/meson-private/${pc}.pc
 .include "../../lang/llvm/buildlink3.mk"
 .if ${USE_CROSS_COMPILE:tl} == "yes"
 USE_TOOLS+=	digest
+# This host executable must understand the target ELF format for ABI checks.
+MESON_BINARIES+=	nm
+MESON_BINARY.nm=	${TOOLDIR}/bin/${MACHINE_GNU_PLATFORM}-nm
 .include "../../devel/wayland-protocols/cross-scanner.mk"
 .endif
 # The explicit absolute binary prevents Meson's default tool/CMake search.

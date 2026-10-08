@@ -134,7 +134,10 @@ been submitted or accepted upstream.
 
 The four exact accepted Mesa patches and the complete 44-patch disposition
 belong to [the source probe](../../probes/wayland-utm/mesa-patches.md).
-The package-only explicit-Python patch is the sole additional Mesa delta.
+The package additionally selects the explicit build-host Python and groups
+compound-literal arguments in six colour-matrix copies for NetBSD's fortified
+`memcpy` macro. The latter preserves the matrix values and SSP checks; it is
+covered by an actual GCC16/NetBSD-header compile regression.
 All seven imported libdrm patches plus the three accepted symbol/identity/
 strict-warning patches remain byte-identical to
 [their owner](../../probes/wayland-utm/native-identity.md). Disabled-module
