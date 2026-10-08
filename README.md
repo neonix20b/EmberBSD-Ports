@@ -37,6 +37,10 @@ runtime behavior are validated.
   also passes split-DWARF generation without an `objcopy` path override.
   Common Qt/LLVM rebuilding and full-image integration
   remain pending.
+  [GDB 18.1](profiles/development-toolchain/gdb/README.md) is cross-built and
+  installed in the AArch64 VM, with split/supplementary DWARF, Unicode and
+  live register/signal-unwinding checks. Its recipe stages a native debugger;
+  integration into pkgsrc and release images remains separate.
 - [Current common build tools](profiles/common-build-tools/README.md):
   [Mac cross packages](profiles/common-build-tools/cross/README.md) for
   pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and

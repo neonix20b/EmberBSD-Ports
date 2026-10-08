@@ -1,0 +1,77 @@
+Origin: EmberBSD (AI-assisted), GDB 18.1 portability and validation.
+Not submitted upstream. See ../README.md for NetBSD source provenance.
+
+--- a/gdb/dwarf2/dwz.c
++++ b/gdb/dwarf2/dwz.c
+@@ -133,30 +133,46 @@
+   if (version != 5)
+     debug_sup_failure (_(".debug_sup has wrong version number"), abfd);
+ 
+-  /* Skip the is_supplementary value.  We already ensured there were
+-     enough bytes, above.  */
++  /* Origin: EmberBSD (AI-assisted), bound every field before advancing.  */
++  if (*contents != (filename == nullptr ? 1 : 0))
++    debug_sup_failure (_(".debug_sup has wrong supplementary role"), abfd);
+   ++contents;
+   --size;
+ 
+-  /* The spec says that in the supplementary file, this must be \0,
+-     but it doesn't seem very important.  */
+   const char *fname = (const char *) contents;
+-  size_t len = strlen (fname) + 1;
++  const char *end = (const char *) memchr (fname, 0, size);
++  if (end == nullptr)
++    debug_sup_failure (_(".debug_sup filename is unterminated"), abfd);
++  size_t len = end - fname + 1;
+   if (filename != nullptr)
+-    *filename = fname;
++    {
++      if (len == 1)
++        debug_sup_failure (_(".debug_sup filename is empty"), abfd);
++      *filename = fname;
++    }
++  else if (len != 1)
++    debug_sup_failure (_(".debug_sup supplementary filename is not empty"), abfd);
+   contents += len;
+   size -= len;
+ 
+-  if (size == 0)
+-    debug_sup_failure (_(".debug_sup section missing ID"), abfd);
+-
+-  unsigned int bytes_read;
+-  *buildid_len = read_unsigned_leb128 (abfd, contents, &bytes_read);
+-  contents += bytes_read;
+-  size -= bytes_read;
+-
+-  if (size < *buildid_len)
+-    debug_sup_failure (_("extra data after .debug_sup section ID"), abfd);
++  *buildid_len = 0;
++  unsigned int shift = 0;
++  for (;;)
++    {
++      if (size == 0)
++        debug_sup_failure (_(".debug_sup section missing ID length"), abfd);
++      unsigned int byte = *contents++;
++      --size;
++      if (shift >= sizeof (size_t) * CHAR_BIT
++          || (size_t) (byte & 0x7f) > SIZE_MAX >> shift)
++        debug_sup_failure (_(".debug_sup ID length overflows"), abfd);
++      *buildid_len |= (size_t) (byte & 0x7f) << shift;
++      if ((byte & 0x80) == 0)
++        break;
++      shift += 7;
++    }
++  if (size != *buildid_len)
++    debug_sup_failure (_(".debug_sup ID length mismatch"), abfd);
+ 
+   if (*buildid_len != 0)
+     buildid->reset ((bfd_byte *) xmemdup (contents, *buildid_len,
+@@ -182,7 +198,7 @@
+       if (!get_debug_sup_info (abfd, nullptr, &new_len, &new_id))
+ 	return false;
+       return (len == new_len
+-	      && memcmp (buildid, new_id.get (), len) == 0);
++	      && (len == 0 || memcmp (buildid, new_id.get (), len) == 0));
+     }
+   else
+     return build_id_verify (abfd, len, buildid);

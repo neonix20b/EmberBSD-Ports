@@ -25,6 +25,12 @@ Apple Silicon macOS. Cross-built C11/C++20 programs pass on Zero 3W with
 its installed GCC16 runtime. This separates compilation from target
 execution; it does not yet cross-build installable pkgsrc packages.
 
+The [GDB 18.1 native debugger](gdb/README.md) also cross-builds on macOS.
+It reads split and standard supplementary DWARF in the AArch64 VM and
+passes live breakpoints, locals, FP registers and signal-frame unwinding.
+Ports carries the current native backend and dependency compatibility
+repairs; release-image and pkgsrc package integration remain separate.
+
 ## Source and preparation
 
 The base is pkgsrc `fff4deb639a1a640476203c80f752fb77b6cb14b`
