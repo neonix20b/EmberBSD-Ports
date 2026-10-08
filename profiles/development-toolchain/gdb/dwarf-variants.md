@@ -1,0 +1,114 @@
+# DWARF format and expression acceptance
+
+This suite exercises native GDB 18.1 on NetBSD 11/AArch64. Ports owns the
+GDB adaptation and its debugger tests. The OS repository owns the separate
+CTF converter; its single-primary-CU restriction is not a GDB restriction.
+These fixtures and local patches are AI-assisted EmberBSD work.
+
+## Build and run
+
+Generate target executables with the accepted GCC 16.2 cross compiler and
+complete sysroot. The GCC16 CRT directory is selected explicitly.
+
+```sh
+sh profiles/development-toolchain/gdb/dwarf-variants-build.sh \
+    /absolute/current-gcc16/bin/aarch64--netbsd-gcc \
+    /absolute/sysroot /absolute/new-fixtures
+```
+
+The builder records compiler and ELF-reader versions and debug metadata.
+GCC's cross prefix can contain the older bootstrap readelf. The target
+acceptance uses the selected Binutils 2.47 `greadelf`; use that version for
+location-list interpretation. Base CRT objects can carry older DWARF CUs
+alongside the fixture CU, so an executable's first CU is not necessarily
+the tested source unit.
+
+Transfer the complete fixture directory and the four target scripts to
+the AArch64 VM. Prepare four indexed packages using LLVM `llvm-dwp` 23.1.2,
+and two zstd compressed cases using Binutils 2.47. A temporary packager and
+its libraries may be used privately; remove them after packaging. Never
+pass its loader overrides to GDB acceptance.
+
+```sh
+sh dwarf-variants-package.sh /absolute/llvm-dwp /absolute/fixtures
+sh dwarf-variants-target.sh /usr/pkg/bin/gdb /absolute/fixtures \
+    /absolute/new-results
+sh dwarf-variants-limits.sh /usr/pkg/bin/gdb /absolute/fixtures \
+    /absolute/new-expression-results
+sh dwarf-variants-ax.sh /usr/pkg/bin/gdb /absolute/fixtures \
+    /absolute/new-agent-results
+```
+
+Packaging verifies that the DWP CU index contains both compilation units,
+then removes only the generated standalone DWO inputs. The debugger runner
+rejects a DWP case if any DWO remains in its directory. The original
+cross-build path must not exist on the test target; do not mount it there.
+Use a fresh build directory to regenerate inputs before repackaging.
+
+## Matrix
+
+| Group | Cases | Required observation |
+| --- | ---: | --- |
+| C DWARF2/3/4/5, DWARF32/64, `-O0`/`-O2` | 16 | Two breakpoints, record members, scalar locals across a call, backtrace and normal exit |
+| C++ DWARF4/5, DWARF32/64, type units | 4 | Signature-referenced template/inheritance types, optimized locals and normal exit |
+| DWARF5 GNU and ELF zlib compression, DWARF32/64 | 4 | The same C debugging workflow using genuinely compressed sections |
+| Separate `.gnu_debuglink`, DWARF32/64 | 2 | Stripped debug sections, external debug-file lookup and live values |
+| DWARF4/5 indexed DWP, DWARF32/64 | 4 | Both CU contributions available with no standalone DWO fallback |
+| DWARF5 ELF zstd compression, DWARF32/64 | 2 | Compressed sections and the same live C workflow |
+
+This is 32 compiler-produced debugging cases. Optimized cases verify actual
+location lists and expressions, but do not enumerate every DWARF operation,
+attribute, language or producer extension.
+
+## Expression regression and local repair
+
+`dwarf-variants-limits.S` supplies small, explicit DWARF5 units in both
+DWARF32 and DWARF64. Every valid case must yield `variant_value == 42`.
+The suite includes direct expressions, `DW_OP_call4`, same-CU and cross-CU
+`DW_OP_call_ref`, constant `DW_OP_entry_value`, `DW_LLE_startx_length`,
+`DW_LLE_startx_endx`, default locations and default/range precedence.
+The cross-CU call enters a CU with the other offset width, performs a
+CU-relative nested call and returns to another call in the original CU.
+Malformed call operands and truncated default expressions must diagnose
+truncation without crashing. There are 20 valid and four malformed cases.
+
+The local `dwarf-variants-fixes.patch` adds `DW_OP_call_ref` to the expression
+engine, symbol-requirement scanner and tracepoint expression compiler.
+The called CU's context is restored after evaluation. It also adds
+`DW_LLE_startx_endx` and default-location handling to the shared location
+reader and location descriptions, with bounded expression lengths.
+The AX compiler independently bounds nested calls, frame-base expressions
+and CFA expressions to 256 levels; tracepoint collection can bypass the
+symbol-requirement scanner, so the scanner's guard is insufficient.
+The patch has not been submitted or accepted upstream. Compilation alone
+is not acceptance; compare the installed debugger before and after it.
+
+`dwarf-variants-ax.sh` adds 14 agent-compiler checks: eight successful
+direct/same-CU/cross-CU translations and six recursive `call2`/`call4`/
+`call_ref` cases. A discarded register expression makes the requirement
+scanner stop before the recursive call. The test accepts only the specific
+AX recursion diagnostic, proving the AX compiler itself rejected the loop.
+No running inferior or trace-capable remote target is needed. The six
+recursive ELF fixtures are additional to the 24 runtime-expression inputs.
+
+The fixture semantics follow [DWARF5 sections 2.5 and 2.6](https://dwarfstd.org/doc/DWARF5.pdf)
+and the [standard's corrections](https://dwarfstd.org/errata-dwarf5.html).
+In particular, `call_ref` is section-relative inside the current executable
+or shared object; it is not an arbitrary reference into another module.
+
+## Remaining limits
+
+Upstream GDB 18.1's `gdb/dwarf2/expr.c` accepts `DW_OP_entry_value` only for
+specific register or register-plus-dereference expressions. The valid
+constant-expression case deliberately exposes that narrower evaluator;
+fixing the three operations above does not remove it. General entry-time
+memory/register reconstruction requires a separate design and tests.
+
+The source also names narrower boundaries: skeletonless type units in DWP
+without `.gdb_index`, `.debug_types` in an alternate/supplementary DWZ
+object, and imported units within type units. Those source findings are
+not executable coverage claims for this suite. Standalone supplementary
+forms retain their separate acceptance in `test-target.sh`.
+
+No result here establishes universal DWARF conformance, physical-board
+ptrace behavior, kernel core dumps or the complete upstream GDB testsuite.

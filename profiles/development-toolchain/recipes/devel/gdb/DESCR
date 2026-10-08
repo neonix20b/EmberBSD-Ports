@@ -1,0 +1,5 @@
+GNU GDB is a source-level debugger. This current release includes the
+EmberBSD native NetBSD/AArch64 port, corrected floating-point register
+and signal-context handling, bounded supplementary DWARF metadata and
+native Unicode conversion. It uses the common GCC16 runtime and supports
+zlib and zstd compressed debug information.

@@ -1,0 +1,10 @@
+$NetBSD$
+
+BLAKE2s (gdb-18.1.tar.xz) = e72b2a5d48d752597eae9e14fb9d69c12d78d0ab0399b13f136431ce00006014
+SHA512 (gdb-18.1.tar.xz) = e7079ad31e6176391a4d278c85a668cc92c13c8dc1f4937f3d4438f9dc7afdbb12083af7f86e17e854b3d23c3ceff80c63bdbbc8e18b0cf9962656f75ab8b5a0
+Size (gdb-18.1.tar.xz) = 22158720 bytes
+SHA1 (patch-ember-netbsd-aarch64) = 7b0cab04c22a29f7e6957ac8e2de660fd1299f06
+SHA1 (patch-ember-netbsd-iconv) = be9557c560eecf03e4140e7c7eeecea04fb18ac0
+SHA1 (patch-ember-supplementary-bounds) = 04e6c16c609ee5c738b07c2327513da3741dac88
+SHA1 (patch-ember-gstack) = de1ae3fc899a0c646d7d38e6b5fa03864abf4010
+SHA1 (patch-ember-dwarf-variants) = 259671e13dbc233910fecdcf665393acd1fb355f

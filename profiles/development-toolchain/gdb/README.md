@@ -6,9 +6,10 @@ The base NetBSD GDB 15.1 reads standalone DWO files but rejects
 forms; EmberBSD ports its native AArch64 backend and validates real debugging
 on the target.
 
-This standalone cross recipe stages a native debugger. It does not replace
-the pinned pkgsrc `devel/gdb` recipe or rebuild the base OS's imported GDB.
-Release-image/package integration must select this current debugger explicitly.
+The [pkgsrc package](package.md) replaces `devel/gdb` in the development
+profile and supplies the offline development image. The standalone cross
+helper remains available for backend diagnosis. Neither route rebuilds the
+base OS's imported GDB sources; the image explicitly selects the Ports package.
 
 ## Sources and adaptations
 
@@ -30,6 +31,10 @@ These patches have not been submitted or accepted upstream.
 | `netbsd-aarch64.patch` | Register the native/target backends; use GDB 18 initialization and shared-library APIs; preserve kernel type visibility; correct FPCR/FPSR order and the NetBSD signal trampoline/context layout |
 | `supplementary-bounds.patch` | Bound the filename and ULEB checksum length, enforce supplementary roles, reject inconsistent lengths and safely compare empty checksums |
 | `netbsd-iconv.patch` | Use NetBSD's real Unicode/iconv implementation instead of upstream's ASCII-only fallback |
+
+The package also carries the [DWARF expression/location-list patch](dwarf-variants.md)
+and a POSIX-shell adaptation for `gstack`. Package and standalone build
+options are recorded separately below; the package enables zstd compression.
 
 The signal unwinder follows NetBSD's `x28` ucontext pointer and libc's
 `setcontext` trampoline. `abi-layout.c` checks the imported constants against

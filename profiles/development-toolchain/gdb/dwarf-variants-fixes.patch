@@ -1,0 +1,394 @@
+Origin: EmberBSD (AI-assisted), GDB 18.1 DWARF call/location fixes; not submitted upstream.
+
+--- a/gdb/dwarf2/expr.h
++++ b/gdb/dwarf2/expr.h
+@@ -242,6 +242,10 @@
+      subroutine.  */
+   void dwarf_call (cu_offset die_cu_off);
+ 
++  /* Execute a section-relative DW_OP_call_ref, preserving the caller's
++     compilation-unit context around the called expression.  */
++  void dwarf_call_ref (sect_offset die_sect_off);
++
+   /* Push on DWARF stack an entry evaluated for DW_TAG_call_site's
+      parameter matching KIND and KIND_U at the caller of specified BATON.
+      If DEREF_SIZE is not -1 then use DW_AT_call_data_value instead of
+--- a/gdb/dwarf2/expr.c
++++ b/gdb/dwarf2/expr.c
+@@ -885,7 +885,7 @@
+     = dwarf2_fetch_die_loc_cu_off (die_cu_off, this->m_per_cu,
+ 				   this->m_per_objfile, get_pc_from_frame);
+ 
+-  /* DW_OP_call_ref is currently not supported.  */
++  /* DW_OP_call2 and DW_OP_call4 stay within their compilation unit.  */
+   gdb_assert (block.per_cu == this->m_per_cu);
+ 
+   this->eval (block.expr ());
+@@ -894,6 +894,31 @@
+ /* See expr.h.  */
+ 
+ void
++dwarf_expr_context::dwarf_call_ref (sect_offset die_sect_off)
++{
++  ensure_have_per_cu (this->m_per_cu, "DW_OP_call_ref");
++  frame_info_ptr frame = this->m_frame;
++  auto get_pc_from_frame = [frame] ()
++    {
++      ensure_have_frame (frame, "DW_OP_call_ref");
++      return get_frame_address_in_block (frame);
++    };
++
++  dwarf2_locexpr_baton block
++    = dwarf2_fetch_die_loc_sect_off (die_sect_off, this->m_per_cu,
++				     this->m_per_objfile, get_pc_from_frame);
++  scoped_restore save_per_cu
++    = make_scoped_restore (&this->m_per_cu, block.per_cu);
++  scoped_restore save_per_objfile
++    = make_scoped_restore (&this->m_per_objfile, block.per_objfile);
++  scoped_restore save_addr_size
++    = make_scoped_restore (&this->m_addr_size, block.per_cu->addr_size ());
++  this->eval (block.expr ());
++}
++
++/* See expr.h.  */
++
++void
+ dwarf_expr_context::read_mem (gdb_byte *buf, CORE_ADDR addr,
+ 			      size_t length)
+ {
+@@ -2329,6 +2354,19 @@
+ 	  }
+ 	  goto no_push;
+ 
++	case DW_OP_call_ref:
++	  {
++	    ensure_have_per_cu (this->m_per_cu, "DW_OP_call_ref");
++	    int size = this->m_per_cu->offset_size ();
++	    if (op_end - op_ptr < size)
++	      error (_("DW_OP_call_ref: too few bytes available."));
++	    sect_offset sect_off
++	      = (sect_offset) extract_unsigned_integer (op_ptr, size, byte_order);
++	    op_ptr += size;
++	    this->dwarf_call_ref (sect_off);
++	  }
++	  goto no_push;
++
+ 	case DW_OP_GNU_variable_value:
+ 	  {
+ 	    ensure_have_per_cu (this->m_per_cu, "DW_OP_GNU_variable_value");
+--- a/gdb/dwarf2/loc.c
++++ b/gdb/dwarf2/loc.c
+@@ -84,6 +84,9 @@
+      the applicable base address.  */
+   DEBUG_LOC_OFFSET_PAIR = 4,
+ 
++  /* A fallback expression for PCs outside all bounded entries.  */
++  DEBUG_LOC_DEFAULT_LOCATION = 5,
++
+   /* An internal value indicating there is insufficient data.  */
+   DEBUG_LOC_BUFFER_OVERFLOW = -1,
+ 
+@@ -168,7 +171,7 @@
+ {
+   uint64_t u64;
+ 
+-  if (loc_ptr == buf_end)
++  if (loc_ptr >= buf_end)
+     return DEBUG_LOC_BUFFER_OVERFLOW;
+ 
+   switch (*loc_ptr++)
+@@ -276,9 +279,22 @@
+       *new_ptr = loc_ptr;
+       return DEBUG_LOC_START_END;
+ 
+-    /* Following cases are not supported yet.  */
+     case DW_LLE_startx_endx:
++      loc_ptr = gdb_read_uleb128 (loc_ptr, buf_end, &u64);
++      if (loc_ptr == nullptr)
++	return DEBUG_LOC_BUFFER_OVERFLOW;
++      *low = dwarf2_read_addr_index (per_cu, per_objfile, u64);
++      loc_ptr = gdb_read_uleb128 (loc_ptr, buf_end, &u64);
++      if (loc_ptr == nullptr)
++	return DEBUG_LOC_BUFFER_OVERFLOW;
++      *high = dwarf2_read_addr_index (per_cu, per_objfile, u64);
++      *new_ptr = loc_ptr;
++      return DEBUG_LOC_START_END;
++
+     case DW_LLE_default_location:
++      *new_ptr = loc_ptr;
++      return DEBUG_LOC_DEFAULT_LOCATION;
++
+     default:
+       return DEBUG_LOC_INVALID_ENTRY;
+     }
+@@ -377,6 +393,7 @@
+   unrelocated_addr unrel_pc = (unrelocated_addr) (pc - text_offset);
+   unrelocated_addr base_address = baton->base_address;
+   const gdb_byte *loc_ptr, *buf_end;
++  gdb::array_view<const gdb_byte> default_location;
+ 
+   loc_ptr = baton->data;
+   buf_end = baton->data + baton->size;
+@@ -384,7 +401,7 @@
+   while (1)
+     {
+       unrelocated_addr low = {}, high = {}; /* init for gcc -Wall */
+-      int length;
++      size_t length;
+       enum debug_loc_kind kind;
+       const gdb_byte *new_ptr = NULL; /* init for gcc -Wall */
+ 
+@@ -409,7 +426,7 @@
+       switch (kind)
+ 	{
+ 	case DEBUG_LOC_END_OF_LIST:
+-	  return {};
++	  return default_location;
+ 
+ 	case DEBUG_LOC_BASE_ADDRESS:
+ 	  base_address = high;
+@@ -418,6 +435,7 @@
+ 	case DEBUG_LOC_START_END:
+ 	case DEBUG_LOC_START_LENGTH:
+ 	case DEBUG_LOC_OFFSET_PAIR:
++	case DEBUG_LOC_DEFAULT_LOCATION:
+ 	  break;
+ 
+ 	case DEBUG_LOC_BUFFER_OVERFLOW:
+@@ -445,15 +463,27 @@
+ 
+       if (baton->dwarf_version < 5)
+ 	{
++	  if (buf_end - loc_ptr < 2)
++	    error (_("Truncated DWARF location expression length."));
+ 	  length = extract_unsigned_integer (loc_ptr, 2, byte_order);
+ 	  loc_ptr += 2;
+ 	}
+       else
+ 	{
+-	  unsigned int bytes_read;
++	  uint64_t expression_length;
++	  loc_ptr = gdb_read_uleb128 (loc_ptr, buf_end, &expression_length);
++	  if (loc_ptr == nullptr || expression_length > buf_end - loc_ptr)
++	    error (_("Truncated DWARF location expression."));
++	  length = expression_length;
++	}
+ 
+-	  length = read_unsigned_leb128 (NULL, loc_ptr, &bytes_read);
+-	  loc_ptr += bytes_read;
++      if (length > buf_end - loc_ptr)
++	error (_("Truncated DWARF location expression."));
++      if (kind == DEBUG_LOC_DEFAULT_LOCATION)
++	{
++	  default_location = gdb::make_array_view (loc_ptr, length);
++	  loc_ptr += length;
++	  continue;
+ 	}
+ 
+       if (low == high && unrel_pc == low && at_entry)
+@@ -2143,10 +2173,14 @@
+ 
+ 	case DW_OP_call2:
+ 	case DW_OP_call4:
++	case DW_OP_call_ref:
+ 	  {
+-	    unsigned int len = op == DW_OP_call2 ? 2 : 4;
+-	    cu_offset cu_off
+-	      = (cu_offset) extract_unsigned_integer (op_ptr, len, byte_order);
++	    unsigned int len = (op == DW_OP_call_ref
++				? per_cu->offset_size ()
++				: op == DW_OP_call2 ? 2 : 4);
++	    if (expr_end - op_ptr < len)
++	      error (_("Truncated DWARF procedure call operand."));
++	    ULONGEST offset = extract_unsigned_integer (op_ptr, len, byte_order);
+ 	    op_ptr += len;
+ 
+ 	    auto get_frame_pc = [&symbol_needs] ()
+@@ -2156,9 +2190,11 @@
+ 	      };
+ 
+ 	    struct dwarf2_locexpr_baton baton
+-	      = dwarf2_fetch_die_loc_cu_off (cu_off, per_cu,
+-					     per_objfile,
+-					     get_frame_pc);
++	      = (op == DW_OP_call_ref
++		 ? dwarf2_fetch_die_loc_sect_off ((sect_offset) offset, per_cu,
++						per_objfile, get_frame_pc)
++		 : dwarf2_fetch_die_loc_cu_off ((cu_offset) offset, per_cu,
++					      per_objfile, get_frame_pc));
+ 
+ 	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
+ 	       we dont have to check the baton content.  */
+@@ -2371,6 +2407,8 @@
+    LOC is the agent value we modify.
+    ADDR_SIZE is the size of addresses, in bytes.
+    EXPR is the location expression.
++   DEPTH bounds nested procedure calls and CFA expressions independently
++   of the symbol-requirement scanner, which tracepoint collection can skip.
+ 
+    This will throw an exception for various kinds of errors -- for
+    example, if the expression cannot be compiled, or if the expression
+@@ -2381,8 +2419,12 @@
+ 			   unsigned int addr_size,
+ 			   gdb::array_view<const gdb_byte> expr,
+ 			   dwarf2_per_cu *per_cu,
+-			   dwarf2_per_objfile *per_objfile)
++			   dwarf2_per_objfile *per_objfile,
++			   unsigned int depth = 0)
+ {
++  if (depth >= 256)
++    error (_("DWARF agent expression recursion limit exceeded."));
++
+   gdbarch *arch = ax->gdbarch;
+   std::vector<int> dw_labels, patches;
+   const gdb_byte *previous_piece = expr.data ();
+@@ -2671,7 +2713,7 @@
+ 
+ 	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
+ 	    dwarf2_compile_expr_to_ax (ax, loc, addr_size, frame_base_expr,
+-				       per_cu, per_objfile);
++				       per_cu, per_objfile, depth + 1);
+ 	    if (loc->kind == axs_lvalue_register)
+ 	      require_rvalue (ax, loc);
+ 
+@@ -2896,7 +2938,7 @@
+ 		/* Another expression.  */
+ 		ax_const_l (ax, text_offset);
+ 		dwarf2_compile_expr_to_ax (ax, loc, addr_size, cfa_expr,
+-					   per_cu, per_objfile);
++					   per_cu, per_objfile, depth + 1);
+ 	      }
+ 
+ 	    loc->kind = axs_lvalue_memory;
+@@ -3006,9 +3048,13 @@
+ 
+ 	case DW_OP_call2:
+ 	case DW_OP_call4:
++	case DW_OP_call_ref:
+ 	  {
+ 	    struct dwarf2_locexpr_baton block;
+-	    int size = (op == DW_OP_call2 ? 2 : 4);
++	    int size = (op == DW_OP_call_ref
++			? per_cu->offset_size () : op == DW_OP_call2 ? 2 : 4);
++	    if (op_end - op_ptr < size)
++	      error (_("Truncated DWARF procedure call operand."));
+ 
+ 	    uoffset = extract_unsigned_integer (op_ptr, size, byte_order);
+ 	    op_ptr += size;
+@@ -3017,21 +3063,18 @@
+ 	      {
+ 		return ax->scope;
+ 	      };
+-	    cu_offset cuoffset = (cu_offset) uoffset;
+-	    block = dwarf2_fetch_die_loc_cu_off (cuoffset, per_cu, per_objfile,
+-						 get_frame_pc_from_expr);
+-
+-	    /* DW_OP_call_ref is currently not supported.  */
+-	    gdb_assert (block.per_cu == per_cu);
+-
+-	    dwarf2_compile_expr_to_ax (ax, loc, addr_size, block.expr (),
+-				       per_cu, per_objfile);
++	    block = (op == DW_OP_call_ref
++		     ? dwarf2_fetch_die_loc_sect_off ((sect_offset) uoffset,
++			 per_cu, per_objfile, get_frame_pc_from_expr)
++		     : dwarf2_fetch_die_loc_cu_off ((cu_offset) uoffset,
++			 per_cu, per_objfile, get_frame_pc_from_expr));
++
++	    dwarf2_compile_expr_to_ax (ax, loc, block.per_cu->addr_size (),
++				       block.expr (), block.per_cu,
++				       block.per_objfile, depth + 1);
+ 	  }
+ 	  break;
+ 
+-	case DW_OP_call_ref:
+-	  unimplemented (op);
+-
+ 	case DW_OP_GNU_variable_value:
+ 	  unimplemented (op);
+ 
+@@ -3974,7 +4017,7 @@
+   while (!done)
+     {
+       unrelocated_addr low = {}, high = {}; /* init for gcc -Wall */
+-      int length;
++      size_t length;
+       enum debug_loc_kind kind;
+       const gdb_byte *new_ptr = NULL; /* init for gcc -Wall */
+ 
+@@ -4010,6 +4053,7 @@
+ 	case DEBUG_LOC_START_END:
+ 	case DEBUG_LOC_START_LENGTH:
+ 	case DEBUG_LOC_OFFSET_PAIR:
++	case DEBUG_LOC_DEFAULT_LOCATION:
+ 	  break;
+ 
+ 	case DEBUG_LOC_BUFFER_OVERFLOW:
+@@ -4035,21 +4079,31 @@
+ 
+       if (dlbaton->dwarf_version < 5)
+ 	 {
++	   if (buf_end - loc_ptr < 2)
++	     error (_("Truncated DWARF location expression length."));
+ 	   length = extract_unsigned_integer (loc_ptr, 2, byte_order);
+ 	   loc_ptr += 2;
+ 	 }
+       else
+ 	 {
+-	   unsigned int bytes_read;
+-	   length = read_unsigned_leb128 (NULL, loc_ptr, &bytes_read);
+-	   loc_ptr += bytes_read;
++	   uint64_t expression_length;
++	   loc_ptr = gdb_read_uleb128 (loc_ptr, buf_end, &expression_length);
++	   if (loc_ptr == nullptr || expression_length > buf_end - loc_ptr)
++	     error (_("Truncated DWARF location expression."));
++	   length = expression_length;
+ 	 }
+ 
++      if (length > buf_end - loc_ptr)
++	error (_("Truncated DWARF location expression."));
++
+       /* (It would improve readability to print only the minimum
+ 	 necessary digits of the second number of the range.)  */
+-      gdb_printf (stream, _("  Range %s-%s: "),
+-		  paddress (gdbarch, low_reloc),
+-		  paddress (gdbarch, high_reloc));
++      if (kind == DEBUG_LOC_DEFAULT_LOCATION)
++	gdb_printf (stream, _("  Default location: "));
++      else
++	gdb_printf (stream, _("  Range %s-%s: "),
++		    paddress (gdbarch, low_reloc),
++		    paddress (gdbarch, high_reloc));
+ 
+       /* Now describe this particular location.  */
+       locexpr_describe_location_1 (symbol, low_reloc, stream,
+--- a/gdb/dwarf2/read.c
++++ b/gdb/dwarf2/read.c
+@@ -16882,6 +16882,14 @@
+   struct dwarf2_locexpr_baton retval;
+   struct objfile *objfile = per_objfile->objfile;
+ 
++  /* A section-relative call can reach a CU whose symbols have not been
++     expanded yet.  Following its DIE may queue that CU for expansion.
++     Own a queue when called outside symbol reading, and leave an existing
++     queue to its caller when evaluating an expression during expansion.  */
++  std::optional<dwarf2_queue_guard> q_guard;
++  if (!per_objfile->queue.has_value ())
++    q_guard.emplace (per_objfile);
++
+   dwarf2_cu *cu = per_objfile->get_cu (per_cu);
+   if (cu == nullptr)
+     cu = load_cu (per_cu, per_objfile, false);
+@@ -16956,7 +16964,12 @@
+   retval.per_objfile = per_objfile;
+   retval.per_cu = cu->per_cu;
+ 
+-  per_objfile->age_comp_units ();
++  if (q_guard.has_value ())
++    {
++      process_queue (per_objfile);
++      q_guard.reset ();
++      per_objfile->age_comp_units ();
++    }
+ 
+   return retval;
+ }

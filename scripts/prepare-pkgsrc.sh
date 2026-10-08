@@ -186,6 +186,9 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
         patch -f -E -d "$destination" -p1 -F 0 < \
             "$root/profiles/development-toolchain/patches/$delta"
     done
+    # One current debugger recipe; dereference the shared Ports patch links.
+    rm -rf "$destination/devel/gdb"
+    cp -RL "$root/profiles/development-toolchain/recipes/devel/gdb" "$destination/devel/gdb"
     cp "$root/profiles/development-toolchain/mk.conf" \
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi

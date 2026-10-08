@@ -29,7 +29,8 @@ The [GDB 18.1 native debugger](gdb/README.md) also cross-builds on macOS.
 It reads split and standard supplementary DWARF in the AArch64 VM and
 passes live breakpoints, locals, FP registers and signal-frame unwinding.
 Ports carries the current native backend and dependency compatibility
-repairs; release-image and pkgsrc package integration remain separate.
+repairs. The profile exports one current `devel/gdb` package recipe;
+the [package guide](gdb/package.md) connects it to the OS-owned development image.
 
 ## Source and preparation
 

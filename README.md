@@ -39,8 +39,11 @@ runtime behavior are validated.
   remain pending.
   [GDB 18.1](profiles/development-toolchain/gdb/README.md) is cross-built and
   installed in the AArch64 VM, with split/supplementary DWARF, Unicode and
-  live register/signal-unwinding checks. Its recipe stages a native debugger;
-  integration into pkgsrc and release images remains separate.
+  live register/signal-unwinding checks. Its [pkgsrc recipe](profiles/development-toolchain/gdb/package.md)
+  replaces `devel/gdb` and adds zstd, bounded DWARF procedure calls and
+  current location-list handling. Image assembly belongs to the OS repository;
+  the [expanded matrix](profiles/development-toolchain/gdb/dwarf-variants.md)
+  records tested formats and remaining valid-expression gaps.
 - [Current common build tools](profiles/common-build-tools/README.md):
   [Mac cross packages](profiles/common-build-tools/cross/README.md) for
   pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and
