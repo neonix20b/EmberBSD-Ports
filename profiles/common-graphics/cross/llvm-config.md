@@ -22,8 +22,10 @@ ruby test-llvm-config.rb /absolute/new-work
 
 The source is the `llvm` subdirectory, not the llvm-project root. The two build
 directories must have matching LLVM 23.1.2 sources and completed generated
-metadata. Keep the input trees unchanged while compiling and using this tool.
-Use a fresh output directory. The helper currently accepts the canonical
+metadata. Keep the input trees unchanged through building, acceptance and
+sealing. The sealed tool then permits build-tree cleanup while checking the
+installed package on every query. Use a fresh output directory.
+The helper currently accepts the canonical
 NetBSD/AArch64, shared LLVM, RTTI and `/usr/pkg` layout with a macOS native
 compiler. Whitespace in paths and different native system-library closures
 are rejected rather than guessed.
@@ -52,7 +54,8 @@ copies the original build output, runs that recorded strip executable, and
 requires its SHA256 to match the staged library. Other differences fail.
 The receipt records the original, staged and reproduced hashes, strip version,
 executable and install script. Both libraries and strip inputs are covered by
-the query-time integrity manifest; keep the target build and stage unchanged.
+the original query-time integrity manifest. Keep those inputs until acceptance,
+then seal the accepted tool as described below before cleaning build trees.
 
 Library search flags such as `-L/usr/pkg/lib` map into the supplied target
 sysroot. The selected LLVM prefix's libdir comes first, as in upstream.
@@ -69,6 +72,48 @@ tool. Input changes during compilation fail. The `bin/llvm-config` launcher
 checks the receipt before every invocation,
 then executes the real compiled program; it does not parse query options or
 synthesize results. Changed inputs require a fresh tool build.
+
+## Preserve an accepted tool across build cleanup
+
+The original helper's complete build receipt also checks temporary compiler
+inputs and the unstripped target library on every query. Removing a completed
+build therefore invalidates that launcher even when its executable and the
+installed LLVM package remain unchanged. Do not remove entries from its receipt.
+
+After accepting the tool, use `seal-llvm-config.rb` with the original manifest
+SHA256 from the preserved build/acceptance evidence:
+
+```sh
+ruby seal-llvm-config.rb /absolute/accepted-helper ORIGINAL_MANIFEST_SHA256 \
+    /absolute/new-sealed-helper
+ruby ../tests/llvm-config-seal.rb /absolute/accepted-helper \
+    ORIGINAL_MANIFEST_SHA256 /absolute/new-sealed-helper \
+    /absolute/fresh-target-reference /absolute/new-seal-test-work
+```
+
+The mandatory external hash authenticates the unchanged original manifest.
+The sealer requires the exact recorded local executable, generated report data,
+target configuration headers and installed LLVM library. Every original entry
+has an explicit class; unknown paths and missing required entries fail.
+Native header classifications come from the authenticated compiler dependency
+file. Compiler sources, caches and original build outputs are historical inputs:
+their observed hashes or absence remain in `seal.json`. Sealing does not repeat
+the historical strip transformation or claim that a missing build DSO was checked.
+
+The small output retains the original receipt, full manifest and launcher in
+`provenance/`, together with immutable target metadata. The executable is copied
+byte for byte. Its new launcher checks this complete sealed payload and the
+live installed headers/library, then runs the same upstream program. No query
+answers are synthesized. Source/build cleanup no longer affects execution;
+installed-library drift still fails before any query. Preserve the sealed tree
+and use its `bin/llvm-config` in the graphics cross MAKECONF.
+
+Repeat the 16-query comparison below with a fresh capture from the installed
+target after sealing. On 2026-10-08, the unchanged accepted executable agreed
+with all 16 groups captured on Zero 3W with the updated kernel. The original
+build library had been removed and its CMake cache changed; both facts remain
+recorded in the sealed provenance. The installed shared-library SHA256 was
+unchanged, so this did not require another LLVM compile or ORC runtime run.
 
 Set the [graphics cross profile's](profile.md) `EMBERBSD_GRAPHICS_LLVM_CONFIG`
 to `NEW_WORK/bin/llvm-config` after staging the target library. The helper does
