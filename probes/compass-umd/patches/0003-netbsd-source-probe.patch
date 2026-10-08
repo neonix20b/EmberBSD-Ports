@@ -1,0 +1,424 @@
+From: EmberBSD (AI-assisted local adaptation)
+Subject: NetBSD AArch64 full UMD source probe, preserving Linux wire ABI
+Origin: Compass 2868d533694740de6891f9998812ceb62a899dee; Linux v6.12 generic UAPI
+Upstream-Status: Not submitted
+
+--- a/Linux/driver/kmd/armchina-npu/include/armchina_aipu.h
++++ b/Linux/driver/kmd/armchina-npu/include/armchina_aipu.h
+@@ -4,8 +4,20 @@
+ #ifndef __UAPI_MISC_ARMCHINA_AIPU_H__
+ #define __UAPI_MISC_ARMCHINA_AIPU_H__
+ 
++#if defined(__NetBSD__)
++#include "armchina_aipu_linux_uapi.h"
++#define ARMCHINA_AIPU_IO ARMCHINA_LINUX_IO
++#define ARMCHINA_AIPU_IOR ARMCHINA_LINUX_IOR
++#define ARMCHINA_AIPU_IOW ARMCHINA_LINUX_IOW
++#define ARMCHINA_AIPU_IOWR ARMCHINA_LINUX_IOWR
++#else
+ #include <linux/types.h>
+ #include <linux/ioctl.h>
++#define ARMCHINA_AIPU_IO _IO
++#define ARMCHINA_AIPU_IOR _IOR
++#define ARMCHINA_AIPU_IOW _IOW
++#define ARMCHINA_AIPU_IOWR _IOWR
++#endif
+ 
+ /*
+  * Zhouyi KMD currently supports Zhouyi aipu v1/v2/v3 hardwares.
+@@ -533,7 +545,7 @@
+  *
+  * User mode driver should call this before calling AIPU_IOCTL_QUERYCORECAP.
+  */
+-#define AIPU_IOCTL_QUERY_CAP _IOR(AIPU_IOCTL_MAGIC, 0, struct aipu_cap)
++#define AIPU_IOCTL_QUERY_CAP ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 0, struct aipu_cap)
+ /**
+  * DOC: AIPU_IOCTL_QUERY_PARTITION_CAP
+  *
+@@ -543,7 +555,7 @@
+  *
+  * UMD only need to call this when the partition count returned by AIPU_IOCTL_QUERYCAP > 1.
+  */
+-#define AIPU_IOCTL_QUERY_PARTITION_CAP _IOR(AIPU_IOCTL_MAGIC, 1, struct aipu_partition_cap)
++#define AIPU_IOCTL_QUERY_PARTITION_CAP ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 1, struct aipu_partition_cap)
+ /**
+  * DOC: AIPU_IOCTL_REQ_BUF
+  *
+@@ -553,7 +565,7 @@
+  *
+  * This fails if kernel driver cannot find a free buffer meets the size/alignment request.
+  */
+-#define AIPU_IOCTL_REQ_BUF _IOWR(AIPU_IOCTL_MAGIC, 2, struct aipu_buf_request)
++#define AIPU_IOCTL_REQ_BUF ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 2, struct aipu_buf_request)
+ /**
+  * DOC: AIPU_IOCTL_FREE_BUF
+  *
+@@ -562,7 +574,7 @@
+  * ioctl to request to free a coherent buffer allocated by AIPU_IOCTL_REQBUF
+  *
+  */
+-#define AIPU_IOCTL_FREE_BUF _IOW(AIPU_IOCTL_MAGIC, 3, struct aipu_buf_desc)
++#define AIPU_IOCTL_FREE_BUF ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 3, struct aipu_buf_desc)
+ /**
+  * DOC: AIPU_IOCTL_DISABLE_SRAM
+  *
+@@ -572,7 +584,7 @@
+  *
+  * This fails if the there is no SRAM in the system or the SRAM has already been allocated.
+  */
+-#define AIPU_IOCTL_DISABLE_SRAM _IO(AIPU_IOCTL_MAGIC, 4)
++#define AIPU_IOCTL_DISABLE_SRAM ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 4)
+ /**
+  * DOC: AIPU_IOCTL_ENABLE_SRAM
+  *
+@@ -580,7 +592,7 @@
+  *
+  * ioctl to enable the management of SoC SRAM in kernel driver disabled by AIPU_IOCTL_DISABLE_SRAM
+  */
+-#define AIPU_IOCTL_ENABLE_SRAM _IO(AIPU_IOCTL_MAGIC, 5)
++#define AIPU_IOCTL_ENABLE_SRAM ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 5)
+ /**
+  * DOC: AIPU_IOCTL_SCHEDULE_JOB
+  *
+@@ -591,7 +603,7 @@
+  * This is a non-blocking operation therefore user mode driver should check the job status
+  * via AIPU_IOCTL_QUERY_STATUS.
+  */
+-#define AIPU_IOCTL_SCHEDULE_JOB _IOW(AIPU_IOCTL_MAGIC, 6, struct aipu_job_desc)
++#define AIPU_IOCTL_SCHEDULE_JOB ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 6, struct aipu_job_desc)
+ /**
+  * DOC: AIPU_IOCTL_QUERY_STATUS
+  *
+@@ -599,7 +611,7 @@
+  *
+  * ioctl to query the execution status of one or multiple scheduled job(s)
+  */
+-#define AIPU_IOCTL_QUERY_STATUS _IOWR(AIPU_IOCTL_MAGIC, 7, struct aipu_job_status_query)
++#define AIPU_IOCTL_QUERY_STATUS ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 7, struct aipu_job_status_query)
+ /**
+  * DOC: AIPU_IOCTL_KILL_TIMEOUT_JOB
+  *
+@@ -607,7 +619,7 @@
+  *
+  * ioctl to kill a timeout job and clean it from kernel mode driver; works for aipu v1/v2 only.
+  */
+-#define AIPU_IOCTL_KILL_TIMEOUT_JOB _IOW(AIPU_IOCTL_MAGIC, 8, __u32)
++#define AIPU_IOCTL_KILL_TIMEOUT_JOB ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 8, __u32)
+ /**
+  * DOC: AIPU_IOCTL_REQ_IO
+  *
+@@ -615,7 +627,7 @@
+  *
+  * ioctl to read/write an external register of an AIPU core; works for aipu v1/v2 only.
+  */
+-#define AIPU_IOCTL_REQ_IO _IOWR(AIPU_IOCTL_MAGIC, 9, struct aipu_io_req)
++#define AIPU_IOCTL_REQ_IO ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 9, struct aipu_io_req)
+ /**
+  * DOC: AIPU_IOCTL_GET_HW_STATUS
+  *
+@@ -623,7 +635,7 @@
+  *
+  * ioctl to the hardware status: idle or busy.
+  */
+-#define AIPU_IOCTL_GET_HW_STATUS _IOR(AIPU_IOCTL_MAGIC, 10, struct aipu_hw_status)
++#define AIPU_IOCTL_GET_HW_STATUS ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 10, struct aipu_hw_status)
+ /**
+  * DOC: AIPU_IOCTL_ABORT_CMD_POOL
+  *
+@@ -632,7 +644,7 @@
+  * ioctl to issue a command pool abortion command from userspace.
+  * this ioctl shall only be applied in a NPU debugger application.
+  */
+-#define AIPU_IOCTL_ABORT_CMD_POOL _IO(AIPU_IOCTL_MAGIC, 11)
++#define AIPU_IOCTL_ABORT_CMD_POOL ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 11)
+ /**
+  * DOC: AIPU_IOCTL_DISABLE_TICK_COUNTER
+  *
+@@ -641,7 +653,7 @@
+  * ioctl to disable aipu v3 tick counter
+  *
+  */
+-#define AIPU_IOCTL_DISABLE_TICK_COUNTER _IO(AIPU_IOCTL_MAGIC, 12)
++#define AIPU_IOCTL_DISABLE_TICK_COUNTER ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 12)
+ /**
+  * DOC: AIPU_IOCTL_ENABLE_TICK_COUNTER
+  *
+@@ -651,7 +663,7 @@
+  *
+  * by default, tick counter is disabled.
+  */
+-#define AIPU_IOCTL_ENABLE_TICK_COUNTER _IO(AIPU_IOCTL_MAGIC, 13)
++#define AIPU_IOCTL_ENABLE_TICK_COUNTER ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 13)
+ /**
+  * DOC: AIPU_IOCTL_CONFIG_CLUSTERS
+  *
+@@ -661,7 +673,7 @@
+  *
+  * please configure the clusters when they are idle.
+  */
+-#define AIPU_IOCTL_CONFIG_CLUSTERS _IOW(AIPU_IOCTL_MAGIC, 14, struct aipu_config_clusters)
++#define AIPU_IOCTL_CONFIG_CLUSTERS ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 14, struct aipu_config_clusters)
+ /**
+  * DOC: AIPU_IOCTL_ALLOC_DMA_BUF
+  *
+@@ -672,7 +684,7 @@
+  *   aipu_dma_buf_request->fd:    filled by KMD
+  *
+  */
+-#define AIPU_IOCTL_ALLOC_DMA_BUF _IOR(AIPU_IOCTL_MAGIC, 15, struct aipu_dma_buf_request)
++#define AIPU_IOCTL_ALLOC_DMA_BUF ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 15, struct aipu_dma_buf_request)
+ /**
+  * DOC: AIPU_IOCTL_FREE_DMA_BUF
+  *
+@@ -680,7 +692,7 @@
+  *
+  * ioctl to free a buffer related to a dma-buf fd
+  */
+-#define AIPU_IOCTL_FREE_DMA_BUF _IOW(AIPU_IOCTL_MAGIC, 16, int)
++#define AIPU_IOCTL_FREE_DMA_BUF ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 16, int)
+ /**
+  * DOC: AIPU_IOCTL_GET_DMA_BUF_INFO
+  *
+@@ -691,7 +703,7 @@
+  *   aipu_dma_buf->pa:    filled by KMD
+  *   aipu_dma_buf->bytes: filled by KMD
+  */
+-#define AIPU_IOCTL_GET_DMA_BUF_INFO _IOWR(AIPU_IOCTL_MAGIC, 17, struct aipu_dma_buf)
++#define AIPU_IOCTL_GET_DMA_BUF_INFO ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 17, struct aipu_dma_buf)
+ /**
+  * DOC: AIPU_IOCTL_GET_DRIVER_VERSION
+  *
+@@ -700,7 +712,7 @@
+  * ioctl to get the kmd version: major.minor.patch
+  * the char buffer size from UMD should be at least 16 characters.
+  */
+-#define AIPU_IOCTL_GET_DRIVER_VERSION _IOR(AIPU_IOCTL_MAGIC, 18, char*)
++#define AIPU_IOCTL_GET_DRIVER_VERSION ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 18, char*)
+ /**
+  * DOC: AIPU_IOCTL_ATTACH_DMA_BUF
+  *
+@@ -711,7 +723,7 @@
+  *   aipu_dma_buf->pa:    filled by KMD
+  *   aipu_dma_buf->bytes: filled by KMD
+  */
+-#define AIPU_IOCTL_ATTACH_DMA_BUF _IOWR(AIPU_IOCTL_MAGIC, 19, struct aipu_dma_buf)
++#define AIPU_IOCTL_ATTACH_DMA_BUF ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 19, struct aipu_dma_buf)
+ /**
+  * DOC: AIPU_IOCTL_DETACH_DMA_BUF
+  *
+@@ -720,7 +732,7 @@
+  * ioctl to detach a dma-buf attached before
+  *   int fd: filled by UMD
+  */
+-#define AIPU_IOCTL_DETACH_DMA_BUF _IOW(AIPU_IOCTL_MAGIC, 20, int)
++#define AIPU_IOCTL_DETACH_DMA_BUF ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 20, int)
+ /**
+  * DOC: AIPU_IOCTL_ALLOC_GRID_ID
+  *
+@@ -728,7 +740,7 @@
+  *
+  * ioctl to get a unique grid ID (do not need to free)
+  */
+-#define AIPU_IOCTL_ALLOC_GRID_ID _IOR(AIPU_IOCTL_MAGIC, 21, int)
++#define AIPU_IOCTL_ALLOC_GRID_ID ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 21, int)
+ /**
+  * DOC: AIPU_IOCTL_ALLOC_GROUP_ID
+  *
+@@ -738,7 +750,7 @@
+  *   aipu_id_desc->size: filled by UMD
+  *   aipu_id_desc->first_id:   filled by KMD
+  */
+-#define AIPU_IOCTL_ALLOC_GROUP_ID _IOWR(AIPU_IOCTL_MAGIC, 22, struct aipu_id_desc)
++#define AIPU_IOCTL_ALLOC_GROUP_ID ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 22, struct aipu_id_desc)
+ /**
+  * DOC: AIPU_IOCTL_FREE_GROUP_ID
+  *
+@@ -748,7 +760,7 @@
+  *   aipu_id_desc->size: filled by UMD
+  *   aipu_id_desc->first_id:   filled by UMD
+  */
+-#define AIPU_IOCTL_FREE_GROUP_ID _IOW(AIPU_IOCTL_MAGIC, 23, struct aipu_id_desc)
++#define AIPU_IOCTL_FREE_GROUP_ID ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 23, struct aipu_id_desc)
+ 
+ /**
+  * DOC: AIPU_IOCTL_GET_CLUSTER_STATUS
+@@ -758,7 +770,7 @@
+  * ioctl to get the cluster status
+  *   aipu_cluster_status->cluster_id: filled by UMD
+  */
+-#define AIPU_IOCTL_GET_CLUSTER_STATUS _IOWR(AIPU_IOCTL_MAGIC, 24, struct aipu_cluster_status)
++#define AIPU_IOCTL_GET_CLUSTER_STATUS ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 24, struct aipu_cluster_status)
+ 
+ /**
+  * DOC: AIPU_IOCTL_GET_RUNNING_JOB_THREAD_ID
+@@ -767,7 +779,7 @@
+  *
+  * ioctl to get the running job thread id
+  */
+-#define AIPU_IOCTL_GET_RUNNING_JOB_THREAD_ID _IOR(AIPU_IOCTL_MAGIC, 25,\
++#define AIPU_IOCTL_GET_RUNNING_JOB_THREAD_ID ARMCHINA_AIPU_IOR(AIPU_IOCTL_MAGIC, 25,\
+ 						  struct aipu_running_job_query)
+ /**
+  * DOC: AIPU_IOCTL_ALLOC_SFLAG_ID
+@@ -778,7 +790,7 @@
+  *   aipu_id_desc->size: filled by UMD
+  *   aipu_id_desc->first_id:   filled by KMD
+  */
+-#define AIPU_IOCTL_ALLOC_SFLAG_ID _IOWR(AIPU_IOCTL_MAGIC, 26, struct aipu_id_desc)
++#define AIPU_IOCTL_ALLOC_SFLAG_ID ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 26, struct aipu_id_desc)
+ /**
+  * DOC: AIPU_IOCTL_FREE_SFLAG_ID
+  *
+@@ -788,7 +800,7 @@
+  *   aipu_id_desc->size: filled by UMD
+  *   aipu_id_desc->first_id:   filled by UMD
+  */
+-#define AIPU_IOCTL_FREE_SFLAG_ID _IOW(AIPU_IOCTL_MAGIC, 27, struct aipu_id_desc)
++#define AIPU_IOCTL_FREE_SFLAG_ID ARMCHINA_AIPU_IOW(AIPU_IOCTL_MAGIC, 27, struct aipu_id_desc)
+ /**
+  * DOC: AIPU_IOCTL_REBIND_DMA_BUF
+  *
+@@ -796,7 +808,7 @@
+  *
+  * ioctl to request to bind phy memory to a new iova.
+  */
+-#define AIPU_IOCTL_REBIND_DMA_BUF _IOWR(AIPU_IOCTL_MAGIC, 28, struct aipu_rebind_buf_desc)
++#define AIPU_IOCTL_REBIND_DMA_BUF ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 28, struct aipu_rebind_buf_desc)
+ /**
+  * DOC: AIPU_IOCTL_BIND_DMA_BUF
+  *
+@@ -804,7 +816,7 @@
+  *
+  * ioctl to request to bind dma shared fd memory to a reserved iova.
+  */
+-#define AIPU_IOCTL_BIND_DMA_BUF _IOWR(AIPU_IOCTL_MAGIC, 29, struct aipu_bind_buf_desc)
++#define AIPU_IOCTL_BIND_DMA_BUF ARMCHINA_AIPU_IOWR(AIPU_IOCTL_MAGIC, 29, struct aipu_bind_buf_desc)
+ /**
+  * DOC: AIPU_IOCTL_AIPU_HW_RESET
+  *
+@@ -812,7 +824,7 @@
+  *
+  * ioctl to request to do a harware reset for v3_2.
+  */
+-#define AIPU_IOCTL_AIPU_HW_RESET _IO(AIPU_IOCTL_MAGIC, 30)
++#define AIPU_IOCTL_AIPU_HW_RESET ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 30)
+ /**
+  * DOC: AIPU_IOCTL_AIPU_SW_RESET
+  *
+@@ -820,5 +832,5 @@
+  *
+  * ioctl to request to do a top software reset for v3_2.
+  */
+-#define AIPU_IOCTL_AIPU_SW_RESET _IO(AIPU_IOCTL_MAGIC, 31)
++#define AIPU_IOCTL_AIPU_SW_RESET ARMCHINA_AIPU_IO(AIPU_IOCTL_MAGIC, 31)
+ #endif /* __UAPI_MISC_ARMCHINA_AIPU_H__ */
+--- /dev/null
++++ b/Linux/driver/kmd/armchina-npu/include/armchina_aipu_linux_uapi.h
+@@ -0,0 +1,33 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++/*
++ * EmberBSD, AI-assisted source-probe adaptation; not a native device ABI.
++ * Encoding and integer types follow Linux v6.12, commit
++ * adc218676eef25575469234709c2d87185ca223a:
++ * include/uapi/asm-generic/{ioctl.h,int-ll64.h}.
++ * Preserve the paired Compass 6.1.1 Linux/AArch64 wire numbers. Do not
++ * use NetBSD _IO* here: its size/direction encoding and transport differ.
++ * No global _IO* macros are defined or replaced by this header.
++ */
++#ifndef ARMCHINA_AIPU_LINUX_UAPI_H
++#define ARMCHINA_AIPU_LINUX_UAPI_H
++#if !defined(__NetBSD__) || !defined(__aarch64__) || \
++    __SIZEOF_POINTER__ != 8 || __SIZEOF_LONG_LONG__ != 8 || \
++    __SIZEOF_INT__ != 4 || __SIZEOF_SHORT__ != 2 || \
++    __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
++#error "Compass source probe supports only NetBSD little-endian AArch64 LP64"
++#endif
++
++typedef unsigned char __u8;
++typedef unsigned short __u16;
++typedef unsigned int __u32;
++typedef unsigned long long __u64;
++typedef signed int __s32;
++typedef signed long long __s64;
++
++#define ARMCHINA_LINUX_IOC(dir, type, nr, size) \
++    (((dir) << 30) | ((type) << 8) | (nr) | ((size) << 16))
++#define ARMCHINA_LINUX_IO(type, nr) ARMCHINA_LINUX_IOC(0U, (type), (nr), 0U)
++#define ARMCHINA_LINUX_IOR(type, nr, t) ARMCHINA_LINUX_IOC(2U, (type), (nr), sizeof(t))
++#define ARMCHINA_LINUX_IOW(type, nr, t) ARMCHINA_LINUX_IOC(1U, (type), (nr), sizeof(t))
++#define ARMCHINA_LINUX_IOWR(type, nr, t) ARMCHINA_LINUX_IOC(3U, (type), (nr), sizeof(t))
++#endif
+--- a/Linux/driver/umd/src/utils/log.h
++++ b/Linux/driver/umd/src/utils/log.h
+@@ -11,7 +11,11 @@
+ #define _LOG_H_
+ 
+ #include <string.h>
++#if defined(__NetBSD__)
++#include <lwp.h>
++#else
+ #include <sys/syscall.h>
++#endif
+ #include <unistd.h>
+ 
+ #include <cstdio>
+@@ -19,7 +23,11 @@
+ #include "debug.h"
+ #include "utils/helper.h"
+ 
++#if defined(__NetBSD__)
++#define gettid() ((long)_lwp_self())
++#else
+ #define gettid() syscall(SYS_gettid)
++#endif
+ #define __FILENAME__                                                           \
+   (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1) : __FILE__)
+ 
+--- a/Linux/driver/umd/src/zhouyi_v3x/common/graph_v3x.cpp
++++ b/Linux/driver/umd/src/zhouyi_v3x/common/graph_v3x.cpp
+@@ -124,10 +124,8 @@
+       return GM_WT_FLAG_WEIGHT_ONLY;
+     if (!m_put_weight_gm && swt_not_empty) {
+       uint32_t zcy_const_indices_size = 0;
+-      uint32_t const_indices_size = 0;
+       for (uint32_t i = 0; i < get_bss_cnt(); ++i) {
+         zcy_const_indices_size += get_zcy_const_indices_size(i);
+-        const_indices_size += get_const_indices_size(i);
+       }
+       if (zcy_const_indices_size != 0) {
+         LOG(LOG_ERR,
+--- a/Linux/driver/umd/Makefile
++++ b/Linux/driver/umd/Makefile
+@@ -158,6 +158,10 @@
+     LDFLAGS += -pthread -llog -ldl
+     CXXFLAGS += $(ANDROIDCXXFLAGS)
+     LDFLAGS += $(ANDROIDCXXFLAGS) $(ANDROIDLDFLAGS)
++else ifeq ($(BUILD_TARGET_OS), NetBSD)
++    CXXFLAGS := $(filter-out -MMD,$(CXXFLAGS)) -MD
++    INCD += -I../kmd/armchina-npu/include
++    LDFLAGS += -lpthread -lexecinfo -Wl,-z,defs
+ else
+     LDFLAGS += -lpthread -ldl
+ endif
+@@ -174,7 +178,7 @@
+ standard_api: build-repo $(TARGET) $(A_TARGET)
+ python_api: build-repo $(PY_TARGET)
+ 
+-$(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR)/%.o: $(SRC_ROOT)/%.cpp
++$(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR)/%.o: $(SRC_ROOT)/%.cpp | build-repo
+ 	$(CXX) $(CXXFLAGS) $(INCD) -c $< -o $@
+ 
+ $(TARGET): $(OBJS)
+@@ -194,10 +198,10 @@
+ clean:
+ 	$(RM) $(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR)
+ 
+-.phony: standard_api python_api build-repo clean
++.PHONY: standard_api python_api build-repo clean
+ 
+ define make-repo
+-	$(MD) $(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR)
++	$(MD) $(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR) $(BUILD_AIPU_DRV_ODIR)
+ 	for dir in $(SRC_DIRS); \
+ 	do \
+ 		$(MD) $(COMPASS_DRV_BTENVAR_UMD_BUILD_DIR)/$$dir; \

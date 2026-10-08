@@ -1,4 +1,4 @@
-# Compass UMD descriptor lifetime and core-count probe
+# Compass UMD source probes
 
 This source probe fixes descriptor ownership and public core-count bounds in
 the official Arm China
@@ -6,6 +6,13 @@ Compass NPU UMD at revision `2868d533694740de6891f9998812ceb62a899dee`,
 whose environment declares paired UMD/KMD 6.1.1. It is preparation for an
 EmberBSD port, not an installed NPU package or a working NPU backend.
 The original source archive and hash are pinned in [sources.tsv](sources.tsv).
+
+The [full UMD cross-build probe](full-umd.md) builds the actual 27-source
+hardware `standard_api` library and static archive with the common GCC16
+toolchain. It preserves the paired Linux/AArch64 wire layout and command
+values. Its isolated public-API consumer requires `/dev/aipu` to be absent;
+85 checks over four cycles pass on the A733 Zero 3W with the actual full DSO.
+The native kernel transport and NPU/model execution remain unavailable.
 
 `Aipu::init` rejects a valid descriptor zero. On either capability-query
 failure it closes a positive descriptor but leaves the stale number owned by
@@ -101,7 +108,7 @@ On macOS ARM64 with Clang 21 and the NetBSD 11 AArch64 VM with GCC 16.2,
 the descriptor-lifetime methods pass all 13 cases. Both platforms
 reproduce 11 expected original failures and two unchanged passing controls.
 The native VM contract run took 1.08 seconds with 104,048 KiB peak RSS.
-This does not establish a full UMD build on NetBSD,
+These fragment checks alone do not establish a full UMD build on NetBSD,
 Linux ioctl encoding compatibility, DMA/mapping/coherency, matched kernel
 support, board execution, model execution or repeated-inference recovery.
 No package, kernel, firmware, compiler selection or board was changed.

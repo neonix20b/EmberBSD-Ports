@@ -9,7 +9,7 @@
   macOS ARM64/Clang 21 and NetBSD 11 AArch64 VM/GCC 16.2 both pass the
   13-case isolated production-method contract, with the same original RED
   controls. The VM used the committed source export, not a guest-only patch.
-  This is not a full UMD/KMD build or hardware/model validation.
+  These fragment checks are not full UMD/KMD or hardware/model validation.
 
 Patch `0001` modifies only `Linux/driver/umd/src/device/aipu/aipu.cpp` and
 `aipu.h`. Patch `0002` modifies only
@@ -56,3 +56,45 @@ immediately after the first real close, before the unchanged factory deletes
 the object. The tick flag starts false, so this path ordinarily suppresses
 the low-level disable ioctl; the erroneous second close is demonstrated
 independently. Separate tests cover the original enabled/error tick branch.
+
+## Full UMD source adaptation
+
+Patch `0003-netbsd-source-probe.patch` is an AI-assisted local adaptation,
+not submitted upstream. It preserves `0001` and `0002`, all pinned UAPI
+structure/enum declarations, and all 32 Linux/AArch64 command values.
+The NetBSD-only header uses namespaced Linux encoders, with an explicit
+little-endian AArch64 LP64 guard. It never replaces native `_IO*` macros.
+The original Linux/Android link choices remain; the NetBSD target uses
+`libexecinfo`, no `libdl`, and `-z defs`. The Makefile also orders directory
+creation before every object, and records complete dependency headers on
+NetBSD. `_lwp_self()` supplies the real logging thread ID. The graph change
+removes only an unused accumulator and calls to its side-effect-free getter.
+
+The integer/encoding reference is Linux v6.12 commit
+`adc218676eef25575469234709c2d87185ca223a`:
+
+- [asm-generic/ioctl.h](https://github.com/torvalds/linux/blob/adc218676eef25575469234709c2d87185ca223a/include/uapi/asm-generic/ioctl.h),
+  unchanged test copy SHA256 `5764a3378f017c826ab55382386c5e477c8c8d34ff026cc9e02cff10f2a23bdb`.
+- [asm-generic/int-ll64.h](https://github.com/torvalds/linux/blob/adc218676eef25575469234709c2d87185ca223a/include/uapi/asm-generic/int-ll64.h),
+  unchanged test copy SHA256 `faca16150492e943a43c83e6b3069531dd498ef15dc612fb2051b88f7da83afc`.
+
+Both reference copies and the adapted UAPI retain
+`GPL-2.0 WITH Linux-syscall-note`; they are not covered by `LICENSE.tests`.
+The UMD remains Apache-2.0, including its original notices. The full build
+uses upstream's vendored header-only ELFIO, whose MIT notice remains intact;
+it does not use pybind11 or a simulator SDK. New recipe/consumer/guards are
+BSD-2-Clause, AI-assisted, under `LICENSE.tests`.
+
+The official GitHub `main` and release/tag metadata were checked on
+2026-10-08: the public head remained `2868d533...`; releases and tags were
+empty. The paired 6.1.1 declarations come from that source tree. No newer
+public revision was substituted, no SDK account was requested, and no
+native driver ABI or model execution is claimed. See [full-umd.md](full-umd.md).
+
+On 2026-10-08 the complete library passed 85 no-device public API checks
+over four cycles on the A733 Orange Pi Zero 3W, EmberBSD kernel
+`dfe456bf1fba2ec41c0fe11a6a8469b1bd960b99`, with no installed NPU driver.
+The target log SHA256 is
+`33b95ee733e95cd05f84323a7569bf6617843e990526a614144adceab95737af`.
+This proves full-library loading and public failure-path behavior on that
+CPU; the native transport and model boundary above remains unchanged.

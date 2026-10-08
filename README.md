@@ -171,8 +171,9 @@ runtime behavior are validated.
 - [Compass NPU UMD source contracts](probes/compass-umd/README.md): pinned
   upstream descriptor-zero and failure-cleanup fixes pass host/native software
   contracts; public core-count bounds pass 58 native production-extracted cases
-  on AArch64/GCC 16.2, with legacy behavior preserved. Kernel/DMA integration
-  and model execution remain unverified.
+  on AArch64/GCC 16.2, with legacy behavior preserved. The complete 27-source
+  UMD cross-build and 85 actual no-device API checks also pass on A733.
+  Kernel/DMA integration and model execution remain unverified.
 - [SQLite and local document retrieval](probes/sqlite/README.md): SQLite 3.53.4
   installed C consumers pass FTS5/JSON, transactions, concurrent readers and
   process-crash/reopen checks. A C application retrieves local documents and
