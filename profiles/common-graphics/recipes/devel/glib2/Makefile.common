@@ -1,0 +1,21 @@
+# $NetBSD: Makefile.common,v 1.133 2026/08/01 17:26:11 adam Exp $
+# used by devel/gdbus-codegen/Makefile
+# used by devel/glib2/Makefile
+# used by devel/glib2-tools/Makefile
+# used by devel/glib2-introspection/Makefile
+
+DISTNAME=	glib-2.90.1
+PKGNAME=	${DISTNAME:S/glib/glib2/}
+MASTER_SITES=	${MASTER_SITE_GNOME:=sources/glib/${PKGVERSION_NOREV:R}/}
+EXTRACT_SUFX=	.tar.xz
+
+MAINTAINER=	prlw1@cam.ac.uk
+HOMEPAGE=	https://developer.gnome.org/glib/
+LICENSE=	gnu-lgpl-v2.1
+
+USE_CC_FEATURES=	c99
+USE_LANGUAGES=		c c++
+USE_TOOLS+=		msgfmt pkg-config xgettext
+
+# does snprintf %d with pid_t...
+BUILDLINK_TRANSFORM+=	rm:-Werror=format=2

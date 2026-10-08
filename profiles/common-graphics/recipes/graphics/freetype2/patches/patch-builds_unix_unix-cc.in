@@ -1,0 +1,28 @@
+$NetBSD: patch-builds_unix_unix-cc.in,v 1.5 2025/09/22 10:46:13 adam Exp $
+
+Provide tag to libtool.
+
+--- builds/unix/unix-cc.in.orig	2025-09-08 02:48:18.000000000 +0000
++++ builds/unix/unix-cc.in
+@@ -95,7 +95,7 @@ ANSIFLAGS := @XX_ANSIFLAGS@
+ # libtool call is always prepended.
+ #
+ CCraw       := $(CC)
+-override CC := $(LIBTOOL) --mode=compile $(CCraw)
++override CC := $(LIBTOOL) --tag=CC --mode=compile $(CCraw)
+ 
+ # Resource compiler to use on Cygwin/MinGW, usually windres.
+ #
+@@ -122,10 +122,9 @@ CCexe_LDFLAGS := @LDFLAGS_BUILD@
+ 
+ # Library linking.
+ #
+-LINK_LIBRARY = $(LIBTOOL) --mode=link $(CCraw) -o $@ $(OBJECTS_LIST) \
++LINK_LIBRARY = $(LIBTOOL) --tag=CC --mode=link $(CCraw) -o $@ $(OBJECTS_LIST) \
+                           -rpath $(libdir) -version-info $(version_info) \
+-                          $(LDFLAGS) -no-undefined \
+-                          -export-symbols $(EXPORTS_LIST)
++                          $(LDFLAGS) -no-undefined
+ 
+ # For the demo programs.
+ FT_DEMO_CFLAGS := @FT_DEMO_CFLAGS@

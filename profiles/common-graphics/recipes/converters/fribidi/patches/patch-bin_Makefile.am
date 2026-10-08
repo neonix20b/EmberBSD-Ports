@@ -1,0 +1,24 @@
+$NetBSD$
+
+Keep the release manpage when cross-compiling; generating it would execute
+the target ELF. A missing release page remains an error. Preserve native
+help2man generation. Origin: EmberBSD (AI-assisted), not submitted upstream.
+
+--- bin/Makefile.am.orig
++++ bin/Makefile.am
+@@ -23,9 +23,15 @@
+ $(top_builddir)/lib/libfribidi.la:
+ 	cd $(top_builddir)/lib && $(MAKE) $(AM_MAKEFLAGS) libfribidi.la
+ 
++ifneq ($(build),$(host))
++# Release archives include this page; target executables cannot run here.
++fribidi.1:
++	@test -r $@ || { echo 'Missing release manpage: fribidi.1' >&2; exit 1; }
++else
+ %.1: %
+ 	$(top_srcdir)/missing --run help2man ./$< --no-info \
+ 	--version-string=- -n "$(shell ./$< --help | head -n 2 | tail -n 1)" \
+ 	--output=$@
++endif
+ 
+ -include $(top_srcdir)/git.mk

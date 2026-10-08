@@ -1,0 +1,31 @@
+$NetBSD: patch-gio_gdbus-2.0_codegen_meson.build,v 1.4 2024/04/09 16:57:18 wiz Exp $
+
+Leave gdbus-2.0/codegen sudirectory to devel/gdbus-codegen package.
+
+--- gio/gdbus-2.0/codegen/meson.build.orig
++++ gio/gdbus-2.0/codegen/meson.build
+@@ -37,6 +37,7 @@
+ # Install gdbus-codegen executable
+ gdbus_codegen = configure_file(input : 'gdbus-codegen.in',
+   output : 'gdbus-codegen',
++  install : false,
+   install_dir : get_option('bindir'),
+   install_tag : 'bin-devel',
+   configuration : gdbus_codegen_conf
+@@ -50,6 +51,7 @@
+ gdbus_codegen_built_targets = []
+ gdbus_codegen_built_files += configure_file(input : 'config.py.in',
+                                             output : 'config.py',
++                                            install : false,
+                                             install_dir : codegen_dir,
+                                             install_tag : 'bin-devel',
+                                             configuration : gdbus_codegen_conf)
+@@ -58,7 +60,7 @@
+   # Copy these into the builddir so that gdbus-codegen can be used uninstalled
+   # and then install it too so that it can be used after installation
+   gdbus_codegen_built_targets += fs.copyfile(f, f,
+-                                             install : true,
++                                             install : false,
+                                              install_dir : codegen_dir,
+                                              install_tag : 'bin-devel')
+ endforeach

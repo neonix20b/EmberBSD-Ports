@@ -1,0 +1,94 @@
+$NetBSD: patch-gio_tests_meson.build,v 1.11 2025/06/30 18:21:29 schmonz Exp $
+
+Work around PR pkg/57399. + DYLD_LIBRARY_PATH for macOS
+
+--- gio/tests/meson.build.orig
++++ gio/tests/meson.build
+@@ -945,6 +945,10 @@
+     plugin_resources_c = custom_target('plugin-resources.c',
+       input : 'test4.gresource.xml',
+       output : 'plugin-resources.c',
++      env : {
++        'LC_ALL': 'en_US.UTF-8',
++        'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++      },
+       command : [glib_compile_resources,
+                  compiler_type,
+                  '--target=@OUTPUT@',
+@@ -978,6 +982,10 @@
+     input : 'test.gresource.xml',
+     depends : [test_generated_txt, gspawn_helpers],
+     output : 'test.gresource',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -993,6 +1001,10 @@
+     input : 'test6.gresource.xml',
+     depends : [gspawn_helpers],
+     output : 'test6.gresource',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -1008,6 +1020,10 @@
+     input : 'test3.gresource.xml',
+     depends : [gspawn_helpers],
+     output : 'test_resources2.c',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -1022,6 +1038,10 @@
+     input : 'test3.gresource.xml',
+     depends : [gspawn_helpers],
+     output : 'test_resources2.h',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -1036,6 +1056,10 @@
+     input : 'test2.gresource.xml',
+     depends : [big_test_resource, gspawn_helpers],
+     output : 'test_resources.c',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -1050,6 +1074,10 @@
+     input : '111_digit_test.gresource.xml',
+     depends : [gspawn_helpers],
+     output : 'digit_test_resources.c',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',
+@@ -1064,6 +1092,10 @@
+     input : '111_digit_test.gresource.xml',
+     depends : [gspawn_helpers],
+     output : 'digit_test_resources.h',
++    env : {
++      'LC_ALL': 'en_US.UTF-8',
++      'DYLD_LIBRARY_PATH': '@0@/glib:@0@/gio:@0@/gobject:@0@/gmodule'.replace('@0@', meson.project_build_root())
++    },
+     command : [glib_compile_resources,
+                compiler_type,
+                '--target=@OUTPUT@',

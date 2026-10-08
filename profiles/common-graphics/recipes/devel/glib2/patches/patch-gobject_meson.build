@@ -1,0 +1,14 @@
+$NetBSD: patch-gobject_meson.build,v 1.6 2022/11/23 10:41:41 adam Exp $
+
+Leave glib-genmarshal and glib-mkenums to devel/glib2-tools.
+
+--- gobject/meson.build.orig
++++ gobject/meson.build
+@@ -100,6 +100,7 @@
+     input : tool + '.in',
+     output : tool,
+     configuration : python_tools_conf,
++    install : false,
+     install_dir : glib_bindir,
+     install_tag : 'bin-devel',
+   )

@@ -52,6 +52,9 @@ It now also passes four [accelerated wlroots DRM presentations](cross/wlroots-vi
 at 1280x800, with pixel checks and clean shutdown. This requires the paired
 Cocoa context repair and the guest PCI queue teardown fix. The CPU consumer
 still passes on the 2D device; a complete compositor session remains unaccepted.
+The [current text/image closure](cross/labwc-dependencies.md) also cross-builds
+GLib 2.90.1, HarfBuzz 14.6.0 and Cairo 1.18.6 with normal package checks.
+Target text rendering, Pango/labwc and full SVG remain separate acceptance.
 
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled

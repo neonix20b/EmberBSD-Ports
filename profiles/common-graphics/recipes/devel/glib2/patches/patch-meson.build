@@ -1,0 +1,107 @@
+$NetBSD: patch-meson.build,v 1.26 2026/05/03 20:57:24 schmonz Exp $
+
+- On Darwin, optionally use Cocoa (needed for X11 users).
+
+- Select pkgsrc's build-host Python explicitly for upstream generators.
+  (Requires meson >= 0.50.0)
+
+- Don't install bash completion scripts.
+
+- Tolerate getxattr not existing (smartOS)
+  https://gitlab.gnome.org/GNOME/glib/merge_requests/888
+
+- Check also for sys/ptrace.h header file.
+
+- Explicitly avoid epoll on SunOS.
+
+--- meson.build.orig
++++ meson.build
+@@ -442,6 +442,7 @@
+   'sys/mount.h',
+   'sys/param.h',
+   'sys/prctl.h',
++  'sys/ptrace.h',
+   'sys/resource.h',
+   'sys/select.h',
+   'sys/statfs.h',
+@@ -711,7 +712,6 @@
+   'copy_file_range',
+   'endmntent',
+   'endservent',
+-  'epoll_create1',
+   'faccessat',
+   'fallocate',
+   'fchmod',
+@@ -777,6 +777,10 @@
+   'sysctlbyname',
+ ]
+ 
++if host_system != 'sunos'
++  functions += ['epoll_create1']
++endif
++
+ # _NSGetEnviron is available on iOS too, but its usage gets apps rejected from
+ # the app store since it's considered 'private API'
+ if host_system == 'darwin'
+@@ -1007,13 +1011,6 @@
+ if host_system == 'darwin' and subsystem == 'macos'
+   add_languages('objc', native: false, required: true)
+   objcc = meson.get_compiler('objc')
+-  if not objcc.compiles('''#include <AvailabilityMacros.h>
+-                           #if MAC_OS_X_VERSION_MIN_REQUIRED < 101300
+-                           #error message "GLib requires macOS 10.13 or later."
+-                           #endif''',
+-                         name : 'macOS 10.13 or later')
+-    error('GLib requires macOS 10.13 or later.')
+-  endif
+ 
+   # Mac OS X Carbon support
+   glib_have_carbon = objcc.compiles('''#include <Carbon/Carbon.h>
+@@ -1030,7 +1027,7 @@
+                                       #error "Detected GNUstep, not Cocoa"
+                                       #endif''',
+                                    name : 'Mac OS X Cocoa support')
+-
++  glib_have_cocoa = glib_have_cocoa and get_option('use_cocoa')
+   if glib_have_cocoa
+     glib_conf.set('HAVE_COCOA', true)
+     osx_ldflags += ['-Wl,-framework,Foundation', '-Wl,-framework,AppKit']
+@@ -2403,18 +2400,17 @@
+ 
+   # try glibc
+   if cc.has_function('getxattr') and cc.has_header('sys/xattr.h')
++    glib_conf.set('HAVE_XATTR', 1)
+     glib_conf.set('HAVE_SYS_XATTR_H', 1)
+     glib_conf_prefix = glib_conf_prefix + '#define @0@ 1\n'.format('HAVE_SYS_XATTR_H')
+   #failure. try libattr
+   elif cc.has_header_symbol('attr/xattr.h', 'getxattr')
++    glib_conf.set('HAVE_XATTR', 1)
+     glib_conf.set('HAVE_ATTR_XATTR_H', 1)
+     glib_conf_prefix = glib_conf_prefix + '#define @0@ 1\n'.format('HAVE_ATTR_XATTR_H')
+     xattr_dep = [cc.find_library('xattr')]
+-  else
+-    error('No getxattr implementation found in C library or libxattr')
+   endif
+ 
+-  glib_conf.set('HAVE_XATTR', 1)
+   if cc.compiles(glib_conf_prefix + '''
+                  #include <stdio.h>
+                  #ifdef HAVE_SYS_TYPES_H
+@@ -2515,7 +2511,7 @@
+ 
+ glib_conf.set('HAVE_PROC_SELF_CMDLINE', have_proc_self_cmdline)
+ 
+-python = import('python').find_installation()
++python = import('python').find_installation('@TOOL_PYTHONBIN@')
+ 
+ # Sets the shebang on script files. This has been changed many times including
+ # using env, the absolute path to the Python executable, and using both python
+@@ -2554,7 +2550,7 @@
+ 
+ # Determine which user environment-dependent files that we want to install
+ bash = find_program('bash', required : false)
+-have_bash = bash.found() # For completion scripts
++have_bash = false
+ bash_comp_dep = dependency('bash-completion', version: '>=2.0', required: false)
+ have_sh = find_program('sh', required : false).found() # For glib-gettextize
+ have_pkg_config = find_program('pkg-config', required: false).found()

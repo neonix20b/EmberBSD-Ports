@@ -93,14 +93,30 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         NF != 4 || ($1 != "graphics/MesaLib" && $1 != "x11/libdrm" &&
             $1 != "devel/wayland" && $1 != "devel/wayland-protocols" &&
             $1 != "x11/xorgproto" && $1 != "devel/libudev-bsd" &&
-            $1 != "wayland/wlroots" && $1 != "x11/xkeyboard-config" && $1 != "devel/input-headers" && $1 != "x11/libxkbcommon" && $1 != "sysutils/hwdata" && $1 != "sysutils/seatd" && $1 != "x11/libdisplay-info" && $1 != "graphics/libliftoff" && $1 != "devel/libopeninput") ||
+            $1 != "wayland/wlroots" && $1 != "x11/xkeyboard-config" && $1 != "devel/input-headers" && $1 != "x11/libxkbcommon" && $1 != "sysutils/hwdata" && $1 != "sysutils/seatd" && $1 != "x11/libdisplay-info" && $1 != "graphics/libliftoff" && $1 != "devel/libopeninput" &&
+            $1 != "devel/glib2" &&
+            $1 != "devel/pcre2" &&
+            $1 != "graphics/cairo" &&
+            $1 != "fonts/harfbuzz" &&
+            $1 != "converters/fribidi" &&
+            $1 != "graphics/png" &&
+            $1 != "graphics/freetype2" &&
+            $1 != "archivers/lzo") ||
             $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz)$/ ||
             length($3) != 64 || $3 !~ /^[0-9a-f]+$/ ||
             $4 !~ /^https:\/\// || seen[$1]++ { bad=1 }
         END { if (bad || !seen["graphics/MesaLib"] || !seen["x11/libdrm"] ||
             !seen["devel/wayland"] || !seen["devel/wayland-protocols"] ||
             !seen["x11/xorgproto"] || !seen["devel/libudev-bsd"] ||
-            !seen["wayland/wlroots"] || !seen["x11/xkeyboard-config"] || !seen["devel/input-headers"] || !seen["x11/libxkbcommon"] || !seen["sysutils/hwdata"] || !seen["sysutils/seatd"] || !seen["x11/libdisplay-info"] || !seen["graphics/libliftoff"] || !seen["devel/libopeninput"]) exit 1 }
+            !seen["wayland/wlroots"] || !seen["x11/xkeyboard-config"] || !seen["devel/input-headers"] || !seen["x11/libxkbcommon"] || !seen["sysutils/hwdata"] || !seen["sysutils/seatd"] || !seen["x11/libdisplay-info"] || !seen["graphics/libliftoff"] || !seen["devel/libopeninput"] ||
+            !seen["devel/glib2"] ||
+            !seen["devel/pcre2"] ||
+            !seen["graphics/cairo"] ||
+            !seen["fonts/harfbuzz"] ||
+            !seen["converters/fribidi"] ||
+            !seen["graphics/png"] ||
+            !seen["graphics/freetype2"] ||
+            !seen["archivers/lzo"]) exit 1 }
     ' "$graphics/sources.tsv" || { echo 'Invalid common graphics manifest.' >&2; exit 2; }
     while IFS="$(printf '\t')" read -r recipe archive sha url; do
         case "$recipe" in
@@ -120,15 +136,39 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             graphics/libliftoff) pin='libliftoff-0.5.0.tar.gz:3309218c3137a70faada653690802b514e4e46d9b38e7d9d5948ffcc4831f3b1:https://gitlab.freedesktop.org/emersion/libliftoff/-/archive/v0.5.0/libliftoff-v0.5.0.tar.gz' ;;
             devel/libopeninput) pin='libopeninput-1.31.3-10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz:fbba09ed60a9a411b9ae7ee5c92daf069a3b4926ad052ac8cbcfb7c3ff82abbf:https://github.com/sizeofvoid/libopeninput/archive/10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz' ;;
             x11/libxkbcommon) pin='xkbcommon-1.13.2.tar.gz:acc4d5f7c3cbba5f9f8d08d8bdbeede84ecede46792f47929aa9321873385528:https://github.com/xkbcommon/libxkbcommon/archive/xkbcommon-1.13.2.tar.gz' ;;
+            devel/glib2) pin='glib-2.90.1.tar.xz:93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396:https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz' ;;
+            devel/pcre2) pin='pcre2-10.49.tar.gz:929f0b20e62879252a15886b06c89f1edef61a363cbd5826fb041080a5e557ae:https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.gz' ;;
+            graphics/cairo) pin='cairo-1.18.6.tar.xz:1c767308174337a74694da0f3ec069c271452163a1ef4540964c50c301f157d4:https://cairographics.org/releases/cairo-1.18.6.tar.xz' ;;
+            fonts/harfbuzz) pin='harfbuzz-14.6.0.tar.xz:d07a007327277708a2a73ae437887cdbaf282937f6d03ca5467723e9099af586:https://github.com/harfbuzz/harfbuzz/releases/download/14.6.0/harfbuzz-14.6.0.tar.xz' ;;
+            converters/fribidi) pin='fribidi-1.0.17.tar.xz:6949dcde27d41cebad1fd741fcafc36d55a1020d2d872d4a6eb3914caabbada2:https://github.com/fribidi/fribidi/releases/download/v1.0.17/fribidi-1.0.17.tar.xz' ;;
+            graphics/png) pin='libpng-1.6.59.tar.xz:d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389:https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz' ;;
+            graphics/freetype2) pin='freetype-2.14.3.tar.xz:36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f:https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz' ;;
+            archivers/lzo) pin='lzo-2.10.tar.gz:c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072:https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz' ;;
         esac
         [ "$archive:$sha:$url" = "$pin" ] || { echo "Incorrect common graphics source pin: $recipe" >&2; exit 2; }
     done < "$graphics/sources.tsv"
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
         source=$graphics/recipes/$recipe
-        for name in Makefile DESCR PLIST distinfo buildlink3.mk; do
+        recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk'
+        case "$recipe" in
+            devel/glib2-tools|devel/glib2-introspection) recipe_files='Makefile DESCR PLIST' ;;
+            devel/gdbus-codegen) recipe_files='Makefile DESCR PLIST distinfo' ;;
+        esac
+        for name in $recipe_files; do
             [ -f "$source/$name" ] || { echo "Incomplete graphics recipe: $recipe/$name" >&2; exit 2; }
         done
         case "$recipe" in
+            devel/glib2) approved='patch-gio_gcredentialsprivate.h patch-gio_gdbus-2.0_codegen_meson.build patch-gio_glib-compile-schemas.c patch-gio_gresource-tool.c patch-gio_gunixcredentialsmessage.c patch-gio_gunixmounts.c patch-gio_inotify_inotify-kernel.c patch-gio_meson.build patch-gio_tests_iptosmessage.c patch-gio_tests_meson.build patch-girepository_gitypelib.c patch-glib_gatomic.c patch-glib_gatomic.h patch-glib_genviron.c patch-glib_glib-unix.c patch-glib_gspawn-posix.c patch-glib_gthread.c patch-glib_tests_hash.c patch-glib_tests_include.c patch-glib_tests_meson.build patch-glib_tests_testing.c patch-glib_tests_thread.c patch-gmodule_gmodule-dl.c patch-gmodule_gmodule.c patch-gobject_glib-mkenums.in patch-gobject_meson.build patch-meson.build patch-meson.options' ;;
+            devel/pcre2) approved='' ;;
+            graphics/cairo) approved='patch-meson.build patch-src_cairo-bentley-ottmann-rectangular.c patch-src_cairo-colr-glyph-render.c patch-src_cairo-image-surface.c patch-test_pdf-structure.c patch-util_cairo-missing_getline.c' ;;
+            fonts/harfbuzz) approved='patch-src_meson.build patch-util_meson.build' ;;
+            converters/fribidi) approved='patch-bin_Makefile.am patch-bin_Makefile.in' ;;
+            graphics/png) approved='patch-libpng-config.in patch-pngpriv.h' ;;
+            graphics/freetype2) approved='patch-builds_unix_freetype-config.in patch-builds_unix_unix-cc.in' ;;
+            archivers/lzo) approved='patch-aa patch-src_lzo1f__d.ch' ;;
+            devel/glib2-tools) approved='' ;;
+            devel/glib2-introspection) approved='' ;;
+            devel/gdbus-codegen) approved='patch-meson.build' ;;
             graphics/MesaLib)
                 approved='patch-bin_symbols-check.py patch-dso-lifetime patch-include_c99__alloca.h patch-meson-python-selection patch-meson-xcb-pkgconfig patch-src_gallium_auxiliary_vl_vl__csc.c patch-src_util_half__float.c' ;;
             x11/libdrm)
@@ -161,9 +201,15 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         if [ "$recipe" = sysutils/hwdata ]; then
             [ -f "$source/native-meson.mk" ] || { echo "Missing native graphics metadata guard" >&2; exit 2; }
         fi
-        if [ "$recipe" = x11/libxkbcommon ] || [ "$recipe" = devel/libopeninput ]; then
+        if [ "$recipe" = x11/libxkbcommon ] || [ "$recipe" = devel/libopeninput ] || [ "$recipe" = devel/glib2 ] || [ "$recipe" = fonts/harfbuzz ]; then
             [ -f "$source/Makefile.common" ] || { echo 'Missing xkbcommon common recipe' >&2; exit 2; }
         fi
+        case "$recipe" in
+            devel/glib2-tools|devel/glib2-introspection)
+                grep -q '^.include "../../devel/glib2/Makefile.common"' "$source/Makefile" || exit 2
+                grep -q '^DISTINFO_FILE=.*../../devel/glib2/distinfo' "$source/Makefile" || exit 2
+                continue ;;
+        esac
         for name in $approved; do
             grep -q "^SHA1 ($name) = " "$source/distinfo" && [ -f "$source/patches/$name" ] || {
                 echo "Missing required graphics patch: $recipe/$name" >&2; exit 2;
@@ -171,7 +217,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         done
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
         case "$recipe" in
-            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff) ;;
+            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff|devel/pcre2) ;;
             *) [ -n "$required" ] || { echo "No graphics patch checksums: $recipe" >&2; exit 2; } ;;
         esac
         actual=0
@@ -239,7 +285,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         "$destination/EMBERBSD-CROSS-MK.CONF"
 fi
 if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done
