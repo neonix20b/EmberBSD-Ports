@@ -1,0 +1,40 @@
+$NetBSD: patch-meson.build,v 1.1 2025/12/18 21:49:09 maya Exp $
+
+Origin: pkgsrc Darwin linker portability, extended by EmberBSD (AI-assisted).
+Check the complete version-script argument, including its actual file.
+Require real native hwdata metadata and the selected build-host Python;
+do not fall back to the build host's /usr/share data or an ambient interpreter.
+Not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -16,15 +16,11 @@
+ version_minor = version.split('.')[1]
+ assert(version_major == '0')
+ 
+-dep_hwdata = dependency('hwdata', required: false, native: true)
+-if dep_hwdata.found()
+-	hwdata_dir = dep_hwdata.get_variable(pkgconfig: 'pkgdatadir')
+-	pnp_ids = files(hwdata_dir / 'pnp.ids')
+-else
+-	pnp_ids = files('/usr/share/hwdata/pnp.ids')
+-endif
++dep_hwdata = dependency('hwdata', native: true)
++hwdata_dir = dep_hwdata.get_variable(pkgconfig: 'pkgdatadir')
++pnp_ids = files(hwdata_dir / 'pnp.ids')
+ 
+-gen_search_table = find_program('tool/gen-search-table.py')
++gen_search_table = [find_program('@PYTHONBIN@'), files('tool/gen-search-table.py')]
+ pnp_id_table = custom_target(
+ 	'pnp-id-table.c',
+ 	command: [ gen_search_table, pnp_ids, '@OUTPUT@', 'pnp_id_table' ],
+@@ -52,6 +48,9 @@
+ 
+ symbols_file = 'libdisplay-info.map'
+ symbols_flag = '-Wl,--version-script,@0@'.format(meson.current_source_dir() / symbols_file)
++if not cc.has_link_argument(symbols_flag)
++	symbols_flag = ''
++endif
+ 
+ di_lib = library(
+ 	'display-info',

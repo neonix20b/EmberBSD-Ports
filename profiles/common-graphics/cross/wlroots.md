@@ -9,8 +9,10 @@ already contains these releases. The older native Wayland probe retains
 The installed [Mesa/libepoxy result](epoxy.md) proves surfaceless CPU
 rendering. The subsequent [canonical wlroots package](wlroots-package.md)
 passes four guarded GLES2/GBM headless cycles in the isolated EMBERGPU VM,
-including a run after dropping UID/GID to 65534. This remains an interim
-consumer gate before full DRM/input and labwc migration. In wlroots
+including a run after dropping UID/GID to 65534. The subsequent
+[DRM/input/color stage](drm-input.md) passes four real DRM presentations and
+131 dependency test invocations in that VM. labwc migration remains pending.
+In wlroots
 0.20.2, `render/gles2/renderer.c` requires `EGL_EXT_image_dma_buf_import`
 and advertises DMA-BUF render targets. Its shared-memory allocator cannot
 satisfy that renderer. `WLR_RENDERER_FORCE_SOFTWARE` selects a software EGL
@@ -92,6 +94,8 @@ libdisplay-info, hwdata and optional libliftoff; X11 and color management have
 their own XCB and lcms2 dependencies. Preserve supported recipe options and
 make their dependencies explicit. Vulkan needs a separately accepted provider
 and a real native shader compiler. Do not silently omit a requested feature.
+The [DRM/input/color stage](drm-input.md) records the current dependency pins,
+native metadata guards and explicit `drm-gles2` package selection.
 
 wlroots requires native `wayland-scanner.pc` metadata, not just a binary.
 Reuse the [validated scanner composition](profile.md) and its real installed

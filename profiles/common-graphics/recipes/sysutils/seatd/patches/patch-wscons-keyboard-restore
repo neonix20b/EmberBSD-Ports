@@ -1,0 +1,27 @@
+Origin: EmberBSD, AI-assisted; applied after pkgsrc patch-common_terminal.c.
+Status: local, not submitted upstream.
+
+Keep wscons event mode while the compositor owns the keyboard and restore
+translated console input on exit. NetBSD WSKBD_RAW selects the PC/AT byte
+stream and bypasses the USB keyboard's WSCONS_EVENT_KEY_UP/DOWN delivery;
+it is not the Linux K_OFF equivalent. libopeninput consumes wscons events.
+
+--- common/terminal.c.orig
++++ common/terminal.c
+@@ -262,10 +262,13 @@ int terminal_set_keyboard(int fd, bool enable) {
+ 		return -1;
+ 	}
+ #else
+-	int mode = enable ? WSKBD_RAW : WSKBD_TRANSLATED;
++	/* wscons clients read events, not the compatibility PC/AT byte stream.
++	 * Opening wskbd exclusively suppresses console delivery while active.
++	 * On close, the console must also remain in translated mode. */
++	int mode = WSKBD_TRANSLATED;
+ 	if (ioctl(fd, WSKBDIO_SETMODE, &mode) == -1) {
+-		log_errorf("Could not set keyboard mode to %s: %s",
+-			   enable ? "translated" : "raw", strerror(errno));
++		log_errorf("Could not set translated keyboard mode: %s",
++			   strerror(errno));
+ 		return -1;
+ 	}
+ #endif

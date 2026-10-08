@@ -40,8 +40,12 @@ four GLES2/GBM headless lifecycles in an isolated AArch64 VirtGPU VM, repeated
 after dropping root privileges. Its 1024-pixel oracle covers rectangles and
 a texture; a real KMS framebuffer import and GEM_CLOSE leave the renderer's
 buffer usable. The package fixes software primary-node selection and private
-EGL cleanup without changing kernel permissions. DRM scanout, input, labwc
-and an accelerated session still require separate acceptance.
+EGL cleanup without changing kernel permissions. The subsequent
+[DRM/input package](cross/drm-input.md) presents four llvmpipe frames at
+1280x800 with an active libseat session and enumerates two wscons devices.
+All 131 selected dependency checks pass in the same isolated VM. Actual
+input events, VT switching, application surfaces, labwc and an accelerated
+session remain separate acceptance stages.
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
 upstream invocations on Zero 3W with the paired kernel IPC fixes. The common

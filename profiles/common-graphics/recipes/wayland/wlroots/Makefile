@@ -40,6 +40,11 @@ PKG_FAIL_REASON+= "Cross wlroots requires the validated native Wayland scanner m
 .endif
 .endif
 
+.if !empty(PKG_OPTIONS:Mdrm)
+EMBERBSD_NATIVE_GRAPHICS_PC= hwdata:0.412
+.include "../../sysutils/hwdata/native-meson.mk"
+.endif
+
 .include "../../devel/meson/build.mk"
 # Core keyboard types use input codes even without the libinput backend.
 BUILDLINK_DEPMETHOD.input-headers= build

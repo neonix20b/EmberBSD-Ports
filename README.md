@@ -103,8 +103,11 @@ runtime behavior are validated.
   uses this same stack for GLES2 rendering, KMS framebuffer import and
   headless presentation. Four root and four unprivileged lifecycles pass
   all 1024 pixels and preserve renderer buffers after caller GEM_CLOSE.
-  Other consumer migrations, visible sessions and guest GPU rendering remain
-  unverified.
+  Its [DRM/input package](profiles/common-graphics/cross/drm-input.md) also
+  presents four verified frames at 1280x800 through a real libseat session
+  and enumerates two wscons input devices. All 131 selected dependency checks
+  pass in the VM. Rendering remains llvmpipe; input events, VT switching,
+  application surfaces and an accelerated desktop remain unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.

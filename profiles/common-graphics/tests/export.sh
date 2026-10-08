@@ -63,7 +63,7 @@ cp "$profile/sources.tsv" "$work/saved-manifest"
 sed 's/bce5f7fb/00000000/' "$work/saved-manifest" > "$profile/sources.tsv"
 negative altered-manifest
 cp "$work/saved-manifest" "$profile/sources.tsv"
-for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do
+for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do
     # Every added consumer/dependency needs its exact source pin.
     awk -F '\t' -v dep="$dependency" 'BEGIN { OFS="\t" }
         $1 == dep { $3="0000000000000000000000000000000000000000000000000000000000000000" }
@@ -73,6 +73,20 @@ for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-
     mv "$profile/recipes/$dependency/Makefile" "$work/dependency-Makefile"
     negative "missing-${dependency##*/}-recipe"
     mv "$work/dependency-Makefile" "$profile/recipes/$dependency/Makefile"
+done
+helper=$profile/recipes/sysutils/hwdata/native-meson.mk
+mv "$helper" "$work/native-meson.mk"
+negative missing-native-graphics-guard
+mv "$work/native-meson.mk" "$helper"
+for entry in 'sysutils/seatd:patch-wscons-keyboard-restore' 'devel/libopeninput:patch-wscons-absolute-pointer'; do
+    dependency=${entry%:*}
+    name=${entry#*:}
+    cp "$profile/recipes/$dependency/distinfo" "$work/input-distinfo"
+    mv "$profile/recipes/$dependency/patches/$name" "$work/input-patch"
+    sed "/SHA1 ($name)/d" "$work/input-distinfo" > "$profile/recipes/$dependency/distinfo"
+    negative "omitted-$name"
+    mv "$work/input-patch" "$profile/recipes/$dependency/patches/$name"
+    cp "$work/input-distinfo" "$profile/recipes/$dependency/distinfo"
 done
 xkb=$profile/recipes/x11/libxkbcommon
 cp "$xkb/distinfo" "$work/xkb-distinfo"
@@ -119,11 +133,11 @@ for mode in default development-toolchain common-build-tools common-graphics com
     else sh "$script" "$tree" "$mode" > "$work/$mode.log" 2>&1; fi
     case "$mode" in
         common-graphics|common-media|plasma-mobile)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
             cmp "$profile/mk.conf" "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
             cmp "$profile/sources.tsv" "$tree/EMBERBSD-COMMON-GRAPHICS-SOURCES" ;;
         *)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)

@@ -41,11 +41,19 @@ check('full recipe retains all supported functions with host-only generator depe
   full['PKG_FAIL_REASON'].empty? && %w[glesv2 vulkan drm libinput x11 session color-management libliftoff examples xwayland xcb-errors].sort == full['PKG_OPTIONS'].split.sort &&
     full['TOOL_DEPENDS'].include?(':../../graphics/glslang') && full['TOOL_DEPENDS'].include?(':../../sysutils/hwdata') && !full['DEPENDS'].match?(/glslang|hwdata/)
 end
+drm = parse.call('drm', 'EMBERBSD_WLROOTS_PROFILE=drm-gles2')
+check('explicit DRM stage retains input, session, color management and plane allocation') do
+  drm['PKG_FAIL_REASON'].empty? && %w[glesv2 drm libinput session color-management libliftoff].sort == drm['PKG_OPTIONS'].split.sort &&
+    %w[-Drenderers=gles2 -Dbackends=drm,libinput -Dsession=enabled -Dcolor-management=enabled -Dlibliftoff=enabled].all? { |arg| Shellwords.split(drm['MESON_ARGS']).include?(arg) } &&
+    drm['TOOL_DEPENDS'].include?('hwdata>=0.412:../../sysutils/hwdata') &&
+    !drm['TOOL_DEPENDS'].include?('glslang') && !drm['DEPENDS'].match?(/vulkan-loader|cairo|xcb-util/)
+end
 native = parse.call('native', 'USE_CROSS_COMPILE=no')
 check('native dependency path keeps all recipe defaults and no cross failure') { native['PKG_FAIL_REASON'].empty? && native['PKG_OPTIONS'] == full['PKG_OPTIONS'] }
 {
-  'unknown-profile' => ['EMBERBSD_WLROOTS_PROFILE=unknown', 'must be full or headless-gles2'],
+  'unknown-profile' => ['EMBERBSD_WLROOTS_PROFILE=unknown', 'must be full, headless-gles2 or drm-gles2'],
   'minimal-override' => ['EMBERBSD_WLROOTS_PROFILE=headless-gles2', 'PKG_OPTIONS.wlroots=glesv2 vulkan', 'rejects option overrides'],
+  'drm-override' => ['EMBERBSD_WLROOTS_PROFILE=drm-gles2', 'PKG_OPTIONS.wlroots=glesv2', 'rejects option overrides'],
   'missing-session' => ['EMBERBSD_WLROOTS_PROFILE=full', 'PKG_OPTIONS.wlroots=-session', 'require the session option'],
   'wrong-scanner' => ['EMBERBSD_WLROOTS_PROFILE=headless-gles2', 'EMBERBSD_WAYLAND_SCANNER=/usr/bin/false', 'must execute and report exactly 1.26.0']
 }.each do |name, args|

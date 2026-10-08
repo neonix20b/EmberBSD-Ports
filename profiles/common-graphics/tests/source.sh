@@ -24,8 +24,10 @@ while IFS="$(printf '\t')" read -r recipe archive sha url; do
     case "$recipe" in ''|'#'*) continue ;; esac
     pkg=$profile/recipes/$recipe
     verify_archive "$distfiles/$archive"
-    tree=$work/${archive%.tar.xz}
-    mkdir "$tree"
+    # A headers-only package and its runtime may share one upstream archive.
+    # Each recipe still needs its own independently patched source view.
+    tree=$work/$recipe
+    mkdir -p "$tree"
     tar -xf "$distfiles/$archive" --strip-components=1 -C "$tree"
     for name in $(awk '/^SHA1 \(patch-/ {gsub(/[()]/,"",$2); print $2}' "$pkg/distinfo"); do
         actual=$(sed '/[$]NetBSD.*/d' "$pkg/patches/$name" | shasum -a 1 | awk '{print $1}')

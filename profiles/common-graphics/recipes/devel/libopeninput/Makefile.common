@@ -1,0 +1,18 @@
+# $NetBSD: Makefile.common,v 1.2 2026/05/27 17:14:19 kikadf Exp $
+
+# used by devel/libopeninput/Makefile
+# input-headers is an independent headers-only recipe from the same source pin
+
+DISTNAME=	libopeninput-${VERSION}
+VERSION=	1.31.3
+CATEGORIES=	devel
+MASTER_SITES=	${MASTER_SITE_GITHUB:=sizeofvoid/}
+GITHUB_PROJECT=	libopeninput
+GITHUB_TAG=	10995219206280da0f1a3ba124abe4c8ef89e021
+
+MAINTAINER=	kikadf@NetBSD.org
+HOMEPAGE=	https://github.com/sizeofvoid/libopeninput/tree/libopeninput/
+LICENSE=	mit
+
+DISTINFO_FILE=	${.CURDIR}/../../devel/libopeninput/distinfo
+PATCHDIR=	${.CURDIR}/../../devel/libopeninput/patches

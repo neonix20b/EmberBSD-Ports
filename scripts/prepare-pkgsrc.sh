@@ -93,14 +93,14 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         NF != 4 || ($1 != "graphics/MesaLib" && $1 != "x11/libdrm" &&
             $1 != "devel/wayland" && $1 != "devel/wayland-protocols" &&
             $1 != "x11/xorgproto" && $1 != "devel/libudev-bsd" &&
-            $1 != "wayland/wlroots" && $1 != "x11/xkeyboard-config" && $1 != "devel/input-headers" && $1 != "x11/libxkbcommon") ||
+            $1 != "wayland/wlroots" && $1 != "x11/xkeyboard-config" && $1 != "devel/input-headers" && $1 != "x11/libxkbcommon" && $1 != "sysutils/hwdata" && $1 != "sysutils/seatd" && $1 != "x11/libdisplay-info" && $1 != "graphics/libliftoff" && $1 != "devel/libopeninput") ||
             $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz)$/ ||
             length($3) != 64 || $3 !~ /^[0-9a-f]+$/ ||
             $4 !~ /^https:\/\// || seen[$1]++ { bad=1 }
         END { if (bad || !seen["graphics/MesaLib"] || !seen["x11/libdrm"] ||
             !seen["devel/wayland"] || !seen["devel/wayland-protocols"] ||
             !seen["x11/xorgproto"] || !seen["devel/libudev-bsd"] ||
-            !seen["wayland/wlroots"] || !seen["x11/xkeyboard-config"] || !seen["devel/input-headers"] || !seen["x11/libxkbcommon"]) exit 1 }
+            !seen["wayland/wlroots"] || !seen["x11/xkeyboard-config"] || !seen["devel/input-headers"] || !seen["x11/libxkbcommon"] || !seen["sysutils/hwdata"] || !seen["sysutils/seatd"] || !seen["x11/libdisplay-info"] || !seen["graphics/libliftoff"] || !seen["devel/libopeninput"]) exit 1 }
     ' "$graphics/sources.tsv" || { echo 'Invalid common graphics manifest.' >&2; exit 2; }
     while IFS="$(printf '\t')" read -r recipe archive sha url; do
         case "$recipe" in
@@ -114,11 +114,16 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             wayland/wlroots) pin='wlroots-0.20.2.tar.gz:972c7ac44b17828f4702bfae7cd8347346a3fb5b2c1076cfa2c3fcedac5ec343:https://gitlab.freedesktop.org/wlroots/wlroots/-/archive/0.20.2/wlroots-0.20.2.tar.gz' ;;
             x11/xkeyboard-config) pin='xkeyboard-config-2.48.tar.xz:b77041324f0109f77161ee43743fe04baa485866af8460d31e476ad3f7648fd5:https://xorg.freedesktop.org/archive/individual/data/xkeyboard-config/xkeyboard-config-2.48.tar.xz' ;;
             devel/input-headers) pin='libopeninput-1.31.3-10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz:fbba09ed60a9a411b9ae7ee5c92daf069a3b4926ad052ac8cbcfb7c3ff82abbf:https://github.com/sizeofvoid/libopeninput/archive/10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz' ;;
+            sysutils/hwdata) pin='hwdata-0.412.tar.gz:f0c64cd7e31d70a5fb3a52e53ab50a61e74c0421a6381eaa45114eec3bde5fe7:https://github.com/vcrhonek/hwdata/archive/v0.412.tar.gz' ;;
+            sysutils/seatd) pin='seatd-0.9.3.tar.gz:302564d54d8e28191fadfd734f2675ecb0c9e0615a58011b89ef15dfa4dbaa96:https://github.com/kennylevinsen/seatd/archive/refs/tags/0.9.3.tar.gz' ;;
+            x11/libdisplay-info) pin='libdisplay-info-0.4.0.tar.xz:43b180baa143e2035654759d84e2b2f5ee77d5fe817c423838c7fe59c0d68459:https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/0.4.0/downloads/libdisplay-info-0.4.0.tar.xz' ;;
+            graphics/libliftoff) pin='libliftoff-0.5.0.tar.gz:3309218c3137a70faada653690802b514e4e46d9b38e7d9d5948ffcc4831f3b1:https://gitlab.freedesktop.org/emersion/libliftoff/-/archive/v0.5.0/libliftoff-v0.5.0.tar.gz' ;;
+            devel/libopeninput) pin='libopeninput-1.31.3-10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz:fbba09ed60a9a411b9ae7ee5c92daf069a3b4926ad052ac8cbcfb7c3ff82abbf:https://github.com/sizeofvoid/libopeninput/archive/10995219206280da0f1a3ba124abe4c8ef89e021.tar.gz' ;;
             x11/libxkbcommon) pin='xkbcommon-1.13.2.tar.gz:acc4d5f7c3cbba5f9f8d08d8bdbeede84ecede46792f47929aa9321873385528:https://github.com/xkbcommon/libxkbcommon/archive/xkbcommon-1.13.2.tar.gz' ;;
         esac
         [ "$archive:$sha:$url" = "$pin" ] || { echo "Incorrect common graphics source pin: $recipe" >&2; exit 2; }
     done < "$graphics/sources.tsv"
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do
         source=$graphics/recipes/$recipe
         for name in Makefile DESCR PLIST distinfo buildlink3.mk; do
             [ -f "$source/$name" ] || { echo "Incomplete graphics recipe: $recipe/$name" >&2; exit 2; }
@@ -136,7 +141,11 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
                 approved='patch-backend_libinput_meson.build patch-render_allocator_allocator.c patch-render_drm__syncobj.c patch-render_vulkan_vulkan.c patch-software-primary-node patch-util_shm.c patch-xcursor_xcursor.c' ;;
             x11/xkeyboard-config) approved='patch-meson.build' ;;
             x11/libxkbcommon) approved='patch-meson-legacy-root' ;;
-            x11/xorgproto|devel/libudev-bsd|devel/input-headers) approved='' ;;
+            sysutils/hwdata) approved='patch-Makefile' ;;
+            sysutils/seatd) approved='patch-common_drm.c patch-common_terminal.c patch-wscons-keyboard-restore' ;;
+            x11/libdisplay-info) approved='patch-meson.build' ;;
+            devel/libopeninput) approved='patch-src_wscons.c patch-src_wscons.h patch-wscons-absolute-pointer' ;;
+            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff) approved='' ;;
         esac
         case "$recipe" in
             graphics/MesaLib|x11/libdrm|x11/xkeyboard-config)
@@ -149,7 +158,10 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         if [ "$recipe" = wayland/wlroots ]; then
             [ -f "$source/options.mk" ] || { echo 'Missing wlroots feature selection' >&2; exit 2; }
         fi
-        if [ "$recipe" = x11/libxkbcommon ]; then
+        if [ "$recipe" = sysutils/hwdata ]; then
+            [ -f "$source/native-meson.mk" ] || { echo "Missing native graphics metadata guard" >&2; exit 2; }
+        fi
+        if [ "$recipe" = x11/libxkbcommon ] || [ "$recipe" = devel/libopeninput ]; then
             [ -f "$source/Makefile.common" ] || { echo 'Missing xkbcommon common recipe' >&2; exit 2; }
         fi
         for name in $approved; do
@@ -159,7 +171,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         done
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
         case "$recipe" in
-            x11/xorgproto|devel/libudev-bsd|devel/input-headers) ;;
+            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff) ;;
             *) [ -n "$required" ] || { echo "No graphics patch checksums: $recipe" >&2; exit 2; } ;;
         esac
         actual=0
@@ -227,7 +239,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         "$destination/EMBERBSD-CROSS-MK.CONF"
 fi
 if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done

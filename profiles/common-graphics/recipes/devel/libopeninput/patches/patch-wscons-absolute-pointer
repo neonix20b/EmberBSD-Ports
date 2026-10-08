@@ -1,0 +1,170 @@
+Origin: EmberBSD, AI-assisted. Local patch; not submitted upstream.
+
+Handle NetBSD wscons absolute pointers using raw HID calibration bounds.
+
+No physical resolution is supplied by wscons: untransformed accessors use
+the same one-unit fallback convention as libinput for missing resolution.
+
+Refreshed for libopeninput 1.31.3, preserving its usec_t/time conversion.
+
+--- src/wscons.h.orig
++++ src/wscons.h
+@@ -20,6 +20,12 @@
+ 	struct TransMapRec *scanCodeMap;
+ 	int old_value;
+ 	struct {
++		struct wsmouse_calibcoords bounds;
++		struct device_coords point;
++		bool available;
++		bool pending;
++	} absolute;
++	struct {
+ 		struct libinput_device_config_accel config;
+ 		struct motion_filter *filter;
+ 	} pointer;
+--- src/wscons.c.orig
++++ src/wscons.c
+@@ -25,6 +25,7 @@
+ #include <fcntl.h>
+ #include <stdarg.h>
+ #include <stdint.h>
++#include <sys/ioctl.h>
+ #include <string.h>
+ #include <time.h>
+ 
+@@ -180,6 +181,17 @@
+ };
+ 
+ static void
++wscons_flush_absolute(struct libinput_device *device, usec_t time)
++{
++	struct wscons_device *dev = wscons_device(device);
++
++	if (dev->absolute.pending) {
++		pointer_notify_motion_absolute(device, time, &dev->absolute.point);
++		dev->absolute.pending = false;
++	}
++}
++
++static void
+ wscons_process(struct libinput_device *device, struct wscons_event *wsevent)
+ {
+ 	enum libinput_button_state bstate;
+@@ -194,6 +206,10 @@
+ 	keycode_t keycode;
+ 
+ 	time = usec_from_timespec(&wsevent->time);
++	/* NetBSD has no frame delimiter. Flush paired axes before buttons. */
++	if (wsevent->type != WSCONS_EVENT_MOUSE_ABSOLUTE_X &&
++	    wsevent->type != WSCONS_EVENT_MOUSE_ABSOLUTE_Y)
++		wscons_flush_absolute(device, time);
+ 
+ 	switch (wsevent->type) {
+ 	case WSCONS_EVENT_KEY_UP:
+@@ -280,7 +296,13 @@
+ 
+ 	case WSCONS_EVENT_MOUSE_ABSOLUTE_X:
+ 	case WSCONS_EVENT_MOUSE_ABSOLUTE_Y:
+-		//return LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE;
++		if (!dev->absolute.available)
++			break;
++		if (wsevent->type == WSCONS_EVENT_MOUSE_ABSOLUTE_X)
++			dev->absolute.point.x = wsevent->value;
++		else
++			dev->absolute.point.y = wsevent->value;
++		dev->absolute.pending = true;
+ 		break;
+ 
+ 	case WSCONS_EVENT_HSCROLL:
+@@ -340,6 +362,7 @@
+ 	for (i = 0; i < count; i++) {
+ 		wscons_process(device, &wsevents[i]);
+ 	}
++	wscons_flush_absolute(device, usec_from_timespec(&wsevents[count - 1].time));
+ }
+ 
+ static void
+@@ -627,6 +650,16 @@
+ 	if (strncmp(device->devname, "/dev/wsmouse", 12) == 0) {
+ 		/* XXX handle tablets and touchpanel */
+ 		wscons_device->capability = LIBINPUT_DEVICE_CAP_POINTER;
++		/* ums reports HID logical bounds through the calibration ioctl. */
++		if (ioctl(device->fd, WSMOUSEIO_GCALIBCOORDS,
++		    &wscons_device->absolute.bounds) == 0) {
++			struct wsmouse_calibcoords *bounds = &wscons_device->absolute.bounds;
++			wscons_device->absolute.available = bounds->maxx > bounds->minx &&
++			    bounds->maxy > bounds->miny &&
++			    bounds->samplelen == WSMOUSE_CALIBCOORDS_RESET;
++			wscons_device->absolute.point.x = bounds->minx;
++			wscons_device->absolute.point.y = bounds->miny;
++		}
+ 		wscons_init_accel(wscons_device, LIBINPUT_CONFIG_ACCEL_PROFILE_ADAPTIVE);
+ 	} else if (strncmp(device->devname, "/dev/wskbd", 10) == 0)  {
+ 		wscons_device->capability = LIBINPUT_DEVICE_CAP_KEYBOARD;
+--- src/libinput_openbsd.c.orig
++++ src/libinput_openbsd.c
+@@ -644,51 +644,56 @@
+ LIBINPUT_EXPORT double
+ libinput_event_pointer_get_absolute_x(struct libinput_event_pointer *event)
+ {
++	struct wscons_device *device = wscons_device(event->base.device);
+ 	require_event_type(libinput_event_get_context(&event->base),
+ 			   event->base.type,
+ 			   0,
+ 			   LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE);
+ 
+-	fprintf(stderr, "%s: stub\n", __func__);
+-	return (double)(-1);
++	/* wscons has no physical resolution; use one logical unit per mm. */
++	return (double)event->absolute.x - device->absolute.bounds.minx;
+ }
+ 
+ LIBINPUT_EXPORT double
+ libinput_event_pointer_get_absolute_y(struct libinput_event_pointer *event)
+ {
++	struct wscons_device *device = wscons_device(event->base.device);
+ 	require_event_type(libinput_event_get_context(&event->base),
+ 			   event->base.type,
+ 			   0,
+ 			   LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE);
+ 
+-	fprintf(stderr, "%s: stub\n", __func__);
+-	return (double)(-1);
++	return (double)event->absolute.y - device->absolute.bounds.miny;
+ }
+ 
+ LIBINPUT_EXPORT double
+ libinput_event_pointer_get_absolute_x_transformed(struct libinput_event_pointer *event,
+ 						  uint32_t width)
+ {
++	struct wscons_device *device = wscons_device(event->base.device);
++	const struct wsmouse_calibcoords *bounds = &device->absolute.bounds;
+ 	require_event_type(libinput_event_get_context(&event->base),
+ 			   event->base.type,
+ 			   0,
+ 			   LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE);
+ 
+-	fprintf(stderr, "%s: stub\n", __func__);
+-	return (double)(-1);
++	return ((double)event->absolute.x - bounds->minx) * width /
++	    ((double)bounds->maxx - bounds->minx);
+ }
+ 
+ LIBINPUT_EXPORT double
+ libinput_event_pointer_get_absolute_y_transformed(struct libinput_event_pointer *event,
+ 						  uint32_t height)
+ {
++	struct wscons_device *device = wscons_device(event->base.device);
++	const struct wsmouse_calibcoords *bounds = &device->absolute.bounds;
+ 	require_event_type(libinput_event_get_context(&event->base),
+ 			   event->base.type,
+ 			   0,
+ 			   LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE);
+ 
+-	fprintf(stderr, "%s: stub\n", __func__);
+-	return (double)(-1);
++	return ((double)event->absolute.y - bounds->miny) * height /
++	    ((double)bounds->maxy - bounds->miny);
+ }
+ 
+ LIBINPUT_EXPORT uint32_t
