@@ -1,0 +1,202 @@
+Origin: EmberBSD (AI-assisted), not submitted upstream.
+Opt-in MACHO_USE_LOAD_COMMANDS=yes resolves actual per-architecture imports from
+local runpaths for checks and metadata, without rewriting upstream binaries.
+Unresolved inherited runpaths fail explicitly in this mode.
+The default pkgsrc path remains unchanged.
+--- a/mk/check/check-shlibs-macho.awk
++++ b/mk/check/check-shlibs-macho.awk
+@@ -68,12 +68,140 @@
+ 	# work for a variety of reasons, not least if the package itself is
+ 	# already installed and its pkgsrc libraries are found before the ones
+ 	# in DESTDIR.  A package obviously can't depend on itself...
+-	if (found)
++	if (found || ENVIRON["MACHO_USE_LOAD_COMMANDS"] == "yes")
+ 		print DSO ": " lib ": " pkg " is not a runtime dependency"
+ 	close(depends_file)
+ }
+ 
+-function checkshlib(DSO,	needed, found) {
++# Resolve only load commands owned by this image. Inherited runpaths need a
++# loader graph and deliberately remain errors rather than guessed providers.
++function normalize(path,    n, parts, out, j) {
++	n = split(path, parts, "/")
++	out = ""
++	for (j = 1; j <= n; j++) {
++		if (parts[j] == "" || parts[j] == ".") continue
++		if (parts[j] == "..") sub(/\/[^\/]*$/, "", out)
++		else out = out "/" parts[j]
++	}
++	return out == "" ? "/" : out
++}
++
++function exists(path) {
++	return system("test -f " shquote(path)) == 0
++}
++
++function expand(path, loader, executable) {
++	if (path == "@loader_path") return loader
++	if (path == "@executable_path" && executable != "") return executable
++	if (path ~ /^@loader_path\//)
++		return normalize(loader "/" substr(path, 14))
++	if (path ~ /^@executable_path\// && executable != "")
++		return normalize(executable "/" substr(path, 18))
++	if (path ~ /^\//) return normalize(path)
++	return ""
++}
++
++function present(path) {
++	if (destdir != "" && exists(destdir path)) return 1
++	if (cross_destdir != "") return exists(cross_destdir path)
++	return exists(path)
++}
++
++function compatible(path, arch,    provider) {
++	if (!present(path)) return 0
++	provider = path
++	if (destdir != "" && exists(destdir path)) provider = destdir path
++	else if (cross_destdir != "") provider = cross_destdir path
++	return system("lipo -verify_arch " shquote(arch) " " shquote(provider) " >/dev/null 2>&1") == 0
++}
++
++function checkshlib(DSO,    physical, kind, command, status, archline, archs, n, i) {
++	physical = DSO
++	if (physical !~ /^\//) physical = destdir prefix "/" physical
++	physical = normalize(physical)
++	if (!exists(physical)) { print DSO ": missing input image"; return }
++	command = "file -b " shquote(physical)
++	status = (command | getline kind)
++	close(command)
++	if (status <= 0) { print DSO ": cannot determine file type"; return }
++	if (kind !~ /Mach-O/) return
++	command = "lipo -archs " shquote(physical) " 2>/dev/null"
++	status = (command | getline archline)
++	if (close(command) != 0 || status <= 0) {
++		print DSO ": cannot read image architectures"
++		return
++	}
++	n = split(archline, archs, /[[:space:]]+/)
++	for (i = 1; i <= n; i++)
++		checkimage(DSO, physical, kind, archs[i])
++}
++
++function checkimage(DSO, physical, kind, arch,    runtime, loader, executable,
++	    command, line, status, name, nneeded, nrpaths, needed, rpaths,
++	    lib, resolved, candidate, provider, i, j) {
++
++	runtime = physical
++	if (destdir != "" && index(runtime, destdir "/") == 1)
++		runtime = substr(runtime, length(destdir) + 1)
++	loader = runtime
++	sub(/\/[^\/]*$/, "", loader)
++	if (kind ~ /executable/) executable = loader
++	command = "otool -arch " shquote(arch) " -l " shquote(physical) " 2>/dev/null"
++	while ((command | getline line) > 0) {
++		if (line ~ /^[[:space:]]*cmd /) {
++			sub(/^[[:space:]]*cmd /, "", line)
++			name = line
++		} else if (name == "LC_RPATH" && line ~ /^[[:space:]]*path /) {
++			sub(/^[[:space:]]*path /, "", line)
++			sub(/ \(offset [0-9]+\)$/, "", line)
++			rpaths[++nrpaths] = line
++		} else if (name ~ /^LC_(LOAD_DYLIB|LOAD_WEAK_DYLIB|REEXPORT_DYLIB|LOAD_UPWARD_DYLIB|LAZY_LOAD_DYLIB)$/ && line ~ /^[[:space:]]*name /) {
++			sub(/^[[:space:]]*name /, "", line)
++			sub(/ \(offset [0-9]+\)$/, "", line)
++			needed[++nneeded] = line
++		}
++	}
++	status = close(command)
++	if (status != 0) {
++		print DSO ": unreadable load commands"
++		return
++	}
++	for (i = 1; i <= nneeded; i++) {
++		lib = needed[i]
++		if (skip_system_libs && lib ~ /^\/(System\/Library|usr\/lib)\//)
++			continue
++		resolved = expand(lib, loader, executable)
++		if (lib ~ /^@rpath\//) {
++			for (j = 1; j <= nrpaths; j++) {
++				candidate = expand(rpaths[j], loader, executable)
++				if (candidate == "") continue
++				candidate = normalize(candidate "/" substr(lib, 8))
++				if (compatible(candidate, arch)) { resolved = candidate; break }
++			}
++		}
++		if (resolved == "" || resolved ~ /[[:space:]]/) {
++			print DSO ": unresolved library path: " lib
++			continue
++		}
++		if (wrkdir != "" && (resolved == wrkdir || index(resolved, wrkdir "/") == 1)) {
++			print DSO ": path relative to WRKDIR: " resolved
++			continue
++		}
++		if (!present(resolved)) {
++			print DSO ": missing library: " resolved
++			continue
++		}
++		if (!compatible(resolved, arch)) {
++			print DSO ": incompatible library architecture " arch ": " resolved
++			continue
++		}
++		if (destdir == "" || !exists(destdir resolved))
++			check_pkg(DSO, resolved)
++		if (requires_file != "") print resolved >> requires_file
++	}
++}
++
++function checkshlib_legacy(DSO,	needed, found) {
+ 	cmd = "otool -XL " shquote(DSO) " 2>/dev/null"
+ 	while ((cmd | getline) > 0) {
+ 		if ($0 !~ /^\t/)
+@@ -128,10 +256,13 @@
+ BEGIN {
+ 	cross_destdir = ENVIRON["CROSS_DESTDIR"]
+ 	destdir = ENVIRON["DESTDIR"]
++	prefix = ENVIRON["PREFIX"]
++	requires_file = ENVIRON["REQUIRES_FILE"]
++	if (destdir != "") destdir = normalize(destdir)
+ 	wrkdir = ENVIRON["WRKDIR"]
+ 	pkg_info_cmd = ENVIRON["PKG_INFO_CMD"]
+ 	depends_file = ENVIRON["DEPENDS_FILE"]
+ 	skip_system_libs = ENVIRON["SKIP_SYSTEM_LIBS"]
+ }
+ 
+-{ checkshlib($0); }
++{ if (ENVIRON["MACHO_USE_LOAD_COMMANDS"] == "yes") checkshlib($0); else checkshlib_legacy($0); }
+--- a/mk/check/check-shlibs.mk
++++ b/mk/check/check-shlibs.mk
+@@ -75,6 +75,8 @@
+ CHECK_SHLIBS_NATIVE_ENV+=	CROSS_DESTDIR=${_CROSS_DESTDIR:Q}
+ CHECK_SHLIBS_NATIVE_ENV+=	PKG_INFO_CMD=${PKG_INFO:Q}
+ CHECK_SHLIBS_NATIVE_ENV+=	DEPENDS_FILE=${_RRDEPENDS_FILE:Q}
++CHECK_SHLIBS_NATIVE_ENV+=	MACHO_USE_LOAD_COMMANDS=${MACHO_USE_LOAD_COMMANDS:U:Q}
++CHECK_SHLIBS_NATIVE_ENV+=	PREFIX=${PREFIX:Q}
+ CHECK_SHLIBS_NATIVE_ENV+=	DESTDIR=${DESTDIR:Q}
+ CHECK_SHLIBS_NATIVE_ENV+=	WRKDIR=${WRKDIR:Q}
+ CHECK_SHLIBS_NATIVE_ENV+=	LANG=C
+--- a/mk/pkgformat/pkg/metadata.mk
++++ b/mk/pkgformat/pkg/metadata.mk
+@@ -119,7 +119,23 @@
+ 	Mach-O)								\
+ 		libs=`${AWK} '/\/lib.*\.dylib/ { print "${DESTDIR}${PREFIX}/" $$0 } END { exit 0 }' ${_PLIST_NOKEYWORDS}`; \
+ 		if ${TEST} "$$bins" != "" -o "$$libs" != ""; then	\
++			if ${TEST} ${MACHO_USE_LOAD_COMMANDS:U:Q}"" = yes; then \
++			: > ${WRKDIR}/.macho-requires; \
++			for image in $$bins $$libs; do ${ECHO} "$$image"; done | \
++			${PKGSRC_SETENV} MACHO_USE_LOAD_COMMANDS=yes REQUIRES_FILE=${WRKDIR}/.macho-requires \
++			    CROSS_DESTDIR=${_CROSS_DESTDIR:Q} DESTDIR=${DESTDIR:Q} \
++			    PREFIX=${PREFIX:Q} WRKDIR=${WRKDIR:Q} \
++			    SKIP_SYSTEM_LIBS=${DARWIN_NO_SYSTEM_LIBS:D1:U:Q} \
++			    PKG_INFO_CMD=${PKG_INFO:Q} DEPENDS_FILE=${_RRDEPENDS_FILE:Q} \
++			    ${AWK} -f ${PKGSRCDIR}/mk/check/check-shlibs-macho.awk \
++			    > ${WRKDIR}/.macho-requires-errors || exit 1; \
++			if ${TEST} -s ${WRKDIR}/.macho-requires-errors; then \
++				${CAT} ${WRKDIR}/.macho-requires-errors; exit 1; \
++			fi; \
++			requires=`${SORT} -u ${WRKDIR}/.macho-requires`; \
++			else \
+ 			requires=`($$ldd $$bins $$libs 2>/dev/null || ${TRUE}) | ${DARWIN_REQUIRES_FILTER} | ${AWK} '/compatibility version/ { print $$1 }' | ${SORT} -u`; \
++			fi; \
+ 		fi;							\
+ 		;;							\
+ 	PE)								\

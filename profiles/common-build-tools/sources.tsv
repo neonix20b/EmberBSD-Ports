@@ -1,4 +1,5 @@
 # archive\tSHA256\tupstream URL
+rust-bin-1.99.0/rust-1.99.0-aarch64-apple-darwin.tar.gz	f35e7c5b2cf63e67c075d323e4d6b87501219311f09744ab24caecb761c96643	https://static.rust-lang.org/dist/2026-10-01/rust-1.99.0-aarch64-apple-darwin.tar.gz
 Python-3.14.8.tar.xz	c2215904f02b175596dc49351585104f4bc20341e1c47378b26a2c274360ce73	https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz
 meson-1.12.1.tar.gz	ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743	https://github.com/mesonbuild/meson/releases/download/1.12.1/meson-1.12.1.tar.gz
 ninja-build/ninja-1.13.2.tar.gz	974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17	https://github.com/ninja-build/ninja/archive/v1.13.2.tar.gz
@@ -10,3 +11,4 @@ binutils-2.47.tar.xz	154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811
 mako-1.4.3.tar.gz	cd6537fe88d5fec315c55c2f8529bc4ce7a9a352ad7db3eeaa6a66e2dd4ec37a	https://files.pythonhosted.org/packages/5a/09/e07c4b5579a79f4b16f8d4f29f6c54514ac787c4ad506b8c4f28a0e6b0bf/mako-1.4.3.tar.gz
 markupsafe-3.0.4.tar.gz	2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6	https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8/markupsafe-3.0.4.tar.gz
 pyyaml-6.0.3.tar.gz	d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f	https://files.pythonhosted.org/packages/05/8e/961c0007c59b8dd7729d542c61a4d537767a59645b82a0b521206e1e25c2/pyyaml-6.0.3.tar.gz
+cargo-c-0.10.25.tar.gz	8054b12ae8b64259e7b63e40368406dd6b6510d5d92b658152b361c5d816a5de	https://github.com/lu-zero/cargo-c/archive/refs/tags/v0.10.25.tar.gz

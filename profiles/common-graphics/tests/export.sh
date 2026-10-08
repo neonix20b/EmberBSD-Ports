@@ -15,7 +15,7 @@ cp -R "$root/profiles/common-graphics" "$work/source/profiles/"
 ln -s "$root/.git" "$work/source/.git"
 ln -s "$root/upstream" "$work/source/upstream"
 ln -s "$root/profiles/common-media" "$work/source/profiles/common-media"
-ln -s "$root/profiles/common-build-tools" "$work/source/profiles/common-build-tools"
+cp -R "$root/profiles/common-build-tools" "$work/source/profiles/common-build-tools"
 ln -s "$root/profiles/development-toolchain" "$work/source/profiles/development-toolchain"
 ln -s "$root/probes" "$work/source/probes"
 cp -R "$root/pkgsrc" "$work/source/pkgsrc"
@@ -28,6 +28,10 @@ negative() {
     negative_count=$((negative_count + 1))
     printf 'PASS: preflight refusal %s\n' "$1"
 }
+macho=$work/source/profiles/common-build-tools/patches/pkgsrc-macho-load-commands.patch
+mv "$macho" "$work/macho-patch"
+negative missing-macho-infrastructure
+mv "$work/macho-patch" "$macho"
 pkg=$profile/recipes/graphics/MesaLib
 mv "$pkg/Makefile" "$pkg/Makefile.saved"
 negative missing-recipe
@@ -156,7 +160,7 @@ for mode in default development-toolchain common-build-tools common-graphics com
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)
-        for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
+        for recipe in lang/python314 lang/rust-bin devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
         cmp "$root/profiles/common-build-tools/mk.conf" "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF" ;;
     esac
     case "$mode" in development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile)

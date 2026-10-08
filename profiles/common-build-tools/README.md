@@ -5,9 +5,13 @@ LLVM/Clang/LLD 23.1.2 with upstream lit for the
 GCC 16 / LLVM 23 / Mesa 26 dependency closure. The [Python package](python.md)
 cross-builds on macOS and passes installed AArch64 VM consumers and 21 selected
 upstream suites. Meson/Ninja also pass installed C/C++ consumers and focused
-upstream tests in that VM. Complete LLVM packages and consumers remain pending.
-Source preparation, host contracts and focused native macro/selection checks
-pass. This is not an installed Mesa stack.
+upstream tests in that VM. The installed LLVM core and
+[Mesa consumers](../common-graphics/cross/mesa-package.md) also pass runtime
+acceptance; Clang/LLD packages remain separate gates. The export itself installs no packages.
+
+The shared [Rust 1.99 host package](rust.md) preserves upstream macOS binaries
+and repairs Mach-O dependency resolution for cargo-c/librsvg builds. Its
+[accepted target std](../../probes/rust-cross-std/README.md) still needs normal packaging.
 
 The [macOS cross-package path](cross/README.md) uses GCC16 and ordinary pkgsrc
 packaging. Pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and
@@ -238,8 +242,9 @@ WRKREF, RPATH, checksum, dependency or upstream test failures.
   installed LLVM23 and a shared-library fixture with transitive PREFIX dependencies.
   Installed C/C++ consumers, basic install-RPATH and the focused upstream group
   are [accepted in the AArch64 VM](cross/validation.md).
-- Common consumers: current setuptools/wheel/Cython dependencies, LLVM23
-  generators, Mesa26 configuration/build/tests and their ELF/runtime closure.
+- Common consumers: current setuptools/wheel/Cython dependencies and LLVM23
+  generators. Installed Mesa26 passes the graphics profile's package/runtime
+  checks; desktop consumer migration remains in that profile.
 
 Native libpython and all C++ consumers must use the selected common runtimes.
 Source/host checks do not establish those package, ELF or Mesa gates.

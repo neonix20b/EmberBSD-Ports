@@ -29,7 +29,7 @@ actual=$(git -C "$root/upstream/pkgsrc" rev-parse HEAD)
     exit 2
 }
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
+    for recipe in lang/python314 lang/rust-bin devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         [ -f "$source/Makefile" ] && [ -f "$source/PLIST" ] && \
             [ -f "$source/distinfo" ] || {
@@ -37,7 +37,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         }
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
         case "$recipe" in
-            devel/lld|devel/py-llvm-lit|devel/py-mako|textproc/py-markupsafe|textproc/py-yaml) ;;
+            lang/rust-bin|devel/lld|devel/py-llvm-lit|devel/py-mako|textproc/py-markupsafe|textproc/py-yaml) ;;
             *) [ -n "$required" ] || { echo "No patch checksums: $recipe" >&2; exit 2; } ;;
         esac
         for name in $required; do
@@ -46,7 +46,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
             }
         done
     done
-    for delta in current-libtool.patch pkgsrc-cross-packages.patch; do
+    for delta in current-libtool.patch pkgsrc-cross-packages.patch pkgsrc-macho-load-commands.patch; do
         [ -s "$root/profiles/common-build-tools/patches/$delta" ] || {
             echo "Missing common-tools infrastructure patch: $delta" >&2; exit 2;
         }
@@ -275,7 +275,7 @@ if [ "$profile" = development-toolchain ] || [ "$profile" = common-build-tools ]
         "$destination/EMBERBSD-DEVELOPMENT-MK.CONF"
 fi
 if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in lang/python314 devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
+    for recipe in lang/python314 lang/rust-bin devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do
         source=$root/profiles/common-build-tools/recipes/$recipe
         # Replace only recipe paths inside this newly created export.
         rm -rf "$destination/$recipe"
@@ -283,7 +283,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
     done
     patch -f -N -d "$destination" -p1 -F 0 < \
         "$root/profiles/common-build-tools/patches/current-python-selection.patch"
-    for delta in current-libtool.patch pkgsrc-cross-packages.patch; do
+    for delta in current-libtool.patch pkgsrc-cross-packages.patch pkgsrc-macho-load-commands.patch; do
         patch -f -N -d "$destination" -p1 -F 0 < \
             "$root/profiles/common-build-tools/patches/$delta"
     done

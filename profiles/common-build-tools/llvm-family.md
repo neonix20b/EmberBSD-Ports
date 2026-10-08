@@ -5,8 +5,9 @@ Python314 lit for the common Mesa26/TinyGo dependency closure. It extends
 [the common profile](README.md), based on pkgsrc
 `fff4deb639a1a640476203c80f752fb77b6cb14b`. The complete LLVM core package
 cross-builds on macOS and passes installed C API and ORC JITLink acceptance
-on Zero 3W. Clang/LLD packages and Mesa/TinyGo consumers remain separate
-gates; core acceptance does not establish an installed compiler family.
+on Zero 3W. [Mesa consumers](../common-graphics/cross/mesa-package.md) also pass
+installed runtime checks. Clang/LLD packages and TinyGo remain separate gates;
+core acceptance does not establish an installed compiler family.
 The `llvm-23.1.2nb1` revision also carries the shared
 [DWARF32/64 DWP package-index repair](cross/llvm-dwp-tests.md), with mixed-width,
 type-unit, live-debugger and malformed-input checks in the AArch64 VM.

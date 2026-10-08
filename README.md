@@ -121,6 +121,8 @@ runtime behavior are validated.
   session with name ownership, real method replies and error/lifecycle checks.
   A [Rust 1.99 std-only cross probe](probes/rust-cross-std/README.md) passes
   threads, TLS destructors, unwinding and C-library consumers in AArch64 VM.
+  The [shared Rust host recipe and cargo-c](profiles/common-build-tools/rust.md)
+  pass macOS installation and native C ABI checks after a Mach-O packaging repair.
   labwc client surfaces and full SVG remain separate acceptance stages.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
