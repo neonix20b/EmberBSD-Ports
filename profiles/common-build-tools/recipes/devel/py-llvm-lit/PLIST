@@ -1,7 +1,6 @@
 @comment Origin: upstream LLVM23 lit package; native wheel/check-files pending.
 bin/lit
 bin/llvm-lit
-${PYSITELIB}/${WHEEL_INFODIR}/INSTALLER
 ${PYSITELIB}/${WHEEL_INFODIR}/METADATA
 ${PYSITELIB}/${WHEEL_INFODIR}/RECORD
 ${PYSITELIB}/${WHEEL_INFODIR}/WHEEL

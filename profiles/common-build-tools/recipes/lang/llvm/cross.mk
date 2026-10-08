@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Origin: EmberBSD (AI-assisted), reuse matching build-host LLVM generators.
+# This opt-in does not change the target package's backends or development files.
+.if empty(EMBERBSD_LLVM_NATIVE_TOOLS:M/*) || !exists(${EMBERBSD_LLVM_NATIVE_TOOLS})
+PKG_FAIL_REASON+= "EMBERBSD_LLVM_NATIVE_TOOLS must name an existing absolute directory"
+.else
+.for _ember_llvm_tool in llvm-tblgen llvm-min-tblgen llvm-config
+_EMBERBSD_LLVM_NATIVE_VERSION!= if test -x ${EMBERBSD_LLVM_NATIVE_TOOLS:Q}/${_ember_llvm_tool} && \
+    ember_llvm_banner=$$(${EMBERBSD_LLVM_NATIVE_TOOLS:Q}/${_ember_llvm_tool} --version); then \
+    printf '%s\n' "$$ember_llvm_banner" | ${AWK} \
+    '/LLVM version/ { print $$NF; exit } /^[0-9]+\.[0-9]+\.[0-9]+$$/ { print; exit }'; fi
+.if ${_EMBERBSD_LLVM_NATIVE_VERSION:U} != ${LLVM_VERSION}
+PKG_FAIL_REASON+= "${_ember_llvm_tool} must execute on the build host and report LLVM ${LLVM_VERSION}"
+.endif
+.endfor
+.endif
+CMAKE_CONFIGURE_ARGS+= -DLLVM_NATIVE_TOOL_DIR:PATH=${EMBERBSD_LLVM_NATIVE_TOOLS:Q}
+CMAKE_CONFIGURE_ARGS+= -DLLVM_TABLEGEN:FILEPATH=${EMBERBSD_LLVM_NATIVE_TOOLS:Q}/llvm-tblgen
+CMAKE_CONFIGURE_ARGS+= -DLLVM_HOST_TRIPLE:STRING=${MACHINE_GNU_PLATFORM:Q}
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_SYSTEM_NAME:STRING=${OPSYS:Q}
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_SYSTEM_PROCESSOR:STRING=${MACHINE_GNU_ARCH:Q}
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_SYSROOT:PATH=${CROSS_DESTDIR:Q}
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_FIND_ROOT_PATH:STRING=${CROSS_DESTDIR:Q}\;${BUILDLINK_DIR:Q}
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM:STRING=NEVER
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY:STRING=ONLY
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE:STRING=ONLY
+CMAKE_CONFIGURE_ARGS+= -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE:STRING=ONLY

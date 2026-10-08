@@ -1,11 +1,12 @@
-# LLVM 23 source family
+# LLVM 23 common family
 
-This source stage prepares matching LLVM 23.1.2, Clang, LLD and upstream
+This profile supplies matching LLVM 23.1.2, Clang, LLD and upstream
 Python314 lit for the common Mesa26/TinyGo dependency closure. It extends
 [the common profile](README.md), based on pkgsrc
-`fff4deb639a1a640476203c80f752fb77b6cb14b`. Host source contracts pass;
-native packages, staging/check-files, LLVM23 driver behavior, JIT and
-application consumers remain pending. No installed LLVM23 toolchain is activated.
+`fff4deb639a1a640476203c80f752fb77b6cb14b`. The complete LLVM core package
+cross-builds on macOS and passes installed C API and ORC JITLink acceptance
+on Zero 3W. Clang/LLD packages and Mesa/TinyGo consumers remain separate
+gates; core acceptance does not establish an installed compiler family.
 
 ## One family and development payload
 
@@ -28,7 +29,10 @@ definitions and replacement Analysis/Clang Basic generated includes. A source-de
 contract checks all 124 outputs in these directly related generation/install rules;
 the preceding PLIST fails on 17 missing entries. llvm_gtest support, libclang.a,
 clangAnalysisLifetimeSafety and LLVMDTLTO are declared. Other generated/tool/archive
-payloads still require native staging/check-files; this is not a complete staged PLIST.
+payloads were subsequently checked against the complete LLVM core stage:
+2,789 installed entries, with conditional backend/gtest components preserved.
+Removed bugpoint and DirectXPointerTypeAnalysis entries were replaced by the
+actual LLVM23 tool/header/archive payload. Clang/LLD staging remains pending.
 Missing or unexpected files remain failures; package checks are not weakened.
 
 Standalone Clang/LLD use matching installed LLVM CMake exports and check
@@ -145,7 +149,43 @@ search order, cross/SDK optout, static and no-default-library modes. Dummy CRT
 files are never linked. AppleClang21 is comparative evidence, not native LLVM23.
 llvm-lit.sh stages actual upstream modules in a private Python314 environment,
 renames the source tree away and runs upstream shell-format PASS/FAIL without
-PYTHONPATH. FAIL must return 1. This does not establish wheel acceptance.
+PYTHONPATH. FAIL must return 1. The subsequent installed
+`py314-llvm-lit-23.1.2` package passed wheel metadata, launcher/module and
+upstream shell-format PASS/XFAIL/FAIL checks in AArch64 UTM. The
+[installed runner](cross/run-llvm-lit-tests.sh) requires the failure exit code;
+it uses the shared Python3.14 provider, without PYTHONPATH overrides.
+
+## Cross-build and accepted core
+
+Use the [common cross composition](cross/README.md) and the
+[host LLVM metadata workflow](../common-graphics/cross/llvm-config.md).
+`cross/build-llvm-native.sh` builds matching native TableGen generators;
+`EMBERBSD_LLVM_NATIVE_TOOLS` selects their absolute directory. The recipe
+checks each executable's exact version and keeps host generators separate
+from target LLVM headers and libraries. It includes upstream libc utilities
+needed by LLVM23; these are build sources, not a second installed libc.
+
+The llvm-config CMake adaptation removes only the build sysroot from reported
+target linker search paths. It does not change actual compiler/linker flags.
+Source-causal CMake and real pkgsrc selection tests cover this boundary.
+The host metadata executable uses the generated target build metadata.
+Its stage proof reproduces CMake's exact target strip operation and requires
+byte-identical output; normal install-strip remains enabled. All 16 query
+groups agree with llvm-config executed on the actual target.
+
+On 2026-10-08 the complete LLVM23.1.2 package passed ordinary pkgsrc file,
+dependency, interpreter, PIE, RELRO, RPATH and work-directory checks. Two
+inherited opt-viewer permission warnings remain; there were no check errors.
+The package retains all selected normal/experimental backends, RTTI, the
+shared library, static archives and test-development support.
+
+Installed normally on Orange Pi Zero 3W (A733), it passed
+[C API/bitcode and four default ORC JITLink lifecycles](cross/llvm-api-tests.md).
+The tests verify shared-library RTTI, real generated-function results,
+resource removal and typed missing-symbol errors. They use ordinary target
+loader paths without global PaX changes or a private LLVM runtime. This is
+focused AArch64 execution evidence, not the full LLVM upstream suite or
+acceptance of other backends, concurrent JIT or arbitrary external relocations.
 
 ## Remaining native gates
 

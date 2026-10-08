@@ -31,6 +31,8 @@ EXTRACT_ELEMENTS=	${DISTNAME}/${PKGBASE:S/wasi-//}
 EXTRACT_ELEMENTS+=	${DISTNAME}/cmake
 EXTRACT_ELEMENTS+=	${DISTNAME}/runtimes
 EXTRACT_ELEMENTS+=	${DISTNAME}/third-party
+# LLVM 23 uses libc's header-only common utilities even with runtimes off.
+EXTRACT_ELEMENTS+=	${DISTNAME}/libc
 
 .include "../../mk/bsd.prefs.mk"
 

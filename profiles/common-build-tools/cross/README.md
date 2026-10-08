@@ -4,8 +4,10 @@ This opt-in path builds ordinary NetBSD 11/AArch64 pkgsrc packages with the
 [GCC 16.2 cross compiler](../../development-toolchain/cross/README.md).
 The compiler and build tools execute on macOS; installed packages are tested
 on EmberBSD. Python, Meson and Ninja are among the
-[accepted target packages](validation.md). A complete GCC16-built OS and
-LLVM23 package acceptance remain pending.
+[accepted target packages](validation.md). LLVM23 core also passes
+[installed C API and JITLink acceptance](../llvm-family.md#cross-build-and-accepted-core)
+on Zero 3W. A complete GCC16-built base userland and compiler-family
+consumer migration remain pending.
 
 Use the `common-build-tools` export from the parent profile. It preserves the
 pinned pkgsrc revision and obtains original upstream archives with recipe
