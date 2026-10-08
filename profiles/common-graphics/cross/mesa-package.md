@@ -7,6 +7,14 @@ unchanged while a build is running. Preserve compiler output, Meson metadata,
 the final package and their input hashes; do not replace a complete build log
 with incremental output.
 
+pkgsrc's normal `install-check-version` compares the extraction cookie with
+the current package name, including `PKGREVISION`. A revision bump can trigger
+automatic cleaning and rebuilding of the existing work directory. Preserve
+the accepted package, tests and receipts first; do not assume an incremental
+restage will retain old objects, and do not disable this stale-work check.
+This occurred during the nb1-to-nb2 metadata correction; the second package
+therefore uses a fresh Mesa build rather than repackaged old build objects.
+
 On 2026-10-08, Apple Silicon macOS/GCC16 cross-built MesaLib 26.2.4nb1 with
 VirGL, softpipe, llvmpipe/shared LLVM23 ORC, X11/Wayland, EGL, GL/GLES and GBM.
 Normal package file, permission, PIE/RELRO, RPATH and work-reference checks
@@ -24,6 +32,32 @@ and reported nine upstream-disabled tests. The negative expected-VirGL check
 rejected the actual llvmpipe renderer. Runtime used the installed package
 closure, without private libraries or loader overrides.
 
+Revision nb2 corrects the private X11 requirement in `gl.pc`, `glx.pc` and
+`egl.pc` from `xfixes` to Mesa's actual `xcb-xfixes` dependency. The associated
+buildlink recipe drops unused Xlib Xdamage/Xfixes requirements. A fresh full
+pkgsrc build passes normal package checks; all eight ELF files and every
+symlink remain byte-identical to nb1. Only those three metadata files change.
+The compiler commands are byte-identical; Meson's option objects also match
+(their JSON array order changed during fresh configuration).
+
+Before the correction, the installed package's actual pkg-config lookup failed
+on missing `xfixes`. After normal sysroot upgrade, this regression checks all
+seven modules, including private requirements, and compiles the pixel consumer:
+
+```sh
+ruby ../tests/mesa-pkgconfig.rb /absolute/cross-tools /absolute/sysroot \
+    /absolute/host/bin/pkg-config /absolute/new-metadata-test-work
+```
+
+Static metadata queries do not claim that static Mesa libraries were built.
+The resulting target ELF still requires target execution. Retain nb1's accepted
+package and target evidence; identical ELF hashes permit a short installed
+payload/renderer check for this metadata update without repeating all 37 runs.
+Normal nb2 installation on Zero 3W passes its complete file/link/runtime
+manifest and four direct EGL shader/pixel lifecycles. The subsequent
+[libepoxy consumer](epoxy.md) also passes installed dynamic dispatch and its
+four selected upstream invocations against that same Mesa package.
+
 The build uses the sysroot's NetBSD zlib 1.3.1 alongside common expat 2.8.5,
 zstd 1.5.7 and LLVM 23.1.2. Vulkan drivers, Rusticl and Teflon are outside this
 classic graphics recipe. The earlier [softpipe diagnostic](README.md#temporary-headless-mesa-diagnostic)
@@ -36,7 +70,7 @@ After installing the real package into the matching sysroot, run:
 ```sh
 ruby prepare-mesa-package-tests.rb /absolute/cross-tools /absolute/sysroot \
     /absolute/prepared-mesa-26.2.4 /absolute/mesa-build \
-    /absolute/MesaLib-26.2.4nb1.tgz /absolute/new-acceptance-work
+    /absolute/MesaLib-26.2.4nb2.tgz /absolute/new-acceptance-work
 ```
 
 The helper compiles the existing EGL/GLES pixel consumer against installed

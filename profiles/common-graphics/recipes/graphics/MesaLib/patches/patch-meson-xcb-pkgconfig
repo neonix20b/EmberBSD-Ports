@@ -1,0 +1,19 @@
+$NetBSD$
+
+Origin: EmberBSD; AI-assisted installed pkg-config consumer correction.
+Not submitted upstream. Retain upstream MIT licensing.
+Mesa uses XCB XFixes, not the obsolete Xlib XFixes dependency in this list.
+Require the real provider so installed GL/EGL metadata works without libXfixes.
+This follows patch-meson-python-selection; no compiler or linker flags change.
+
+--- meson.build.orig
++++ meson.build
+@@ -2452,7 +2452,7 @@
+   gl_priv_reqs += ['x11', 'xext', 'xcb']
+ elif with_glx == 'dri'
+   gl_priv_reqs += [
+-    'x11', 'xext', 'xfixes', 'x11-xcb', 'xcb',
++    'x11', 'xext', 'xcb-xfixes', 'x11-xcb', 'xcb',
+     'xcb-glx >= 1.8.1']
+   if with_dri_platform == 'drm' or with_dri_platform == 'pseudo-drm'
+     gl_priv_reqs += 'xcb-dri2 >= 1.8'

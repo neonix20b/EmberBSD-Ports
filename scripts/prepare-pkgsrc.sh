@@ -119,7 +119,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         done
         case "$recipe" in
             graphics/MesaLib)
-                approved='patch-bin_symbols-check.py patch-dso-lifetime patch-include_c99__alloca.h patch-meson-python-selection patch-src_gallium_auxiliary_vl_vl__csc.c patch-src_util_half__float.c' ;;
+                approved='patch-bin_symbols-check.py patch-dso-lifetime patch-include_c99__alloca.h patch-meson-python-selection patch-meson-xcb-pkgconfig patch-src_gallium_auxiliary_vl_vl__csc.c patch-src_util_half__float.c' ;;
             x11/libdrm)
                 approved='patch-ac patch-amdgpu_amdgpu__cs.c patch-include_drm_drm.h patch-libsync.h patch-symbols-check.py patch-tests_nouveau_threaded.c patch-xf86drm.c patch-xf86drmMode.c patch-zz-native-identity patch-zzz-native-warnings' ;;
             devel/wayland)

@@ -1,6 +1,6 @@
 # Common graphics source packages
 
-This opt-in source profile prepares canonical MesaLib 26.2.4nb1, adapted
+This opt-in source profile prepares canonical MesaLib 26.2.4nb2, adapted
 libdrm 2.4.134nb1, Wayland 1.26.0nb1 and wayland-protocols 1.49 for
 NetBSD 11/AArch64. Native builds and the explicit
 [macOS cross composition](cross/profile.md) consume the existing
@@ -25,6 +25,15 @@ shader and pixel lifecycles through llvmpipe/LLVM23 on Zero 3W, reporting
 EGL 1.5 and GLES 3.2. All 37 upstream test invocations exit zero; utility
 tests report one internal skip and NIR nine disabled cases. Downstream
 consumer migration and visible X11/Wayland sessions remain separate gates.
+The subsequent nb2 package changes only three pkg-config files; all eight
+installed ELF files remain byte-identical. Its X11 private dependency is
+`xcb-xfixes`, matching Mesa's actual XCB provider. Obsolete Xlib Xdamage/Xfixes
+buildlink requirements are removed, allowing normal consumer configuration.
+Normal nb2 installation passes the complete payload check and four direct
+EGL lifecycles on Zero 3W. The first downstream consumer,
+[libepoxy 1.5.10nb2](cross/epoxy.md), also cross-builds and passes four real
+EGL/GLES dispatch cycles plus four selected upstream tests there. Live
+providers resolve to the installed common Mesa/LLVM closure.
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
 upstream invocations on Zero 3W with the paired kernel IPC fixes. The common
@@ -147,6 +156,10 @@ The package additionally selects the explicit build-host Python and groups
 compound-literal arguments in six colour-matrix copies for NetBSD's fortified
 `memcpy` macro. The latter preserves the matrix values and SSP checks; it is
 covered by an actual GCC16/NetBSD-header compile regression.
+The pkg-config patch replaces the stale `xfixes` requirement with the already
+selected `xcb-xfixes`. The real installed metadata failed before this change;
+all seven modules now resolve and compile an EGL/GLES/GBM consumer. Normal
+package checks and a full rebuild verify that this changes no Mesa ELF payload.
 All seven imported libdrm patches plus the three accepted symbol/identity/
 strict-warning patches remain byte-identical to
 [their owner](../../probes/wayland-utm/native-identity.md). Disabled-module

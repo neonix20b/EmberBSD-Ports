@@ -15,6 +15,9 @@ dependencies without changing the native profile.
 The full Mesa package now passes normal cross packaging and sysroot installation.
 [Installed package acceptance](mesa-package.md) prepares the EGL/GLES consumer
 and 37 upstream target invocations against its canonical runtime libraries.
+Its [libepoxy consumer](epoxy.md) passes installed EGL/GLES dynamic dispatch,
+four llvmpipe rendering lifecycles and four pure upstream tests on Zero 3W.
+Visible X11/Wayland sessions and physical GPU acceleration remain unverified.
 
 [Wayland 1.26 and protocols 1.49](wayland.md) use a matching host scanner,
 separate native metadata and the installed target libraries. Their target

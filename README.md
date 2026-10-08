@@ -72,9 +72,10 @@ runtime behavior are validated.
   The complete LLVM23 core package now passes normal packaging and installed
   [C API/bitcode and four ORC JITLink lifecycles](profiles/common-build-tools/cross/llvm-api-tests.md)
   on Zero 3W. Packaged upstream lit passes launcher and PASS/XFAIL/FAIL checks
-  in AArch64 UTM. Clang/LLD packaging and Mesa26/TinyGo consumers remain pending.
+  in AArch64 UTM. Mesa26 passes installed llvmpipe/ORC acceptance below;
+  Clang/LLD packaging and the TinyGo consumer remain pending.
 - [Common graphics source packages](profiles/common-graphics/README.md):
-  canonical MesaLib 26.2.4nb1, adapted libdrm 2.4.134nb1,
+  canonical MesaLib 26.2.4nb2, adapted libdrm 2.4.134nb1,
   Wayland 1.26.0nb1 and wayland-protocols 1.49 compose the common
   GCC16/Python314/Meson112/shared LLVM23 profile for NetBSD 11/AArch64.
   Source, export and dependency-selection checks cover X11/Wayland,
@@ -86,7 +87,14 @@ runtime behavior are validated.
   Orange Pi Zero 3W (A733). The installed
   [Wayland package](profiles/common-graphics/cross/wayland.md) passes all 26
   enabled upstream invocations there after the paired kernel IPC repairs.
-  Full Mesa packaging, consumer migration and guest GPU rendering remain unverified.
+  The full [Mesa package](profiles/common-graphics/cross/mesa-package.md) now
+  installs normally and passes four llvmpipe/LLVM23 EGL pixel lifecycles and
+  all 37 upstream invocations on Zero 3W; one internal case skips and nine
+  NIR cases remain disabled. The nb2 XCB pkg-config correction preserves
+  byte-identical Mesa libraries. Installed [libepoxy](profiles/common-graphics/cross/epoxy.md)
+  passes real dispatch through those providers and four pure upstream tests.
+  Other consumer migrations, visible sessions and guest GPU rendering remain
+  unverified.
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.
@@ -170,8 +178,8 @@ runtime behavior are validated.
   current Mesa 26.2.4 source adaptation with DSO-lifetime and numeric
   regressions, paired libdrm, wlroots and labwc recipes. Mesa26 headless
   softpipe tests now pass on A733; earlier Mesa21 native KMS/input checks
-  remain separate. The full common Mesa/LLVM build and guest VirGL runtime
-  are still pending.
+  remain separate. The installed common Mesa/LLVM package now passes CPU
+  rendering and libepoxy acceptance above. Guest VirGL runtime remains pending.
 - [UTM VirGL host source adaptations](probes/utm-virgl-host/README.md): the
   accepted upstream size-truncation fix is prepared for UTM's pinned 1.3.0
   renderer. Actual-source macOS/arm64 checks show compiled BASE RED and

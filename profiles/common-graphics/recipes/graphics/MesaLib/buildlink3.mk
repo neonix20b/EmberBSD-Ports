@@ -5,8 +5,8 @@ BUILDLINK_TREE+=	MesaLib
 .if !defined(MESALIB_BUILDLINK3_MK)
 MESALIB_BUILDLINK3_MK:=
 
-BUILDLINK_API_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb1
-BUILDLINK_ABI_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb1
+BUILDLINK_API_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb2
+BUILDLINK_ABI_DEPENDS.MesaLib+=	MesaLib>=26.2.4nb2
 BUILDLINK_PKGSRCDIR.MesaLib?=	../../graphics/MesaLib
 
 .include "../../graphics/MesaLib/features.mk"
@@ -22,9 +22,7 @@ pkgbase:= MesaLib
 
 .if ${PKG_BUILD_OPTIONS.MesaLib:Mx11}
 .  include "../../x11/libX11/buildlink3.mk"
-.  include "../../x11/libXdamage/buildlink3.mk"
 .  include "../../x11/libXext/buildlink3.mk"
-.  include "../../x11/libXfixes/buildlink3.mk"
 .  include "../../x11/libXrandr/buildlink3.mk"
 .  include "../../x11/libXxf86vm/buildlink3.mk"
 .  include "../../x11/libxcb/buildlink3.mk"

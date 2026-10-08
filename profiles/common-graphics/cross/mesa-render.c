@@ -4,9 +4,15 @@
  */
 #include <sys/types.h>
 
+#ifdef EMBER_EPOXY_DISPATCH
+#include <epoxy/egl.h>
+#include <epoxy/gl.h>
+#include <link_elf.h>
+#else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
+#endif
 #include <gbm.h>
 
 #include <fcntl.h>
@@ -14,6 +20,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifdef EMBER_EPOXY_DISPATCH
+/* NetBSD's live loader inventory includes providers opened by libepoxy. */
+static int
+loaded_library(struct dl_phdr_info *info, size_t size, void *argument)
+{
+	const char *executable = argument;
+	const char *name = info->dlpi_name;
+
+	(void)size;
+	if (name[0] == '\0' || strcmp(name, executable) == 0)
+		return 0;
+	if (strncmp(name, "/usr/pkg/", 9) != 0 &&
+	    strncmp(name, "/usr/lib/", 9) != 0 &&
+	    strncmp(name, "/lib/", 5) != 0 &&
+	    strcmp(name, "/libexec/ld.elf_so") != 0 &&
+	    strcmp(name, "/usr/libexec/ld.elf_so") != 0) {
+		fprintf(stderr, "FAIL: unexpected loaded library: %s\n", name);
+		return 1;
+	}
+	printf("LOADED: %s\n", name);
+	return 0;
+}
+#endif
 
 static void
 fail(const char *message)
@@ -140,6 +170,9 @@ main(int argc, char **argv)
 	const char *renderer;
 	int fd = -1;
 	unsigned cycle;
+#ifdef EMBER_EPOXY_DISPATCH
+	int loader_status = 0;
+#endif
 
 	if (argc != 3) {
 		fprintf(stderr, "Usage: mesa-render surfaceless|RENDER_NODE EXPECTED_RENDERER\n");
@@ -183,10 +216,19 @@ main(int argc, char **argv)
 		printf("Cycle %u: EGL %d.%d; GL %s; renderer %s\n", cycle + 1,
 		    major, minor, glGetString(GL_VERSION), renderer);
 		draw();
+#ifdef EMBER_EPOXY_DISPATCH
+		if (cycle == 0)
+			loader_status = dl_iterate_phdr(loaded_library, argv[0]);
+#endif
 		if (!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE,
 		    EGL_NO_CONTEXT) || !eglDestroyContext(display, context) ||
 		    !eglTerminate(display) || !eglReleaseThread())
 			fail("EGL cleanup");
+#ifdef EMBER_EPOXY_DISPATCH
+		/* Leave the loader callback and release the context before exit. */
+		if (loader_status != 0)
+			return 1;
+#endif
 	}
 	if (gbm != NULL)
 		gbm_device_destroy(gbm);
