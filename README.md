@@ -108,6 +108,10 @@ runtime behavior are validated.
   and enumerates two wscons input devices. All 131 selected dependency checks
   pass in the VM. Rendering remains llvmpipe; input events, VT switching,
   application surfaces and an accelerated desktop remain unverified.
+  A separate [guest VirGL check](profiles/common-graphics/cross/virgl-draw.md)
+  passes four offscreen GLES lifecycles with this same Mesa/LLVM package
+  stack and the paired ANGLE Metal host on Apple M3.
+
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
   numerical and synthetic GNSS workflows verified on AArch64.

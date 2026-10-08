@@ -46,6 +46,10 @@ EGL cleanup without changing kernel permissions. The subsequent
 All 131 selected dependency checks pass in the same isolated VM. Actual
 input events, VT switching, application surfaces, labwc and an accelerated
 session remain separate acceptance stages.
+The same installed stack also passes four [offscreen guest VirGL lifecycles](cross/virgl-draw.md)
+with the separate EMBERVIRGL kernel and paired ANGLE Metal host on Apple M3.
+This result does not qualify an accelerated compositor session.
+
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled
 upstream invocations on Zero 3W with the paired kernel IPC fixes. The common

@@ -121,3 +121,10 @@ The separate [live-backing reset check](reset.md) subsequently passed three
 actual QMP resets, four Metal renderer initializations and final quit while
 the guest retained a 2D GEM resource. It uses an isolated read-only root and
 does not extend this result to in-flight 3D commands or blocked display cleanup.
+
+## First installed guest draw
+
+The [bounded guest supervisor](run-guest-draw.rb) and [target instructions](../../../profiles/common-graphics/cross/virgl-draw.md)
+record the first four-cycle Mesa26 guest VirGL GLES acceptance on ANGLE Metal.
+The result covers offscreen shader/pixel lifecycles, not a visible compositor,
+live guest reset or general fault recovery.
