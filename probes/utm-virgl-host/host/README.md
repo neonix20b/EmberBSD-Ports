@@ -148,7 +148,13 @@ Apple M3/ANGLE Metal. A privately compiled control with DRAW_VBO count changed
 from three to zero fails the interior-pixel oracle while the background remains
 green and GL reports no error. The setup derives from the pinned renderer's
 `tests/testvirgl_encode.c` and `tests/test_virgl_cmd.c`, with their MIT notices
-preserved. This does not establish a guest Mesa driver, compositor or 3D reset.
+preserved. This does not establish a guest Mesa driver or compositor.
+
+A separate [native reset check](native-reset.md) passes three resets with
+live 3D contexts, resources, attached IOVs and an unreported fence. It checks
+old-object removal, fresh ctx0 ownership, cancelled callbacks and shader
+pixels after reusing the same IDs. The GPU may already have completed its
+work; QEMU/guest reset and DMA revocation remain separate boundaries.
 
 Each cycle also submits six command buffers through the complete decoder with
 real EGL contexts. Before the decoder fix, missing payload, truncation after a

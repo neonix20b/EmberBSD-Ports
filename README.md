@@ -218,7 +218,11 @@ runtime behavior are validated.
   classic submissions and poisoned contexts, with native checks both with and
   without upstream GL error checking. [Query results](probes/utm-virgl-host/host/query-results.md)
   reject incomplete backing and preserve delayed errors/fence ownership;
-  native Metal and causal sanitizer contracts pass. The [full paired QEMU
+  native Metal and causal sanitizer contracts pass. A separate
+  [native reset test](probes/utm-virgl-host/host/native-reset.md) passes three
+  live-resource resets, cancelled-fence checks and shader rendering after
+  ID reuse. This does not establish interruption of running GPU work or a
+  guest 3D reset. The [full paired QEMU
   recipe](probes/utm-virgl-host/qemu/README.md) also builds and passes an isolated
   2D guest boot on ANGLE Metal, including libdrm and 32 GEM/PRIME lifetimes.
   Three [real QMP resets](probes/utm-virgl-host/qemu/reset.md) with a live guest
