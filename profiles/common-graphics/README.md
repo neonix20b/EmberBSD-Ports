@@ -2,7 +2,7 @@
 
 This opt-in source profile prepares canonical MesaLib 26.2.4nb2, adapted
 libdrm 2.4.134nb1, Wayland 1.26.0nb1 and wayland-protocols 1.49 for
-NetBSD 11/AArch64. Native builds and the explicit
+EmberBSD/AArch64, retaining the NetBSD 11 ABI. Native builds and the explicit
 [macOS cross composition](cross/profile.md) consume the existing
 [common build tools](../common-build-tools/README.md): GCC16, Python3.14.8,
 Meson1.12.1 and shared LLVM23.1.2 remain one dependency graph with final
@@ -60,6 +60,10 @@ rasterization and PNG roundtrip with causal negative controls. Installed
 lookup/parser tests and actual bus ownership, method replies, errors and shutdown
 in AArch64. A [Rust 1.99 cross-std probe](../../probes/rust-cross-std/README.md)
 passes target TLS/unwind and C-library consumers for the future SVG path.
+The [GI 1.86.0 cross package](cross/introspection.md) preserves the complete
+selected payload and runs real GType queries on EmberBSD/CM5. Three unchanged
+upstream hash/search cases also pass there. Sysroot base provenance follows
+the [fork-specific requirements](../common-build-tools/cross/sysroot.md).
 labwc client surfaces and full SVG remain separate acceptance.
 
 

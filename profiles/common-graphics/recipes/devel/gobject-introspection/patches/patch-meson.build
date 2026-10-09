@@ -1,0 +1,16 @@
+$NetBSD$
+
+Keep complete target data in cross builds while using native generators.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -301,7 +301,7 @@
+ 
+ # The tests will also run, which is not possible if they
+ # were built for a different architecture.
+-if not meson.is_cross_build() and get_option('tests')
++if get_option('tests')
+   subdir('tests')
+ endif
+ 

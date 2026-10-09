@@ -1,0 +1,19 @@
+$NetBSD$
+
+Keep complete target data in cross builds while using native generators.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- tests/meson.build.orig
++++ tests/meson.build
+@@ -80,6 +80,11 @@
+   install_dir: test_install_dir,
+ )
+ 
++# Cross builds still install the public test sources generated above.
++if meson.is_cross_build()
++  subdir_done()
++endif
++
+ test_everything_headers = [test_everything_files[0]]
+ test_everything_sources = [test_everything_files[1]]
+ 

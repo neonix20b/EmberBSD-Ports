@@ -1,0 +1,18 @@
+$NetBSD$
+
+Keep complete target data in cross builds while using native generators.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- gir/meson.build.orig
++++ gir/meson.build
+@@ -514,7 +514,9 @@
+ )
+ 
+ typelibs = []
+-if get_option('gi_cross_binary_wrapper') != ''
++if get_option('gi_cross_use_prebuilt_gi')
++  gircompiler_command = [find_program('g-ir-compiler', native: true)]
++elif get_option('gi_cross_binary_wrapper') != ''
+   gircompiler_command = [get_option('gi_cross_binary_wrapper'), gircompiler.full_path(), ]
+ else
+   gircompiler_command = [gircompiler, ]

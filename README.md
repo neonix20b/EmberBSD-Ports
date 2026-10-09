@@ -123,8 +123,12 @@ runtime behavior are validated.
   threads, TLS destructors, unwinding and C-library consumers in AArch64 VM.
   The [shared Rust host recipe and cargo-c](profiles/common-build-tools/rust.md)
   pass macOS installation and native C ABI checks after a Mach-O packaging repair.
-  Their [normally installed NetBSD std](profiles/common-build-tools/rust-target-std.md)
+  Their [normally installed EmberBSD target std](profiles/common-build-tools/rust-target-std.md)
   also passes those target lifecycles and a Cargo consumer with host proc macros.
+  The [full GI package](profiles/common-graphics/cross/introspection.md) cross-builds
+  with real GType discovery and upstream hash/search checks on EmberBSD/CM5.
+  The [sysroot rules](profiles/common-build-tools/cross/sysroot.md) preserve
+  fork libc provenance and reject divergent shared-library aliases.
   labwc client surfaces and full SVG remain separate acceptance stages.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native

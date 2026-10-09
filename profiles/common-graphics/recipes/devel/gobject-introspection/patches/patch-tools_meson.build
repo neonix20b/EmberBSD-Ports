@@ -1,0 +1,32 @@
+$NetBSD: patch-tools_meson.build,v 1.3 2025/07/18 08:37:35 adam Exp $
+
+Keep the target interpreter in installed scripts and native typelib tools
+for cross generation. Extends the pkgsrc interpreter selection patch.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- tools/meson.build.orig
++++ tools/meson.build
+@@ -9,11 +9,7 @@
+   tools += [['g-ir-doc-tool', 'docmain', 'doc_main']]
+ endif
+ 
+-if not python.full_path().startswith('/usr/bin')
+-  python_cmd = '/usr/bin/env ' + python.full_path()
+-else
+-  python_cmd = '/usr/bin/env python@0@'.format(python.language_version().split('.')[0])
+-endif
++python_cmd = python.get_variable('BINDIR') / ('python' + python.language_version())
+ 
+ tool_output = []
+ foreach tool : tools
+@@ -66,7 +62,9 @@
+   install: true,
+   c_args: custom_c_args,
+ )
+-meson.override_find_program('g-ir-compiler', gircompiler)
++if not get_option('gi_cross_use_prebuilt_gi')
++  meson.override_find_program('g-ir-compiler', gircompiler)
++endif
+ 
+ girgenerate = executable('g-ir-generate', 'generate.c',
+   dependencies: [
