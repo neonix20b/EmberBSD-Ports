@@ -91,6 +91,8 @@ for every DRM driver.
 | Final output manifest | `8f066b24355e049d99a5a9d18eb41eed02fd31065a24f17e79d03bf430db5713` |
 | CPU regression guest log | `0f93ab499679fd1e01e69e0e3832090e4a4e33f0df9de69bf4735ba7999dbf6c` |
 
-Application surfaces, input-event delivery, VT switching, full labwc use,
+[The later labwc session check](labwc-session.md) covers application surfaces,
+screencopy and actual USB input in two sessions on Apple M4. This earlier
+enumeration result alone does not establish interactive input. VT switching,
 sustained operation, physical A733/CM5 GPU drivers and Vulkan Compute remain
-separate acceptance stages. Enumeration does not establish interactive input.
+separate acceptance stages.

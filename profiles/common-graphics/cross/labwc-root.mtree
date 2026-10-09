@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Origin: EmberBSD (AI-assisted), AArch64 test nodes from the fork MAKEDEV ABI.
+# Selected EMBERVIRGL kernel and ld4 root only; this is not a generic disk image.
+. type=dir uid=0 gid=0 mode=755
+./dev type=dir uid=0 gid=0 mode=755
+./dev/console type=char device=netbsd,2,0 mode=600 gid=0 uid=0
+./dev/constty type=char device=netbsd,2,1 mode=600 gid=0 uid=0
+./dev/drum type=char device=netbsd,1,0 mode=640 gid=2 uid=0
+./dev/kmem type=char device=netbsd,0,1 mode=640 gid=2 uid=0
+./dev/mem type=char device=netbsd,0,0 mode=640 gid=2 uid=0
+./dev/null type=char device=netbsd,0,2 mode=666 gid=0 uid=0
+./dev/full type=char device=netbsd,0,11 mode=666 gid=0 uid=0
+./dev/zero type=char device=netbsd,0,12 mode=666 gid=0 uid=0
+./dev/klog type=char device=netbsd,5,0 mode=600 gid=0 uid=0
+./dev/ksyms type=char device=netbsd,105,0 mode=440 gid=2 uid=0
+./dev/random type=char device=netbsd,52,0 mode=444 gid=0 uid=0
+./dev/urandom type=char device=netbsd,52,1 mode=644 gid=0 uid=0
+./dev/tty type=char device=netbsd,3,0 mode=666 gid=0 uid=0
+./dev/stdin type=char device=netbsd,34,0 mode=666 gid=0 uid=0
+./dev/stdout type=char device=netbsd,34,1 mode=666 gid=0 uid=0
+./dev/stderr type=char device=netbsd,34,2 mode=666 gid=0 uid=0
+./dev/ld4 type=block device=netbsd,92,34 mode=640 gid=5 uid=0
+./dev/rld4 type=char device=netbsd,92,34 mode=640 gid=5 uid=0
+./dev/ld4a type=block device=netbsd,92,32 mode=640 gid=5 uid=0
+./dev/ld4b type=block device=netbsd,92,33 mode=640 gid=5 uid=0
+./dev/ld4c type=block device=netbsd,92,34 mode=640 gid=5 uid=0
+./dev/ld4d type=block device=netbsd,92,35 mode=640 gid=5 uid=0
+./dev/ld4e type=block device=netbsd,92,36 mode=640 gid=5 uid=0
+./dev/ld4f type=block device=netbsd,92,37 mode=640 gid=5 uid=0
+./dev/ld4g type=block device=netbsd,92,38 mode=640 gid=5 uid=0
+./dev/ld4h type=block device=netbsd,92,39 mode=640 gid=5 uid=0
+./dev/ld4i type=block device=netbsd,92,524320 mode=640 gid=5 uid=0
+./dev/ld4j type=block device=netbsd,92,524321 mode=640 gid=5 uid=0
+./dev/ld4k type=block device=netbsd,92,524322 mode=640 gid=5 uid=0
+./dev/ld4l type=block device=netbsd,92,524323 mode=640 gid=5 uid=0
+./dev/ld4m type=block device=netbsd,92,524324 mode=640 gid=5 uid=0
+./dev/ld4n type=block device=netbsd,92,524325 mode=640 gid=5 uid=0
+./dev/ld4o type=block device=netbsd,92,524326 mode=640 gid=5 uid=0
+./dev/ld4p type=block device=netbsd,92,524327 mode=640 gid=5 uid=0
+./dev/rld4a type=char device=netbsd,92,32 mode=640 gid=5 uid=0
+./dev/rld4b type=char device=netbsd,92,33 mode=640 gid=5 uid=0
+./dev/rld4c type=char device=netbsd,92,34 mode=640 gid=5 uid=0
+./dev/rld4d type=char device=netbsd,92,35 mode=640 gid=5 uid=0
+./dev/rld4e type=char device=netbsd,92,36 mode=640 gid=5 uid=0
+./dev/rld4f type=char device=netbsd,92,37 mode=640 gid=5 uid=0
+./dev/rld4g type=char device=netbsd,92,38 mode=640 gid=5 uid=0
+./dev/rld4h type=char device=netbsd,92,39 mode=640 gid=5 uid=0
+./dev/rld4i type=char device=netbsd,92,524320 mode=640 gid=5 uid=0
+./dev/rld4j type=char device=netbsd,92,524321 mode=640 gid=5 uid=0
+./dev/rld4k type=char device=netbsd,92,524322 mode=640 gid=5 uid=0
+./dev/rld4l type=char device=netbsd,92,524323 mode=640 gid=5 uid=0
+./dev/rld4m type=char device=netbsd,92,524324 mode=640 gid=5 uid=0
+./dev/rld4n type=char device=netbsd,92,524325 mode=640 gid=5 uid=0
+./dev/rld4o type=char device=netbsd,92,524326 mode=640 gid=5 uid=0
+./dev/rld4p type=char device=netbsd,92,524327 mode=640 gid=5 uid=0
+./dev/dri type=dir mode=755 gid=0 uid=0
+./dev/dri/card0 type=char device=netbsd,180,0 mode=660 gid=0 uid=0
+./dev/dri/renderD128 type=char device=netbsd,180,128 mode=660 gid=0 uid=0
+./dev/ttyE0 type=char device=netbsd,60,0 mode=600 gid=0 uid=0
+./dev/wskbd0 type=char device=netbsd,61,0 mode=600 gid=0 uid=0
+./dev/wsmouse0 type=char device=netbsd,62,0 mode=600 gid=0 uid=0
+./dev/wsmux0 type=char device=netbsd,73,0 mode=600 gid=0 uid=0
+./dev/wsmux1 type=char device=netbsd,73,1 mode=600 gid=0 uid=0

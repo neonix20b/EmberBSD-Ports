@@ -2,15 +2,15 @@
 
 The ordinary macOS cross build produced and installed `labwc-0.20.2nb2`
 into the private EmberBSD AArch64 sysroot on 2026-10-09. The package and
-its dependency closure passed inspection. Target execution and a complete
-Wayland session remain unaccepted.
+its dependency closure passed inspection. The separate [session check](labwc-session.md)
+now passes EGL surfaces, screencopy pixels and USB input in two VirGL VM sessions.
 
 The `labwc-0.20.2nb2` recipe targets the shared wlroots 0.20.2,
 Mesa 26, LLVM 23, GLib 2.90.1 and librsvg 2.63.2 stack. It retains the
 compositor, labnag, terminal/session helpers, SVG window decorations,
 freedesktop icons, translations, configuration examples and man pages.
 EmberBSD Ports owns the recipe and cross-build checks. A working desktop
-session requires separate target acceptance.
+session is checked by the linked bounded VM scenario.
 
 The upstream [0.20.2 release](https://github.com/labwc/labwc/releases/tag/0.20.2)
 was current on 2026-10-09. Its
@@ -123,7 +123,7 @@ Package SHA256:
 `1632b0d72d9090f8ada1b5643b203256c4e12590e6e41c07706b1fe0da166aa2`.
 This records one build, not a bit-reproducibility claim.
 
-The normal upstream test option remains disabled. Client surfaces, EGL
-presentation, screen capture, real keyboard/pointer events and clean repeated
-sessions require the separate VM scenario. No compositor was started by these
-checks. They do not establish hardware GPU acceleration or a complete SDK.
+The normal upstream test option remains disabled. These package checks do not
+start a compositor. [Target session acceptance](labwc-session.md) separately
+covers EGL, screencopy, USB input and clean repeated sessions on VirGL/Metal.
+Physical GPU support and complete SDK provenance remain unaccepted.

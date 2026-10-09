@@ -137,11 +137,14 @@ runtime behavior are validated.
   The [librsvg 2.63.2 consumer](profiles/common-graphics/cross/librsvg.md)
   passes four CM5 CPU cycles with SVG/PNG pixels, dynamic loading, AVIF,
   text and typelib invocation. Its corrected isolated bundle includes
-  verified MIME data; labwc client surfaces and GPU rendering remain separate.
+  verified MIME data; this SVG result is CPU rendering.
   The [labwc 0.20.2nb2 package](profiles/common-graphics/cross/labwc.md) now
   cross-builds with SVG, icons, translations and man pages. Its 62 installed
-  payload files/links and 80 target ELF files pass inspection; a complete
-  Wayland session remains a separate acceptance step.
+  payload files/links and 80 target ELF files pass inspection.
+  Its [VirGL session check](profiles/common-graphics/cross/labwc-session.md)
+  passes two sessions on Apple M4/ANGLE Metal: four EGL frames each,
+  screencopy pixels, real virtual USB input and clean restart. This does not
+  qualify sustained desktop use or physical-board GPU acceleration.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,

@@ -1,0 +1,110 @@
+# labwc EGL, screencopy and USB input on VirGL
+
+The packaged labwc 0.20.2nb2 passes two consecutive Wayland sessions in an
+isolated EmberBSD AArch64 QEMU/HVF guest. Both compositor and native xdg-shell
+EGL client use Mesa `virgl` on the paired ANGLE Metal host. EmberBSD Ports owns
+this package acceptance harness. This is a bounded application-surface/input
+check, not a general desktop release or physical-board GPU qualification.
+
+## Inputs and preparation
+
+Use the [accepted labwc package](labwc.md), shared MesaLib 26.2.4nb2,
+wlroots 0.20.2nb4 and the [matched EMBERVIRGL/QEMU pair](wlroots-virgl.md).
+Keep the kernel's matched recovery bundle. The target base and rescue tools
+must come from the recorded EmberBSD test root. The helper verifies the known
+fork shared-libc repair, but does not certify the complete base as an SDK.
+Do not fill missing base components from upstream sets.
+
+Build the [host renderer](../../../probes/utm-virgl-host/host/README.md) and
+run its native acceptance with the exact ANGLE frameworks being used. A changed
+framework hash invalidates the previous native receipt. The 2026-10-09 run
+used freshly built renderer/epoxy and frameworks extracted from the official
+[UTM 4.7.5 DMG](https://github.com/utmapp/UTM/releases/tag/v4.7.5).
+It did not install UTM. ANGLE reports 2.1.22612 / `40dfb3a8bd65`, Metal on Apple M4.
+The earlier M3 result remains historical evidence for its own input hashes.
+
+From `profiles/common-graphics`, with new absolute work directories:
+
+```sh
+ruby cross/build-labwc-client.rb /path/to/cross-tools /path/to/sysroot \
+  /path/to/native/wayland-scanner \
+  /path/to/wlroots-0.20.2/protocol/wlr-screencopy-unstable-v1.xml \
+  /path/to/new-client
+ruby cross/prepare-labwc-root.rb /path/to/sysroot /path/to/recorded-base-root \
+  /path/to/new-client/labwc-session /path/to/cross-tools/bin/aarch64--netbsd-readelf \
+  /path/to/labwc-0.20.2nb2.tgz /path/to/new-root
+/path/to/nbmakefs -t ffs -s 768m -F cross/labwc-root.mtree \
+  /path/to/new-root/root.ffs /path/to/new-root/root
+ruby cross/run-labwc-session.rb /path/to/accepted-qemu-work \
+  /path/to/accepted-renderer-work /path/to/netbsd-EMBERVIRGL.img \
+  /path/to/new-root/root.ffs /path/to/ANGLE-frameworks /path/to/new-evidence
+ruby tests/labwc-session-oracle.rb /path/to/new-evidence/guest.log
+```
+
+The supplied base root must contain `/rescue` including init, shell, mount,
+halt and ordinary file tools; the dynamic loader and their shared dependencies;
+`/usr/bin/sha256`, `/usr/bin/timeout`, `/usr/pkg/bin/seatd`; the accepted Mesa
+DRI/GBM modules and wlroots DRM/input closure. Reuse the root prepared for
+[the DRM scenario](drm-input.md). The root builder copies it with hard links
+preserved, overlays the verified compositor/font/SVG payload and resolves
+additional ELF dependencies from the explicit sysroot. It records base,
+input and final-root hashes. No private account or application is required.
+
+The guest creates tmpfs at `/tmp`, `/var/run` and `/var/shm`. The last must have
+mode 1777: EmberBSD's POSIX shared-memory implementation checks both the
+filesystem type and permissions. Omitting it caused the first experimental
+labwc startup to fail during keymap/format-table allocation. The corrected
+boot script prepares it before starting seatd or labwc.
+
+## What is checked
+
+The client requests a fullscreen xdg-shell surface, renders four different
+EGL colors, checks its framebuffer and waits for each frame callback. It then
+uses the compositor's screencopy protocol and checks 1024 central pixels in
+each 1280x800 output. Both RGB and BGR byte orders are handled explicitly.
+The capture excludes the cursor. A framebuffer check alone is not counted
+as output capture.
+
+After all four captures, the host sends relative pointer movement, left-button
+press/release and K press/release through QMP to actual QEMU USB mouse/keyboard
+devices. The client must receive the corresponding Wayland motion, button and
+key events. Device enumeration alone does not pass. QMP uses a private Unix
+socket; no network or user disk is connected. `SEATD_VTBOUND=0` is explicit.
+
+The client destroys its EGL and Wayland objects and exits. labwc's session
+mode then terminates the compositor. The guest starts the same scenario again
+and finally stops seatd and halts. It checks 142 staged runtime ELF hashes
+before and after the sessions. The host checks both client and compositor
+renderers, per-session frame/color/input sequences, result markers, clean QEMU
+exit, host loaded-library paths and unchanged input FFS. A zero compositor
+exit without the client's success marker is rejected.
+
+The host limit is 180+5 seconds; each compositor has a 75+5 second limit and
+the client has a 55-second alarm. The log oracle regression rejects fourteen
+mutations, including software renderers, wrong pixels, missing release events,
+failed cleanup and missing runtime-integrity evidence.
+
+## Result and boundaries
+
+On 2026-10-09 the final public harness passed on Apple M4 / ANGLE Metal.
+Each of two sessions delivered four 1280x800 captures, keyboard and pointer
+events, then exited cleanly. Runtime hashes passed twice; the guest halted
+at approximately 13.9 guest seconds. The unchanged prior wlroots DRM workload
+also passed with this rebuilt host before the labwc run.
+
+| Evidence | SHA256 |
+| --- | --- |
+| Client | `adfe95840e273f6a67e59204fbb1bd59a1f6a78d570454e3e743eec59cdc7b82` |
+| Test FFS | `ed160c85cf8ec18a11131970209889d952e704477d19b0699f091e91e7088278` |
+| Guest log | `d046b40f258bd1e6da2d8e563d2394246bfd2c35cecea8172177a16050c72399` |
+| Host log | `74933816fb87d14b784e72df043529a205630b840cfeb3a75c36b8c3ed60a8f4` |
+| Output manifest | `902cc91c580968c940402f9622d27312f6122a6f0a2e3c05cb3256a14f8a5124` |
+| UTM DMG | `a8435c93cfb5f8bbfeea4b134cfad1ac66b67632b75e438c63b1a8ae043bef0e` |
+| EGL framework | `3d099577b2dad45bedc55d25971c9725e5acffa130745720ab6da052dfa2c616` |
+| GLESv2 framework | `e146b9185ed7b8a1bf45d7ec9977f38d60d6c6d286f4b3373c33d40297e8afb0` |
+
+This does not cover VT switching, Xwayland, clipboard, a desktop application
+suite, window-management interaction, sustained use, GPU reset/fault recovery,
+or A733/CM5 physical GPU acceleration. It does not exercise SVG window
+ornaments merely because SVG is included in the package. Fonts, SVG rendering
+and package contents retain their separate acceptance records.

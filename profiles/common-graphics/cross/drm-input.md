@@ -5,8 +5,8 @@ This is the next package stage after the accepted
 MesaLib 26.2.4nb2, libdrm 2.4.134nb1, Wayland 1.26.0nb1 and LLVM23 ABI.
 The installed package passes real DRM presentation with llvmpipe in an
 EMBERGPU VM and [VirGL on the paired Metal host](wlroots-virgl.md) with
-EMBERVIRGL. Physical input events and a usable labwc session remain separate
-acceptance stages.
+EMBERVIRGL. The separate [labwc session check](labwc-session.md) now verifies
+EGL surfaces, screencopy and real QEMU USB input in two repeated sessions.
 
 ## Selected sources and providers
 
