@@ -120,6 +120,9 @@ destructors. Incomplete and duplicate manifests were rejected before consumer
 execution. Target and QEMU exit statuses were zero; the root image and all
 provider hashes were unchanged. This is software-runtime VM acceptance.
 
-Canonical Rust/cargo-c packaging, librsvg's complete SVG/GIR/pixbuf package,
+The [shared Rust/cargo-c provider](../../profiles/common-build-tools/rust.md)
+and [target std package](../../profiles/common-build-tools/rust-target-std.md)
+now pass normal host installation and target consumers. This probe remains
+the source/bootstrap regression. librsvg's complete SVG/GIR/pixbuf package
 and real labwc client/input/VT acceptance remain separate steps. See the
 [desktop dependency boundary](../../profiles/common-graphics/cross/labwc-dependencies.md).

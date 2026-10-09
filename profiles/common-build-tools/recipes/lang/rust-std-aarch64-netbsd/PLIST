@@ -1,0 +1,3 @@
+@comment Target libraries are generated from the complete upstream component.
+share/licenses/rust-std-aarch64-netbsd/LICENSE-APACHE
+share/licenses/rust-std-aarch64-netbsd/LICENSE-MIT

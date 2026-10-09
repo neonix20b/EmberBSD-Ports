@@ -11,7 +11,7 @@ acceptance; Clang/LLD packages remain separate gates. The export itself installs
 
 The shared [Rust 1.99 host package](rust.md) preserves upstream macOS binaries
 and repairs Mach-O dependency resolution for cargo-c/librsvg builds. Its
-[accepted target std](../../probes/rust-cross-std/README.md) still needs normal packaging.
+[target std package](rust-target-std.md) installs into the same host sysroot and passes AArch64 VM consumers.
 
 The [macOS cross-package path](cross/README.md) uses GCC16 and ordinary pkgsrc
 packaging. Pkgconf 3.0.7, GNU M4 1.4.21, Libtool 2.6.2 and

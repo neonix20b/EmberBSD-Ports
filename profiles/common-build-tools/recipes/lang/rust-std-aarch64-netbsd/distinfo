@@ -1,0 +1,6 @@
+$NetBSD$
+
+BLAKE2s (rustc-1.99.0-src.tar.xz) = b3df0967ecf6fb817f40159123290bff1add2595a42e43d9f4f316227ea9abf3
+SHA512 (rustc-1.99.0-src.tar.xz) = 64f84f9d2c9531c85bc7d4a775abfddf4c09d852e17993d8c2ad3cf94d0a62ac72228bb452e3f3964a18bb49fa47e9a97ee7ed16ed61533717ba68164abd1fbd
+Size (rustc-1.99.0-src.tar.xz) = 265258564 bytes
+SHA1 (patch-stage0-cross-std) = d481ea728a392f074fd6c862699671f39c62609a

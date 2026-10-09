@@ -1,0 +1,5 @@
+The Rust 1.99 standard library for aarch64-unknown-netbsd, built from the
+original release sources by the installed official macOS/AArch64 compiler.
+It adds one target to that shared compiler sysroot without rebuilding rustc
+or LLVM. This is build-host target data, not an installed NetBSD compiler.
+The existing GCC16 cross toolchain and target sysroot must be supplied.

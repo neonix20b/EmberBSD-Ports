@@ -135,9 +135,9 @@ The official compiler's private LLVM 23.1.1 backend is part of this upstream
 binary distribution. It is not the target shared LLVM 23.1.2 provider used by
 Mesa and is not rebuilt here.
 
-The [Rust target std probe](../../probes/rust-cross-std/README.md) supplies the
-tested same-compiler source build and a bootstrap compatibility patch.
-Its NetBSD/AArch64 VM consumers pass TLS, unwind and C `dlopen` lifecycles.
-That source probe is not yet a normally installed target-data package for the
-shared host compiler. Full librsvg/GIR/pixbuf, labwc surfaces/input/VT and an
-installed NetBSD compiler remain separate acceptance steps.
+The [target std package](rust-target-std.md) now installs the same-compiler
+source build into this shared host sysroot. Normal package integrity and
+AArch64 VM consumers pass TLS, unwind, C `dlopen`, and a Cargo target built
+with a macOS proc macro and build script. Host Rust/LLVM bytes are unchanged.
+Full librsvg/GIR/pixbuf, labwc surfaces/input/VT and an installed NetBSD
+compiler remain separate acceptance steps.

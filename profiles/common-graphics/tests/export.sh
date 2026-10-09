@@ -28,6 +28,13 @@ negative() {
     negative_count=$((negative_count + 1))
     printf 'PASS: preflight refusal %s\n' "$1"
 }
+std=$work/source/profiles/common-build-tools/recipes/lang/rust-std-aarch64-netbsd
+mv "$std/Makefile" "$work/std-Makefile"
+negative missing-rust-target-recipe
+mv "$work/std-Makefile" "$std/Makefile"
+mv "$std/patches/patch-stage0-cross-std" "$work/std-patch"
+negative missing-rust-target-patch
+mv "$work/std-patch" "$std/patches/patch-stage0-cross-std"
 macho=$work/source/profiles/common-build-tools/patches/pkgsrc-macho-load-commands.patch
 mv "$macho" "$work/macho-patch"
 negative missing-macho-infrastructure
@@ -160,7 +167,7 @@ for mode in default development-toolchain common-build-tools common-graphics com
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)
-        for recipe in lang/python314 lang/rust-bin devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
+        for recipe in lang/python314 lang/rust-bin lang/rust-std-aarch64-netbsd devel/meson lang/llvm lang/clang devel/lld devel/py-llvm-lit devel/binutils devel/py-mako textproc/py-markupsafe textproc/py-yaml; do diff -qr "$root/profiles/common-build-tools/recipes/$recipe" "$tree/$recipe"; done
         cmp "$root/profiles/common-build-tools/mk.conf" "$tree/EMBERBSD-COMMON-TOOLS-MK.CONF" ;;
     esac
     case "$mode" in development-toolchain|common-build-tools|common-graphics|common-media|plasma-mobile)

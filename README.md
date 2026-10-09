@@ -123,6 +123,8 @@ runtime behavior are validated.
   threads, TLS destructors, unwinding and C-library consumers in AArch64 VM.
   The [shared Rust host recipe and cargo-c](profiles/common-build-tools/rust.md)
   pass macOS installation and native C ABI checks after a Mach-O packaging repair.
+  Their [normally installed NetBSD std](profiles/common-build-tools/rust-target-std.md)
+  also passes those target lifecycles and a Cargo consumer with host proc macros.
   labwc client surfaces and full SVG remain separate acceptance stages.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
