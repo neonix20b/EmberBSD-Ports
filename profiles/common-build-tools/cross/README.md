@@ -1,7 +1,9 @@
 # Cross-building common packages on macOS
 
-This opt-in path builds ordinary NetBSD 11/AArch64 pkgsrc packages with the
+This opt-in path builds EmberBSD/AArch64 pkgsrc packages with the
 [GCC 16.2 cross compiler](../../development-toolchain/cross/README.md).
+The retained NetBSD 11 ABI and `aarch64--netbsd` triplet identify compatibility,
+not an upstream OS build. Follow the [sysroot provenance rules](sysroot.md).
 The compiler and build tools execute on macOS; installed packages are tested
 on EmberBSD. Python, Meson and Ninja are among the
 [accepted target packages](validation.md). LLVM23 core also passes
@@ -18,7 +20,8 @@ checksums. The cross fixes also compose into profiles based on common tools.
 Prepare these separate directories, outside Git:
 
 - A working GCC16 cross prefix targeting `aarch64--netbsd`.
-- NetBSD host tools built on the Mac, including `aarch64--netbsd-install`.
+- Host tools from the EmberBSD source tree, built on the Mac, including
+  `aarch64--netbsd-install`.
 - A pkgsrc unprivileged macOS bootstrap with BSD make, the patched package tools,
   mksh and digest. Use the exported `pkg_install-20260227nb1` recipe: it fixes
   alternate-root replacement and suppresses target deinstall scripts during
@@ -71,7 +74,7 @@ Use the host BSD make to build a target package, for example:
 
 Pkgsrc resolves native build dependencies separately from target runtime
 packages. Add private paths for any required host tools through pkgsrc's tool
-configuration. The NetBSD target remains `/usr/pkg`. Cross `install` populates
+configuration. The EmberBSD target prefix remains `/usr/pkg`. Cross `install` populates
 the private sysroot with package scripts disabled; actual `pkg_add` on the
 target runs installation scripts, including Info registration.
 
@@ -114,7 +117,7 @@ when Libtool reconstructs its link command. Packages retain normal pkgsrc
 file, permission, RPATH and shared-library checks, and record root/wheel
 ownership rather than the Mac user's UID.
 
-The only cross runtime-tool exception is NetBSD base `install-info`, verified
+The only cross runtime-tool exception is base `install-info`, verified
 in the sysroot. Its build wrapper is a no-op and the installation script names
 `/usr/bin/install-info` on the target. Other unsupported `:run` tools still
 fail explicitly. Libtool declares GNU M4 as a target package dependency.
@@ -125,6 +128,10 @@ Run `tests/cross-pkgsrc.sh` against a staged pkgconf package. It exercises real
 pkgsrc parsing, native dependency recursion, ELF metadata and failure cases.
 `tests/cross-tools.sh` checks tool composition, refusal of existing output,
 missing host tools and the constrained target Info utility selection.
+`tests/cross-libc.rb BMAKE NEW_WORK` exercises the actual pre-extract guard:
+canonical aliases pass; four missing and four divergent libc paths fail.
+That guard detects inconsistent copies, not the origin of an otherwise
+consistent sysroot. See [the separate provenance requirement](sysroot.md).
 `tests/host-msgfmt.sh` checks the opt-in on native/cross pkgsrc configurations,
 preserved defaults and libintl, rejection of invalid tools and a real
 translated plural/context catalog consumer on the Mac host.

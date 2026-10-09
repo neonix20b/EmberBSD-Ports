@@ -31,6 +31,12 @@ probe or recipe documentation before making changes.
 - Keep experimental probes separate from validated package recipes.
   Preserve error exit statuses and do not replace missing system
   behavior with silent stubs.
+- The target OS is EmberBSD. Retained NetBSD ABI names and compiler triplets
+  are compatibility identifiers, not permission to replace EmberBSD's kernel,
+  libc, headers or drivers with upstream NetBSD components. Record sysroot
+  source revisions and artifact hashes. Do not fill missing base files from
+  upstream sets without checking fork differences; a mixed sysroot is not an
+  accepted EmberBSD SDK. Preserve upstream authorship and licenses.
 - Prefer cross-compilation on the development host, with execution and
   acceptance on the target VM or board. Use the GCC16 cross recipe where
   applicable. Keep build-host tools separate from target headers and runtime.
