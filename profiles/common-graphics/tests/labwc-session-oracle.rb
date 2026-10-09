@@ -3,9 +3,17 @@
 # Origin: EmberBSD (AI-assisted), mutate real session evidence to reject false PASS.
 require_relative '../cross/labwc-session-oracle'
 abort 'usage: labwc-session-oracle.rb ACCEPTED_GUEST_LOG' unless ARGV.size == 1
-log = File.read(ARGV[0])
+log = File.binread(ARGV[0])
 abort 'baseline rejected' unless LabwcSessionOracle.check(log, 2)
+abort 'partial UTF-8 rejected' unless LabwcSessionOracle.check(log + "\nDEBUG: \xe2\x94\n".b, 2)
 cases = {
+  'wrong window state' => log.sub('stage=2 max=1', 'stage=2 max=0'),
+  'wrong restore size' => log.sub('size=640x400', 'size=800x600'),
+  'missing window frame' => log.sub(/^WINDOW_CAPTURE: stage=2 frame=7 .*\n/, ''),
+  'wrong window pixels' => log.sub(/(WINDOW_CAPTURE:.*)rgb=255,0,0/) { Regexp.last_match(1) + 'rgb=0,0,0' },
+  'missing elapsed evidence' => log.sub(/^WINDOW_ELAPSED: stage=4.*\n/, ''),
+  'short duration' => log.sub(/WINDOW_ELAPSED: stage=4 seconds=\d+/, 'WINDOW_ELAPSED: stage=4 seconds=1'),
+  'missing window success' => log.sub(/^PASS: windowed.*\n/, ''),
   'runtime integrity missing' => log.sub('PASS: staged runtime ELF hashes', 'unchecked runtime'),
   'guest cleanup failed' => log.sub('EMBER_LABWC_RESULT=0', 'EMBER_LABWC_RESULT=1'),
   'missing frame' => log.sub(/^CAPTURE: frame=2.*\n/, ''),

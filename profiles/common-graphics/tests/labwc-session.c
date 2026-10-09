@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <wayland-client.h>
@@ -30,7 +31,10 @@ static struct wl_egl_window *window;
 static EGLDisplay egl_display;
 static EGLSurface egl_surface;
 static EGLContext context;
-static int width = 1280, height = 800, configured, cycle;
+static struct xdg_toplevel *toplevel;
+static int window_stage, window_frame, maximized, fullscreen;
+static struct timespec window_started;
+static int width = 640, height = 400, configured, cycle;
 static int key_down, key_up, button_down, button_up, motion, input_phase;
 static uint32_t format, stride, shot_width, shot_height;
 static struct wl_buffer *buffer;
@@ -50,7 +54,17 @@ configure(void *data, struct xdg_surface *xdg, uint32_t serial)
 static const struct xdg_surface_listener surface_listener = { .configure = configure };
 static void
 size(void *data, struct xdg_toplevel *top, int32_t w, int32_t h, struct wl_array *states)
-{ if (w > 0 && h > 0) { width = w; height = h; if (window) wl_egl_window_resize(window, w, h, 0, 0); } }
+{
+	uint32_t *state;
+	maximized = fullscreen = 0;
+	wl_array_for_each(state, states) {
+		if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) maximized = 1;
+		if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) fullscreen = 1;
+	}
+	if (w > 0 && h > 0) { width = w; height = h; }
+	else if (window_stage) { width = 640; height = 400; }
+	if (window) wl_egl_window_resize(window, width, height, 0, 0);
+}
 static void close_window(void *data, struct xdg_toplevel *top) { errx(1, "unexpected close"); }
 static const struct xdg_toplevel_listener top_listener = { .configure = size, .close = close_window };
 static void keymap(void *d, struct wl_keyboard *k, uint32_t f, int fd, uint32_t n) { close(fd); }
@@ -136,7 +150,7 @@ static void
 shot_ready(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t hi, uint32_t lo, uint32_t ns)
 {
 	int x, y;
-	const unsigned char *rgb = colors[cycle - 1];
+	const unsigned char *rgb = colors[window_stage ? (window_frame - 1) % 4 : cycle - 1];
 	for (y = shot_height / 2 - 16; y < (int)shot_height / 2 + 16; y++)
 		for (x = shot_width / 2 - 16; x < (int)shot_width / 2 + 16; x++) {
 			unsigned char *p = pixels + y * stride + x * 4;
@@ -145,9 +159,13 @@ shot_ready(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t hi, uint32_t lo
 			if (red != rgb[0] || p[1] != rgb[1] || blue != rgb[2])
 				errx(1, "frame %d captured pixel %d,%d is %u,%u,%u", cycle, x, y, red, p[1], blue);
 		}
-	printf("CAPTURE: frame=%d size=%ux%u pixels=1024 rgb=%u,%u,%u\n", cycle, shot_width, shot_height, rgb[0], rgb[1], rgb[2]);
+	if (!window_stage) printf("CAPTURE: frame=%d size=%ux%u pixels=1024 rgb=%u,%u,%u\n", cycle, shot_width, shot_height, rgb[0], rgb[1], rgb[2]);
 	zwlr_screencopy_frame_v1_destroy(f); wl_buffer_destroy(buffer); munmap(pixels, pixel_size);
-	if (cycle < 4) draw();
+	if (window_stage) {
+		printf("WINDOW_CAPTURE: stage=%d frame=%d surface=%dx%d pixels=1024 rgb=%u,%u,%u\n",
+		    window_stage, window_frame, width, height, rgb[0], rgb[1], rgb[2]);
+		if (window_frame < 15) { sleep(1); draw(); } else window_frame++;
+	} else if (cycle < 4) draw();
 	else { input_phase = 1; puts("READY_INPUT"); }
 }
 static const struct zwlr_screencopy_frame_v1_listener shot_listener = {
@@ -167,7 +185,7 @@ draw(void)
 {
 	unsigned char p[4];
 	struct wl_callback *callback;
-	const unsigned char *rgb = colors[cycle++];
+	const unsigned char *rgb = colors[window_stage ? window_frame++ % 4 : cycle++];
 	glViewport(0, 0, width, height);
 	glClearColor(rgb[0] / 255.0f, rgb[1] / 255.0f, rgb[2] / 255.0f, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -188,7 +206,7 @@ main(void)
 	const EGLint attributes[] = { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
 		EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_NONE };
 	const EGLint context_attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
-	setvbuf(stdout, NULL, _IONBF, 0); alarm(55);
+	setvbuf(stdout, NULL, _IONBF, 0); alarm(140);
 	display = wl_display_connect(NULL); if (!display) errx(1, "Wayland connection failed");
 	registry = wl_display_get_registry(display); wl_registry_add_listener(registry, &registry_listener, NULL);
 	if (wl_display_roundtrip(display) < 0 || !compositor || !shm || !output || !wm || !capture || !seat)
@@ -196,9 +214,9 @@ main(void)
 	xdg_wm_base_add_listener(wm, &wm_listener, NULL); wl_seat_add_listener(seat, &seat_listener, NULL);
 	if (wl_display_roundtrip(display) < 0 || !keyboard || !pointer) errx(1, "missing input capabilities");
 	surface = wl_compositor_create_surface(compositor); xdg = xdg_wm_base_get_xdg_surface(wm, surface);
-	xdg_surface_add_listener(xdg, &surface_listener, NULL); top = xdg_surface_get_toplevel(xdg);
+	xdg_surface_add_listener(xdg, &surface_listener, NULL); top = xdg_surface_get_toplevel(xdg); toplevel = top;
 	xdg_toplevel_add_listener(top, &top_listener, NULL); xdg_toplevel_set_title(top, "EmberBSD EGL acceptance");
-	xdg_toplevel_set_app_id(top, "emberbsd-labwc-acceptance"); xdg_toplevel_set_fullscreen(top, output);
+	xdg_toplevel_set_app_id(top, "emberbsd-labwc-acceptance");
 	wl_surface_commit(surface);
 	while (!configured) if (wl_display_dispatch(display) < 0) errx(1, "configure failed");
 	window = wl_egl_window_create(surface, width, height);
@@ -211,9 +229,44 @@ main(void)
 	    !eglMakeCurrent(egl_display, egl_surface, egl_surface, context)) errx(1, "EGL surface/context");
 	renderer = (const char *)glGetString(GL_RENDERER);
 	if (!renderer || strcmp(renderer, "virgl")) errx(1, "wrong renderer: %s", renderer ? renderer : "null");
-	printf("CLIENT_RENDERER: %s\n", renderer); draw();
+	printf("CLIENT_RENDERER: %s\n", renderer);
+	/* Map a normal-sized buffer first so fullscreen has restore geometry. */
+	glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+	if (!eglSwapBuffers(egl_display, egl_surface) || wl_display_roundtrip(display) < 0)
+		errx(1, "initial window map failed");
+	configured = 0; xdg_toplevel_set_fullscreen(top, output);
+	while (!configured || !fullscreen)
+		if (wl_display_dispatch(display) < 0) errx(1, "initial fullscreen failed");
+	draw();
 	while (!(key_down && key_up && button_down && button_up && motion))
 		if (wl_display_dispatch(display) < 0) errx(1, "dispatch failed");
+	clock_gettime(CLOCK_MONOTONIC, &window_started);
+	for (window_stage = 1; window_stage <= 4; window_stage++) {
+		struct timespec now;
+		configured = window_frame = 0;
+		if (window_stage == 1) xdg_toplevel_unset_fullscreen(toplevel);
+		if (window_stage == 2) xdg_toplevel_set_maximized(toplevel);
+		if (window_stage == 3) xdg_toplevel_unset_maximized(toplevel);
+		if (window_stage == 4) xdg_toplevel_set_fullscreen(toplevel, output);
+		while (!configured)
+			if (wl_display_dispatch(display) < 0) errx(1, "window configure failed");
+		if (maximized != (window_stage == 2) || fullscreen != (window_stage == 4))
+			errx(1, "wrong window state: stage=%d max=%d full=%d", window_stage, maximized, fullscreen);
+		if ((window_stage == 1 || window_stage == 3) && (width != 640 || height != 400))
+			errx(1, "window size was not restored: %dx%d", width, height);
+		if (window_stage == 2 && (width < 1000 || height < 600 || height > 800))
+			errx(1, "unexpected maximized size: %dx%d", width, height);
+		if (window_stage == 4 && (width != 1280 || height != 800))
+			errx(1, "unexpected fullscreen size: %dx%d", width, height);
+		printf("WINDOW_STATE: stage=%d max=%d full=%d size=%dx%d\n", window_stage, maximized, fullscreen, width, height);
+		draw();
+		/* Frame count advances in draw; wait for the final capture as well. */
+		while (window_frame <= 15)
+			if (wl_display_dispatch(display) < 0) errx(1, "window dispatch failed");
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		printf("WINDOW_ELAPSED: stage=%d seconds=%ld\n", window_stage, (long)(now.tv_sec - window_started.tv_sec));
+	}
+	puts("PASS: windowed/maximized/restored/fullscreen, 60 captured EGL frames");
 	eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 	eglDestroySurface(egl_display, egl_surface); eglDestroyContext(egl_display, context); eglTerminate(egl_display);
 	wl_egl_window_destroy(window); xdg_toplevel_destroy(top); xdg_surface_destroy(xdg); wl_surface_destroy(surface);

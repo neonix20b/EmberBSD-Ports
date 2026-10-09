@@ -125,5 +125,6 @@ This records one build, not a bit-reproducibility claim.
 
 The normal upstream test option remains disabled. These package checks do not
 start a compositor. [Target session acceptance](labwc-session.md) separately
-covers EGL, screencopy, USB input and clean repeated sessions on VirGL/Metal.
+covers EGL, screencopy, USB input, client-requested window state transitions
+and clean repeated sessions on VirGL/Metal.
 Physical GPU support and complete SDK provenance remain unaccepted.

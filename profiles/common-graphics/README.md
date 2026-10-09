@@ -75,7 +75,9 @@ The [labwc 0.20.2nb2 package](cross/labwc.md) cross-builds and preserves the
 selected SVG, icon, translation and documentation payload. Inspection matches
 62 installed files/links and 80 target ELF files.
 The separate [VirGL session check](cross/labwc-session.md) passes two EGL/screencopy
-and USB-input sessions on Apple M4/ANGLE Metal. Sustained desktop use and
+and USB-input sessions on Apple M4/ANGLE Metal, including 60 additional paced
+frames per session across window/maximize/restore/fullscreen transitions.
+Sustained desktop use and
 physical-board GPU acceleration remain unaccepted.
 
 

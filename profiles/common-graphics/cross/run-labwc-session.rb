@@ -89,7 +89,7 @@ begin
   reserve(work)
   pid = Process.spawn(env, *args, unsetenv_others: true, pgroup: true,
     rlimit_fsize: 64 * 1024 * 1024, out: host, err: [:child, :out])
-  deadline = clock.call + 180
+  deadline = clock.call + 340
   while clock.call < deadline
     result = Process.waitpid2(pid, Process::WNOHANG)
     if result
@@ -104,7 +104,7 @@ begin
       abort 'invalid QMP greeting' unless greeting.key?('QMP')
       qmp.call('qmp_capabilities', {})
     end
-    ready = File.file?(serial) ? File.read(serial).scan(/^READY_INPUT\r?$/).length : 0
+    ready = File.file?(serial) ? File.binread(serial).scan(/^READY_INPUT\r?$/).length : 0
     if socket && ready > injected
       abort 'unexpected input request count' unless ready == injected + 1 && ready <= 2
       qmp.call('input-send-event', {events: [
@@ -146,7 +146,7 @@ ensure
   File.write(work + '/qemu-exit.txt', "#{code}\n")
 end
 abort "QEMU did not exit successfully: #{code}" unless code == 0
-host_log, guest_log = File.read(host), File.read(serial)
+host_log, guest_log = File.read(host), File.binread(serial)
 abort 'Metal backend not selected' unless host_log.include?('ANGLE Metal Renderer: Apple')
 (libraries + framework_files).each do |path|
   abort "accepted image not loaded: #{path}" unless host_log.include?(File.realpath(path))

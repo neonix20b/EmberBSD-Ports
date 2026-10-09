@@ -58,7 +58,8 @@ boot script prepares it before starting seatd or labwc.
 
 ## What is checked
 
-The client requests a fullscreen xdg-shell surface, renders four different
+The client first maps a 640x400 normal window to establish restore geometry,
+then requests fullscreen and renders four different
 EGL colors, checks its framebuffer and waits for each frame callback. It then
 uses the compositor's screencopy protocol and checks 1024 central pixels in
 each 1280x800 output. Both RGB and BGR byte orders are handled explicitly.
@@ -71,6 +72,20 @@ devices. The client must receive the corresponding Wayland motion, button and
 key events. Device enumeration alone does not pass. QMP uses a private Unix
 socket; no network or user disk is connected. `SEATD_VTBOUND=0` is explicit.
 
+After USB input, the client requests normal, maximized, restored and fullscreen
+states in sequence through xdg-shell. Each configure must carry the expected
+maximized/fullscreen flags. Normal and restored content must be 640x400;
+fullscreen must be 1280x800. The accepted maximized content is also 1280x800:
+this client does not negotiate server decorations. Protocol state distinguishes
+maximized from fullscreen. No decoration, shortcut, drag or resize-handle
+acceptance is implied by these client requests.
+
+Each state renders 15 changing-color frames with a one-second delay between
+captures. Each capture checks 1024 output-center pixels and the client checks
+its own EGL center pixel. The host checks all 60 added captures and cumulative
+monotonic durations of at least 14/28/42/56 seconds. This is paced rendering,
+not a throughput benchmark or a sustained-stability qualification.
+
 The client destroys its EGL and Wayland objects and exits. labwc's session
 mode then terminates the compositor. The guest starts the same scenario again
 and finally stops seatd and halts. It checks 142 staged runtime ELF hashes
@@ -79,14 +94,35 @@ renderers, per-session frame/color/input sequences, result markers, clean QEMU
 exit, host loaded-library paths and unchanged input FFS. A zero compositor
 exit without the client's success marker is rejected.
 
-The host limit is 180+5 seconds; each compositor has a 75+5 second limit and
-the client has a 55-second alarm. The log oracle regression rejects fourteen
+The host limit is 340+5 seconds; each compositor has a 155+5 second limit and
+the client has a 140-second alarm. The log oracle regression rejects twenty-one
 mutations, including software renderers, wrong pixels, missing release events,
-failed cleanup and missing runtime-integrity evidence.
+failed cleanup, missing runtime-integrity evidence, wrong window states,
+geometry, capture sequences and duration.
+Serial input is read as bytes: polling can split UTF-8 debug glyphs between
+writes. The regression also accepts incomplete UTF-8 in unrelated debug text.
+Acceptance markers remain exact ASCII matches.
 
 ## Result and boundaries
 
-On 2026-10-09 the final public harness passed on Apple M4 / ANGLE Metal.
+The extended 2026-10-09 window cycle passed twice on the same matched host.
+Each session produced the original four fullscreen captures plus 60 paced
+captures across normal 640x400, maximized 1280x800, restored 640x400 and
+fullscreen 1280x800 states. Each window cycle took 61 monotonic seconds.
+The guest halted at 140.9 seconds; both runtime checks and unchanged-input
+checks passed. The oracle accepted the log and rejected 21 false-success
+mutations; incomplete UTF-8 debug text was also accepted without losing checks.
+
+| Extended evidence | SHA256 |
+| --- | --- |
+| Client | `f321c6501f0c68737bda698fc3647665471341de118b894d18f1d55684b371f1` |
+| Test FFS | `f6e389ebdbb5d943ad8dcecc1d79e3640cb695043a7005770850bcd508cde5b5` |
+| Guest log | `558131f1cad5c53533f02a2ea41d0c5078c02fd513f17dbfc081bed2a66b1f07` |
+| Host log | `0d91dfc3110823dd0a5dd4e0b1a43c1eae5f05a2b6743f27b1d6353bc42c48f5` |
+| Output manifest | `4042e3d2919b7d31be8103c5740823c1cf942b6e335a7969b3fff7124a88bfa1` |
+
+The original 2026-10-09 four-frame harness passed on Apple M4 / ANGLE Metal.
+Its historical inputs and receipts are listed below.
 Each of two sessions delivered four 1280x800 captures, keyboard and pointer
 events, then exited cleanly. Runtime hashes passed twice; the guest halted
 at approximately 13.9 guest seconds. The unchanged prior wlroots DRM workload
@@ -104,7 +140,7 @@ also passed with this rebuilt host before the labwc run.
 | GLESv2 framework | `e146b9185ed7b8a1bf45d7ec9977f38d60d6c6d286f4b3373c33d40297e8afb0` |
 
 This does not cover VT switching, Xwayland, clipboard, a desktop application
-suite, window-management interaction, sustained use, GPU reset/fault recovery,
+suite, interactive shortcuts/dragging, sustained use, GPU reset/fault recovery,
 or A733/CM5 physical GPU acceleration. It does not exercise SVG window
 ornaments merely because SVG is included in the package. Fonts, SVG rendering
 and package contents retain their separate acceptance records.

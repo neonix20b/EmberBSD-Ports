@@ -142,8 +142,9 @@ runtime behavior are validated.
   cross-builds with SVG, icons, translations and man pages. Its 62 installed
   payload files/links and 80 target ELF files pass inspection.
   Its [VirGL session check](profiles/common-graphics/cross/labwc-session.md)
-  passes two sessions on Apple M4/ANGLE Metal: four EGL frames each,
-  screencopy pixels, real virtual USB input and clean restart. This does not
+  passes two sessions on Apple M4/ANGLE Metal: 64 captured EGL frames each,
+  real virtual USB input, client-requested window/maximize/restore/fullscreen
+  transitions and clean restart. This does not
   qualify sustained desktop use or physical-board GPU acceleration.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native

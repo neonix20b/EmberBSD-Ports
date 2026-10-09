@@ -29,7 +29,7 @@ sleep 1
 result=0
 for cycle in 1 2; do
     echo "SESSION_BEGIN=$cycle"
-    timeout -k 5 75 /usr/pkg/bin/labwc -d -C /tests/labwc/config -S /tests/labwc/client
+    timeout -k 5 155 /usr/pkg/bin/labwc -d -C /tests/labwc/config -S /tests/labwc/client
     code=$?
     echo "SESSION_EXIT=$cycle,$code"
     if [ "$code" != 0 ]; then result=$code; break; fi
