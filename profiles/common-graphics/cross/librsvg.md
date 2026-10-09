@@ -24,10 +24,13 @@ Embedded AVIF, text, typelib invocation and four complete lifecycles were not
 reached and are not validated. The next diagnostic step is to print that
 GError and repeat the loader check alone. The conditional AVIF/dav1d consumer
 buildlink correction is saved; downstream labwc configure has not been rerun.
+The later malformed-CLI assertion also needs tightening before acceptance:
+its current nonzero check would accept an execution failure or signal.
 
-The exporter passed 98 refusal checks and one complete common-profile export
-before the final loader-install patch. The additional refusal and final export
-composition remain to be rerun. Full SVG runtime acceptance remains open.
+The final exporter passed 99 refusal checks and a complete common-graphics
+export. All five added recipe directories matched the exported copies byte
+for byte. Other profile compositions were not rerun at this checkpoint.
+Full SVG runtime acceptance remains open.
 
 Sources come from [GNOME](https://download.gnome.org/sources/librsvg/2.63/),
 [VideoLAN](https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/) and
