@@ -1,0 +1,39 @@
+$NetBSD$
+
+Use validated native generators and real target GType queries for cross GIRs.
+Default and native builds retain the upstream execution guard and compiler.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -2704,17 +2704,27 @@
+ # which adds a hard dependency on gobject-introspection-1.0, so we’d better
+ # check for that here.
+ gobject_introspection_required_version = '>= 1.80.0'
+-gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'), version: gobject_introspection_required_version)
++# The Ports recipe validates the native tools and the real target query runner.
++emberbsd_gi_cross = meson.is_cross_build() and meson.get_external_property('emberbsd_gi_cross', false)
++if emberbsd_gi_cross
++  gir_scanner = find_program('g-ir-scanner', native: true, required: true, version: gobject_introspection_required_version)
++  meson.override_find_program('g-ir-scanner', gir_scanner)
++else
++  gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'), version: gobject_introspection_required_version)
++endif
+ gobject_introspection = dependency('gobject-introspection-1.0', required: get_option('introspection'), version: gobject_introspection_required_version)
+-enable_gir = get_option('introspection').allowed() and gir_scanner.found() and gobject_introspection.found() and meson.can_run_host_binaries()
++enable_gir = get_option('introspection').allowed() and gir_scanner.found() and gobject_introspection.found() and (meson.can_run_host_binaries() or emberbsd_gi_cross)
+ 
+-if get_option('introspection').enabled() and not meson.can_run_host_binaries()
++if get_option('introspection').enabled() and not (meson.can_run_host_binaries() or emberbsd_gi_cross)
+   error('Running binaries on the build host needs to be supported to build with -Dintrospection=enabled')
+ endif
+ 
+ gir_args = [
+   '--quiet',
+ ]
++if emberbsd_gi_cross
++  gir_args += ['--use-ldd-wrapper=' + meson.get_external_property('emberbsd_gi_ldd_wrapper')]
++endif
+ if gobject_introspection.version().version_compare('>=1.83.2')
+   gir_args += [
+     '--doc-format=gi-docgen',

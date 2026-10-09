@@ -96,7 +96,7 @@ for dependency in devel/glib2-tools devel/glib2-introspection devel/gdbus-codege
     negative "missing-${dependency##*/}-family-recipe"
     mv "$work/family-Makefile" "$profile/recipes/$dependency/Makefile"
 done
-for entry in 'devel/glib2:patch-meson.build' 'converters/fribidi:patch-bin_Makefile.in' 'archivers/lzo:patch-src_lzo1f__d.ch' 'x11/libXt:patch-util_Makefile.in'; do
+for entry in 'devel/glib2:patch-meson.build' 'devel/glib2:patch-meson_gir-cross.build' 'devel/glib2:patch-girepository_compiler_meson.build' 'converters/fribidi:patch-bin_Makefile.in' 'archivers/lzo:patch-src_lzo1f__d.ch' 'x11/libXt:patch-util_Makefile.in'; do
     dependency=${entry%:*}
     name=${entry#*:}
     cp "$profile/recipes/$dependency/distinfo" "$work/new-dependency-distinfo"

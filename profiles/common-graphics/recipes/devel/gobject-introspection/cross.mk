@@ -12,9 +12,13 @@ PKG_FAIL_REASON+= "${_input} must name an existing absolute file without shell m
 .endfor
 # Cross dependency traversal builds the native tool package independently.
 TOOL_DEPENDS+= gobject-introspection>=1.86.0nb4:../../devel/gobject-introspection
+EMBERBSD_GI_FILESDIR?= ${.CURDIR}/../../devel/gobject-introspection/files
+# Consumers share the launcher and native machine file, but not GI's options.
+.if ${EMBERBSD_GI_MESON_OPTIONS:Uyes:tl} == "yes"
 MESON_ARGS+= -Dgi_cross_use_prebuilt_gi=true
-MESON_ARGS+= -Dgi_cross_ldd_wrapper=${FILESDIR}/elf-needed.sh
-MAKE_ENV+= GI_CROSS_LAUNCHER=${EMBERBSD_GI_RUBY:Q}\ ${FILESDIR:Q}/target-query.rb
+MESON_ARGS+= -Dgi_cross_ldd_wrapper=${EMBERBSD_GI_FILESDIR}/elf-needed.sh
+.endif
+MAKE_ENV+= GI_CROSS_LAUNCHER=${EMBERBSD_GI_RUBY:Q}\ ${EMBERBSD_GI_FILESDIR:Q}/target-query.rb
 MAKE_ENV+= EMBERBSD_GI_QUERY_CONFIG=${EMBERBSD_GI_QUERY_CONFIG:Q}
 MAKE_ENV+= EMBERBSD_GI_READELF=${TOOLDIR:Q}/bin/aarch64--netbsd-readelf
 MESON_NATIVE_ARGS+= --native-file ${WRKDIR}/.meson-gi-native
@@ -22,7 +26,7 @@ MESON_NATIVE_ARGS+= --native-file ${WRKDIR}/.meson-gi-native
 pre-configure: emberbsd-gi-native
 .PHONY: emberbsd-gi-native
 emberbsd-gi-native:
-	${RUN}${SETENV} EMBERBSD_GI_QUERY_CONFIG=${EMBERBSD_GI_QUERY_CONFIG:Q} ${EMBERBSD_GI_RUBY} ${FILESDIR}/target-query.rb --check ${WRKDIR} ${CROSS_DESTDIR} ${TOOLDIR}/bin/aarch64--netbsd-readelf
+	${RUN}${SETENV} EMBERBSD_GI_QUERY_CONFIG=${EMBERBSD_GI_QUERY_CONFIG:Q} ${EMBERBSD_GI_RUBY} ${EMBERBSD_GI_FILESDIR}/target-query.rb --check ${WRKDIR} ${CROSS_DESTDIR} ${TOOLDIR}/bin/aarch64--netbsd-readelf
 	${RUN}${TEST} -x ${TOOLBASE}/bin/g-ir-scanner && ${TEST} -x ${TOOLBASE}/bin/g-ir-compiler
 	${RUN}version=$$(env PKG_CONFIG_SYSROOT_DIR= PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=${TOOLBASE}/lib/pkgconfig:${TOOLBASE}/share/pkgconfig ${TOOLBASE}/bin/pkg-config --modversion gobject-introspection-1.0); ${TEST} "$$version" = 1.86.0
 	${RUN}${PRINTF} '%s\n' '[binaries]' \

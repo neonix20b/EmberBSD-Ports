@@ -3,6 +3,7 @@
 .include "../../devel/glib2/Makefile.common"
 
 PKGNAME=	glib2-introspection-${DISTNAME:S/^glib-//}
+PKGREVISION=	1
 CATEGORIES=	devel gnome
 
 COMMENT=	Introspection data for glib2
@@ -21,6 +22,27 @@ MESON_ARGS+=	-Dlocalstatedir=${VARBASE}
 MESON_ARGS+=	-Druntime_dir=${VARBASE}/run
 
 .include "../../mk/bsd.prefs.mk"
+
+EMBERBSD_GI_MESON_OPTIONS=	no
+.include "../../devel/gobject-introspection/cross.mk"
+.if ${USE_CROSS_COMPILE:Uno:tl} == "yes"
+TOOL_DEPENDS+=	glib2>=${PKGVERSION_NOREV}:../../devel/glib2
+# Use the same target libc contract as the matching glib2 library recipe.
+MESON_CROSS_OPSYS_VARS+=	have_c99_snprintf have_c99_vsnprintf have_strlcpy have_unix98_printf
+MESON_CROSS.NetBSD.have_c99_snprintf=	true
+MESON_CROSS.NetBSD.have_c99_vsnprintf=	true
+MESON_CROSS.NetBSD.have_strlcpy=	true
+MESON_CROSS.NetBSD.have_unix98_printf=	true
+MESON_CROSS_VARS+=	emberbsd_gi_cross emberbsd_gi_ldd_wrapper emberbsd_gi_compiler
+MESON_CROSS.emberbsd_gi_cross=	true
+MESON_CROSS.emberbsd_gi_ldd_wrapper=	'${EMBERBSD_GI_FILESDIR}/elf-needed.sh'
+MESON_CROSS.emberbsd_gi_compiler=	'${TOOLBASE}/bin/gi-compile-repository'
+pre-configure: emberbsd-glib-compiler
+.PHONY: emberbsd-glib-compiler
+emberbsd-glib-compiler:
+	${RUN}${TEST} -x ${TOOLBASE}/bin/gi-compile-repository
+	${RUN}version=$$(${TOOLBASE}/bin/gi-compile-repository --version); ${TEST} "$$version" = 'gi-compile-repository ${PKGVERSION_NOREV}'
+.endif
 
 .if !empty(PKG_OPTIONS.glib2:Mcocoa)
 MESON_ARGS+=	-Duse_cocoa=true
@@ -65,7 +87,7 @@ TYPELIB_TARGETS+=	girepository/introspection/GObject-2.0.typelib
 TYPELIB_TARGETS+=	girepository/introspection/Gio-2.0.typelib
 TYPELIB_TARGETS+=	girepository/introspection/GioUnix-2.0.typelib
 
-MESON_BUILD_TARGET=	${GIR_ARGETS} ${TYPELIB_TARGETS}
+MESON_BUILD_TARGET=	${GIR_TARGETS} ${TYPELIB_TARGETS}
 MESON_INSTALL=		no
 
 INSTALLATION_DIRS=	lib/girepository-1.0 share/gir-1.0
@@ -84,7 +106,7 @@ do-install:
 
 .include "../../converters/libiconv/buildlink3.mk"
 .include "../../devel/gettext-lib/buildlink3.mk"
-BUILDLINK_API_DEPENDS.gobject-introspection+=	gobject-introspection>=1.86.0nb3
+BUILDLINK_API_DEPENDS.gobject-introspection+=	gobject-introspection>=1.86.0nb5
 .include "../../devel/gobject-introspection/buildlink3.mk"
 .include "../../devel/libffi/buildlink3.mk"
 .include "../../devel/meson/build.mk"

@@ -127,6 +127,8 @@ runtime behavior are validated.
   also passes those target lifecycles and a Cargo consumer with host proc macros.
   The [full GI package](profiles/common-graphics/cross/introspection.md) cross-builds
   with real GType discovery and upstream hash/search checks on EmberBSD/CM5.
+  Matching GLib 2.90.1 metadata now cross-builds all seven GIR/typelib pairs
+  and passes target loading and introspection/libffi invocation on CM5.
   The [sysroot rules](profiles/common-build-tools/cross/sysroot.md) preserve
   fork libc provenance and reject divergent shared-library aliases.
   labwc client surfaces and full SVG remain separate acceptance stages.

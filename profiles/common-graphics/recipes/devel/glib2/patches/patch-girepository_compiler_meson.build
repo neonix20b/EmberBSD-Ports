@@ -1,0 +1,20 @@
+$NetBSD$
+
+Use validated native generators and real target GType queries for cross GIRs.
+Default and native builds retain the upstream execution guard and compiler.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- girepository/compiler/meson.build.orig
++++ girepository/compiler/meson.build
+@@ -31,5 +31,10 @@
+ if enable_gir
+   # Replace the default g-ir-compiler target with the version we
+   # just built.
++  if emberbsd_gi_cross
++    gir_compiler = find_program(meson.get_external_property('emberbsd_gi_compiler'), native: true, required: true)
++    meson.override_find_program('g-ir-compiler', gir_compiler)
++  else
+-  meson.override_find_program('g-ir-compiler', gicompilerepository)
++    meson.override_find_program('g-ir-compiler', gicompilerepository)
++  endif
+ endif

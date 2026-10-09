@@ -161,11 +161,11 @@ AArch64 VM. The eventual labwc client/compositor scenario remains separate
 acceptance. The matching APNG patch is retained, but this package run used the
 unchanged default without APNG; it does not establish APNG runtime support.
 
-The stock cross selections for introspection remain explicit. GLib 2.90.1
-requires the ability to run target binaries when introspection is enabled.
-Host Darwin introspection output is not target metadata. Full SVG also needs
-the current librsvg provider and its accepted Rust/tooling closure. These are
-not replaced with an older library or silently claimed complete here.
+The separate [GLib introspection package](introspection.md#glib-2901-metadata-package)
+now cross-builds all seven GIR/typelib pairs with native generators and real
+target GType queries. Its installed metadata passes four load/invoke cycles on
+CM5. Full SVG still needs the current librsvg provider and its accepted
+Rust/tooling closure; that application acceptance remains separate.
 
 ## Installed text and PNG acceptance
 

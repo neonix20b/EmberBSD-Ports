@@ -4,8 +4,8 @@ The graphics profile supplies `gobject-introspection-1.86.0nb5`, built on
 macOS for EmberBSD/AArch64 with GCC16, Python 3.14.8 and GLib 2.90.1.
 Its complete selected pkgsrc payload is preserved: library, tools, Python
 scanner extension, GIRepository GIR/typelib, headers and test sources.
-The GLib-family GIR files belong to the separate `glib2-introspection` package;
-building them here does not install that separate package.
+The GLib-family GIR files belong to the separate `glib2-introspection` package.
+Its current 2.90.1nb1 cross package and target metadata checks are described below.
 
 The original [GNOME archive](https://download.gnome.org/sources/gobject-introspection/1.86/gobject-introspection-1.86.0.tar.xz)
 has SHA256 `920d1a3fcedeadc32acff95c2e203b319039dd4b4a08dd1a2dfd283d19c0b9ae`.
@@ -87,6 +87,51 @@ transport fixture publishes it only at the end. These transport fixtures are
 separate from the actual CM5 execution. `tests/export.sh NEW_WORK` checks all
 six profile compositions and the required recipe, helper and patch inputs.
 The final export passed all six compositions and 75 preflight refusals.
+
+## GLib 2.90.1 metadata package
+
+`glib2-introspection-2.90.1nb1` supplies all seven GIR/typelib pairs: GLib,
+GLibUnix, GObject, GModule, Gio, GioUnix and GIRepository 3.0. Build its normal
+`package install` targets with the same cross configuration and a query JSON
+whose `build_root` contains its new work directory. Installation populates the
+private cross sysroot; it does not install anything on the query target.
+
+The recipe reuses GI's native machine file, configuration validation, ELF
+inspection and target-query runner. Two GLib patches permit this explicit
+cross path and select the matching native `gi-compile-repository` 2.90.1.
+The ordinary upstream cross refusal and native compiler selection remain.
+The recipe also carries the same target libc printf/strlcpy properties as
+`glib2`, and fixes its misspelled GIR build-target variable. Upstream Python
+remains a generator dependency; these changes add no project Python helper.
+
+Normal packaging and cross-sysroot installation pass with all 14 payload files.
+Seven real GType queries ran on EmberBSD/AArch64 CM5 in temporary directories.
+All query exits and cleanup statuses were zero. Package SHA256:
+`9c577a6a88dddc170ba98e76fa8cbe175494590c87d94ed6a5afd18df3ca0b0a`.
+
+The selection regression extracts the actual patched Meson code. It checks
+default cross refusal, explicit cross generators, unchanged native behavior,
+and all 14 generated package rules. The target consumer verifies that installed
+typelib bytes match the archive, then embeds those exact bytes in an ELF fixture.
+Four CM5 cycles load all seven namespaces and invoke `g_get_monotonic_time`
+through introspection/libffi with a checked return value. Malformed metadata
+and an incorrect argument count are rejected. This checks target metadata
+loading and invocation, not the complete GLib or installed scanner test suites.
+
+```sh
+ruby tests/glib-introspection-cross.rb /path/to/built/glib-2.90.1 \
+  /path/to/native-host-prefix /path/to/cross-tools/bin/aarch64--netbsd-gcc \
+  /path/to/new-selection-check
+ruby tests/prepare-glib-typelib.rb /path/to/cross-tools /path/to/sysroot \
+  /path/to/glib2-introspection-2.90.1nb1.tgz /path/to/work/new-typelib-check
+EMBERBSD_GI_QUERY_CONFIG=/path/to/private/query.json ruby \
+  recipes/devel/gobject-introspection/files/target-query.rb \
+  /path/to/work/new-typelib-check/glib-typelib
+```
+
+Run these commands from `profiles/common-graphics`. The consumer work directory
+must be inside the JSON's `build_root`; the existing runner enforces that bound.
+The exporter has two additional missing-patch refusal controls for this change.
 
 The installed target Python scanner and its complete upstream suite have not
 yet been accepted on a board. Full current librsvg, its CLI/pixbuf integration,
