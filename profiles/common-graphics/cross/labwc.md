@@ -1,9 +1,9 @@
-# labwc 0.20.2 cross-package work in progress
+# labwc 0.20.2 cross package
 
-**Work in progress:** the recipe and selection checks are prepared.
-The first ordinary configuration failed at the librsvg dependency.
-No labwc package, installation or target session is accepted by this stage.
-Work stopped at the user's requested checkpoint before another configure run.
+The ordinary macOS cross build produced and installed `labwc-0.20.2nb2`
+into the private EmberBSD AArch64 sysroot on 2026-10-09. The package and
+its dependency closure passed inspection. Target execution and a complete
+Wayland session remain unaccepted.
 
 The `labwc-0.20.2nb2` recipe targets the shared wlroots 0.20.2,
 Mesa 26, LLVM 23, GLib 2.90.1 and librsvg 2.63.2 stack. It retains the
@@ -79,6 +79,7 @@ ruby tests/labwc-cross.rb /path/to/labwc-0.20.2.tar.gz \
   /path/to/native-prefix /path/to/new-feature-check
 BMAKE=/path/to/native-prefix/bin/bmake ruby tests/labwc-options.rb \
   /path/to/exported-pkgsrc /path/to/private/mk.conf /path/to/new-options-check
+ruby tests/labwc-package.rb --rpath-regression
 ruby tests/labwc-package.rb /path/to/labwc-0.20.2nb2.tgz \
   /path/to/sysroot /path/to/cross-tools/bin/aarch64--netbsd-readelf \
   /path/to/built/labwc-0.20.2 /path/to/new-package-check
@@ -93,64 +94,36 @@ The package check compares every installed payload file with the archive,
 checks the configured features and inspects the target ELF dependency closure.
 Static ELF inspection does not prove which providers a target process loads.
 
-The source/feature and recipe-option checks passed. The package inspection
-helper has only passed a Ruby syntax check; it has not run on a labwc package.
-The recipe has not yet been added to the shared exporter/source registry;
-the current `common-graphics` export does not include this labwc overlay.
+The source/feature and recipe-option checks passed with the rebuilt host
+tools. Package inspection matched all 62 installed files/links and inspected
+80 AArch64 ELF files. It checks the exact wlroots SONAME, which has no extra
+ABI suffix. The RPATH regression allows the accepted GCC/Mesa/LLVM inherited
+paths only for those providers and rejects host paths and consumer leaks.
+The shared exporter and source registry include this labwc overlay.
+Export preflight requires its source pin, feature options, session helper
+and all four patches. Exporting the recipe does not establish a working session.
 
-## Checkpoint and continuation
+## Package acceptance and remaining session
 
-The first ordinary `bmake configure` found the selected wlroots, Wayland,
-GLib, Cairo, Pango and input providers. It stopped with:
+The first configuration failed because librsvg's `Requires.private` named
+its AVIF dependency dav1d without exposing it through buildlink. The conditional
+librsvg buildlink correction resolves this in a fresh work directory. The
+successful build reused the accepted target libraries; it did not rebuild
+librsvg or dav1d and did not add a private pkg-config search path.
 
-```text
-Package 'dav1d', required by 'librsvg-2.0', not found
-ERROR: Dependency lookup for librsvg-2.0 with method 'pkg-config' failed
-```
+Ordinary `configure`, `package` and private-sysroot `install` passed with GCC16,
+Meson 1.12.1 and native Wayland scanner 1.26.0. pkgsrc passed its PLIST, file,
+permission, PIE, RELRO, runtime search path and work-reference checks.
+The package keeps the compositor, labnag, helpers, six man pages, translations,
+configuration examples, SVG and icon support. Xwayland is explicitly disabled.
+The shared exporter passed 107 refusal checks and full composition across
+all six profiles, including source pins, required patches and temporary cleanup.
 
-The installed librsvg 2.63.2 metadata declares dav1d in `Requires.private`.
-Dav1d is installed in the sysroot, but the then-current
-[librsvg buildlink recipe](../recipes/graphics/librsvg/buildlink3.mk)
-did not expose it in a downstream package's `.buildlink` metadata directory.
-The correction belongs to librsvg: admit its selected AVIF dependency using
-the installed package options. Adding a private search path to labwc would
-conceal the incomplete dependency declaration.
-
-The librsvg owner has prepared the conditional AVIF buildlink correction in
-the public recipe and working pkgsrc copy. This labwc checkpoint does not
-claim a successful configure after it. To continue, verify that correction
-in the exported recipe, retain the failed work/log as evidence, select a new
-work directory and rerun ordinary `configure`, then `package install`.
-Keep `PKG_OPTIONS.labwc=-xwayland` with the current accepted wlroots provider.
-For example, extend the existing private cross configuration:
-
-```make
-.include "/path/to/private/mk.conf"
-WRKOBJDIR=/absolute/new-labwc-work
-MAKE_JOBS=1
-PKG_OPTIONS.labwc= -xwayland
-```
-
-Save that as a new MAKECONF and run:
-
-```sh
-TMPDIR=/absolute/external-tmp bmake \
-  -C /path/to/prepared-pkgsrc/wayland/labwc \
-  MAKECONF=/path/to/private/labwc-next.mk.conf configure
-TMPDIR=/absolute/external-tmp bmake \
-  -C /path/to/prepared-pkgsrc/wayland/labwc \
-  MAKECONF=/path/to/private/labwc-next.mk.conf package install
-```
-
-The prepared pkgsrc tree must contain this WIP overlay and the corrected
-librsvg buildlink recipe. The new work directory makes ordinary pkgsrc
-regenerate buildlink metadata and wrappers. The installed current libraries
-are reused; rebuilding librsvg, dav1d or the compiler is not the required fix.
-Run the package inspection helper only after successful packaging and private
-sysroot installation. Missing NetBSD portability/link dependencies may still
-surface during compilation; the current checkpoint has not tested them.
+Package SHA256:
+`1632b0d72d9090f8ada1b5643b203256c4e12590e6e41c07706b1fe0da166aa2`.
+This records one build, not a bit-reproducibility claim.
 
 The normal upstream test option remains disabled. Client surfaces, EGL
 presentation, screen capture, real keyboard/pointer events and clean repeated
-sessions require the separate VM scenario. None of these package checks
-establishes hardware GPU acceleration.
+sessions require the separate VM scenario. No compositor was started by these
+checks. They do not establish hardware GPU acceleration or a complete SDK.

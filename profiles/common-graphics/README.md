@@ -69,7 +69,12 @@ preserve thirteen raster formats, introspection and thumbnailer payload;
 four CM5 cycles pass complete and incremental decoding with pixel checks.
 Sysroot base provenance follows
 the [fork-specific requirements](../common-build-tools/cross/sysroot.md).
-labwc client surfaces and full SVG remain separate acceptance.
+The [librsvg package](cross/librsvg.md) passes four CM5 CPU cycles for its C API,
+CLI, dynamic loader, AVIF, text and typelib with verified MIME data.
+labwc client surfaces and GPU rendering remain separate acceptance.
+The [labwc 0.20.2nb2 package](cross/labwc.md) cross-builds and preserves the
+selected SVG, icon, translation and documentation payload. Inspection matches
+62 installed files/links and 80 target ELF files; no session was started.
 
 
 The [Wayland 1.26.0nb1 package](cross/wayland.md) passes all 26 enabled

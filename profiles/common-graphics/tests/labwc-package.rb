@@ -5,6 +5,41 @@ require 'digest'
 require 'fileutils'
 require 'json'
 require 'open3'
+
+def accepted_rpath?(path, sysroot, directory)
+  return true if %w[/usr/pkg/lib /usr/pkg/gcc16/lib /usr/lib /lib].include?(directory)
+
+  # Match the accepted Mesa/LLVM package closure's retained Python libdir.
+  inherited = %w[/usr/pkg/lib/libgallium-26.2.4.so /usr/pkg/lib/libLLVM.so.23.1]
+  return true if inherited.include?(path.delete_prefix(sysroot)) &&
+    directory == '/usr/pkg/lib/python3.14/config-3.14'
+
+  # The accepted GCC16 package retains these compiler runtime search paths.
+  # They are not permission for consumers to embed arbitrary build paths.
+  path.start_with?(sysroot + '/usr/pkg/gcc16/lib/') &&
+    %w[/usr/pkg/gcc16/aarch64--netbsd/lib/. /usr/pkg/gcc16/lib/.].include?(directory)
+end
+
+if ARGV == ['--rpath-regression']
+  root = '/test/sysroot'
+  compiler = root + '/usr/pkg/gcc16/lib/libgcc_s.so.1'
+  consumer = root + '/usr/pkg/bin/labwc'
+  [[compiler, '/usr/pkg/gcc16/aarch64--netbsd/lib/.', true],
+   [compiler, '/usr/pkg/gcc16/lib/.', true],
+   [consumer, '/usr/pkg/lib', true],
+   [root + '/usr/pkg/lib/libgallium-26.2.4.so', '/usr/pkg/lib/python3.14/config-3.14', true],
+   [root + '/usr/pkg/lib/libLLVM.so.23.1', '/usr/pkg/lib/python3.14/config-3.14', true],
+   [consumer, '/usr/pkg/lib/python3.14/config-3.14', false],
+   [consumer, '/usr/pkg/gcc16/aarch64--netbsd/lib/.', false],
+   [compiler, '/tmp/build/lib', false],
+   [consumer, '/test/sysroot/usr/pkg/lib', false],
+   [compiler, '/usr/pkg/gcc16/lib/../../tmp', false]].each do |path, dir, expected|
+    abort "wrong RPATH decision: #{path}: #{dir}" unless accepted_rpath?(path, root, dir) == expected
+  end
+  puts 'PASS: inherited GCC/Mesa/LLVM paths accepted; consumer and build-path leaks rejected'
+  exit
+end
+
 abort 'Usage: labwc-package.rb PACKAGE SYSROOT READELF BUILT_SOURCE NEW_WORK' unless ARGV.size == 5
 package, sysroot, readelf, source = ARGV.first(4).map { |p| File.realpath(p) }
 work = File.expand_path(ARGV.last)
@@ -60,7 +95,7 @@ until queue.empty?
   dynamic, status = Open3.capture2e(readelf, '-d', path)
   abort 'ELF inspection failed' unless status.success?
   dynamic.scan(/\((?:RPATH|RUNPATH)\).*\[(.*?)\]/).flatten.flat_map { |v| v.split(':') }.each do |dir|
-    abort "noncanonical runtime path: #{path}: #{dir}" unless %w[/usr/pkg/lib /usr/pkg/gcc16/lib /usr/lib /lib].include?(dir)
+    abort "noncanonical runtime path: #{path}: #{dir}" unless accepted_rpath?(path, sysroot, dir)
   end
   dynamic.scan(/\(NEEDED\).*\[(.*?)\]/).flatten.each do |name|
     abort 'unsafe SONAME' unless name.match?(/\A[A-Za-z0-9._+-]+\z/)
@@ -71,8 +106,8 @@ until queue.empty?
   File.write(work + '/' + File.basename(path) + '.dynamic', dynamic)
   manifest << "#{Digest::SHA256.file(path).hexdigest}  #{path}\n"
 end
-%w[libwlroots-0.20.so librsvg-2.so libinput.so libEGL.so libGLESv2.so].each do |stem|
-  abort "expected shared provider missing: #{stem}" unless needed.any? { |name| name.start_with?(stem + '.') }
+%w[libwlroots-0.20.so librsvg-2.so.2 libinput.so.10 libEGL.so.1 libGLESv2.so.2].each do |name|
+  abort "expected shared provider missing: #{name}" unless needed.include?(name)
 end
 manifest += [__FILE__, package, source + '/output/build.ninja', source + '/output/include/config.h'].map { |p| "#{Digest::SHA256.file(p).hexdigest}  #{p}\n" }
 File.write(work + '/inputs.sha256', manifest.uniq.join)
