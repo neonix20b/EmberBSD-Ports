@@ -9,44 +9,49 @@ require 'rubygems/package'
 require 'shellwords'
 require 'zlib'
 
-abort 'Usage: prepare-librsvg-package.rb CROSS_TOOLS SYSROOT LIBRSVG_PACKAGE ORIGINAL_SOURCE NEW_WORK' unless ARGV.size == 5
-tools, sysroot, package, source = ARGV.first(4).map { |p| File.realpath(p) }
+abort 'Usage: prepare-librsvg-package.rb CROSS_TOOLS SYSROOT LIBRSVG_PACKAGE MIME_PACKAGE ORIGINAL_SOURCE NEW_WORK' unless ARGV.size == 6
+tools, sysroot, package, mime_package, source = ARGV.first(5).map { |p| File.realpath(p) }
 work = File.expand_path(ARGV.last)
 abort 'new absolute work required' unless ARGV.last.start_with?('/') && !File.exist?(work)
 abort 'unsafe assembler path' unless [sysroot, source].all? { |p| p.match?(%r{\A/[A-Za-z0-9_./-]+\z}) }
 FileUtils.mkdir_p(work)
-metadata, status = Open3.capture2('tar', '-xOzf', package, '+CONTENTS')
-abort 'wrong renderer package' unless status.success? && metadata.lines.any? { |l| l.strip == '@name librsvg-2.63.2' }
 payload = %w[bin/rsvg-convert lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.so lib/girepository-1.0/Rsvg-2.0.typelib]
 package_manifest = []
 package_names = []
-Zlib::GzipReader.open(package) do |gzip|
-  Gem::Package::TarReader.new(gzip) do |tar|
-    tar.each do |entry|
-      if entry.header.typeflag == 'x'
-        # pkg_create declares binary header encoding; no path override is used.
-        abort 'unsupported extended package header' unless entry.read == "21 hdrcharset=BINARY\n"
-        next
+mime_names = []
+[[package, 'librsvg-2.63.2', package_names], [mime_package, 'shared-mime-info-2.5.1', mime_names]].each do |archive, name, names|
+  metadata, status = Open3.capture2('tar', '-xOzf', archive, '+CONTENTS')
+  abort "wrong package: #{name}" unless status.success? && metadata.lines.any? { |l| l.strip == '@name ' + name }
+  Zlib::GzipReader.open(archive) do |gzip|
+    Gem::Package::TarReader.new(gzip) do |tar|
+      tar.each do |entry|
+        if entry.header.typeflag == 'x'
+          # pkg_create declares binary header encoding; no path override is used.
+          abort 'unsupported extended package header' unless entry.read == "21 hdrcharset=BINARY\n"
+          next
+        end
+        relative = entry.full_name.sub(%r{\A\./}, '')
+        next if relative.start_with?('+') || entry.directory?
+        abort 'unsafe archive entry' if relative.start_with?('/') || relative.split('/').include?('..')
+        installed = sysroot + '/usr/pkg/' + relative
+        if entry.header.typeflag == '2'
+          abort "installed symlink differs: #{relative}" unless File.symlink?(installed) && File.readlink(installed) == entry.header.linkname
+          package_manifest << "symlink #{File.readlink(installed)}  #{installed}\n"
+        elsif entry.file?
+          bytes = entry.read
+          abort "installed payload differs: #{relative}" unless !File.symlink?(installed) && bytes == File.binread(installed)
+          package_manifest << "#{Digest::SHA256.hexdigest(bytes)}  #{installed}\n"
+        else
+          abort "unexpected archive entry type: #{relative}"
+        end
+        names << relative
       end
-      relative = entry.full_name.sub(%r{\A\./}, '')
-      next if relative.start_with?('+') || entry.directory?
-      abort 'unsafe archive entry' if relative.start_with?('/') || relative.split('/').include?('..')
-      installed = sysroot + '/usr/pkg/' + relative
-      if entry.header.typeflag == '2'
-        abort "installed symlink differs: #{relative}" unless File.symlink?(installed) && File.readlink(installed) == entry.header.linkname
-        package_manifest << "symlink #{File.readlink(installed)}  #{installed}\n"
-      elsif entry.file?
-        bytes = entry.read
-        abort "installed payload differs: #{relative}" unless !File.symlink?(installed) && bytes == File.binread(installed)
-        package_manifest << "#{Digest::SHA256.hexdigest(bytes)}  #{installed}\n"
-      else
-        abort "unexpected archive entry type: #{relative}"
-      end
-      package_names << relative
     end
   end
 end
 abort 'incomplete renderer package' unless (payload - package_names).empty? && package_names.include?('lib/librsvg-2.so.2.63.2')
+mime_payload = %w[bin/update-mime-database share/mime/packages/freedesktop.org.xml]
+abort 'incomplete MIME package' unless (mime_payload - mime_names).empty?
 font = source + '/rsvg/tests/resources/Ahem.ttf'
 avif = source + '/rsvg/tests/fixtures/reftests/rectangle.avif'
 {font => 'b719ecb31c5b21fc573c03f6421c74ac63c271a5a3ff841e34f9705fb94b8448',
@@ -59,7 +64,9 @@ files = [['rsvg-convert', sysroot + '/usr/pkg/' + payload[0], '0700'],
          ['Ahem.ttf', font, '0600'],
          ['font-README.md', source + '/rsvg/tests/resources/README.md', '0600'],
          ['librsvg-AUTHORS', source + '/AUTHORS', '0600'],
-         ['librsvg-COPYING.LIB', source + '/COPYING.LIB', '0600']]
+         ['librsvg-COPYING.LIB', source + '/COPYING.LIB', '0600'],
+         ['update-mime-database', sysroot + '/usr/pkg/' + mime_payload[0], '0700'],
+         ['mime/packages/freedesktop.org.xml', sysroot + '/usr/pkg/' + mime_payload[1], '0600']]
 names = %w[GLib-2.0 GObject-2.0 Gio-2.0 cairo-1.0 GdkPixbuf-2.0 Rsvg-2.0]
 typelibs = names.map { |name| [name, sysroot + '/usr/pkg/lib/girepository-1.0/' + name + '.typelib', '0600'] }
 header = "struct fixture { const char *name; const unsigned char *start, *end; mode_t mode; };\n"
@@ -83,7 +90,7 @@ assembly += ".section .note.GNU-stack,\"\",@progbits\n"
 File.write(work + '/librsvg-fixtures.h', header)
 File.write(work + '/librsvg-fixtures.S', assembly)
 readelf = tools + '/bin/aarch64--netbsd-readelf'
-needed = files.first(3).flat_map do |(_name, path, _mode)|
+needed = files.select { |name, _path, mode| mode == '0700' || name == 'svg-loader.so' }.flat_map do |(_name, path, _mode)|
   out, status = Open3.capture2e(readelf, '-h', '-d', path)
   abort "not AArch64 ELF: #{path}" unless status.success? && out.match?(/Machine:.*AArch64/) && out.match?(/Data:.*little endian/)
   out.scan(/\(NEEDED\).*\[([a-zA-Z0-9._+-]+)\]/).flatten
@@ -103,6 +110,6 @@ File.write(work + '/compile.log', out)
 abort "consumer build failed: #{out}" unless status.success?
 out, status = Open3.capture2e(readelf, '-d', work + '/librsvg-package')
 abort 'consumer omitted a dynamic provider needed by an embedded tool' unless status.success? && (needed - out.scan(/\(NEEDED\).*\[([^\]]+)\]/).flatten).empty?
-manifest += [__FILE__, test_source, package, avif, work + '/librsvg-package'].map { |p| "#{Digest::SHA256.file(p).hexdigest}  #{p}\n" }
+manifest += [__FILE__, test_source, package, mime_package, avif, work + '/librsvg-package'].map { |p| "#{Digest::SHA256.file(p).hexdigest}  #{p}\n" }
 File.write(work + '/inputs.sha256', manifest.join)
-puts "PASS: all #{package_names.size} package files/links match installation; upstream fixtures verified; target consumer embeds CLI/module/GIR and their dynamic providers"
+puts "PASS: all #{package_names.size} renderer and #{mime_names.size} MIME package files/links match installation; upstream fixtures verified; target consumer embeds CLI/module/GIR/MIME and their dynamic providers"

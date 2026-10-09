@@ -156,13 +156,14 @@ check_metadata(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	char cwd[4096], loader[4096], cache[4096];
 	char *query_args[] = { "./query-loaders", loader, NULL };
 	char *cli_args[] = { "./rsvg-convert", "-o", "cli.png", "input.svg", NULL };
 	char *bad_args[] = { "./rsvg-convert", "-o", "bad.png", "bad.svg", NULL };
 	char *version_args[] = { "./rsvg-convert", "--version", NULL };
+	char *mime_args[] = { "./update-mime-database", "mime", NULL };
 	cairo_surface_t *surface;
 	GdkPixbuf *pixbuf;
 	GError *error = NULL;
@@ -172,16 +173,34 @@ main(void)
 	uint32_t value;
 	unsigned int cycle, i, ink;
 	int stride, channels;
+	int loader_only = argc == 2 && strcmp(argv[1], "--loader-only") == 0;
+
+	check(argc == 1 || loader_only, "usage: librsvg-package [--loader-only]");
 
 	check(getcwd(cwd, sizeof(cwd)) != NULL, "temporary working directory");
 	check(snprintf(loader, sizeof(loader), "%s/svg-loader.so", cwd) < (int)sizeof(loader), "loader path");
 	check(snprintf(cache, sizeof(cache), "%s/loaders.cache", cwd) < (int)sizeof(cache), "cache path");
+	check(mkdir("mime", 0700) == 0 && mkdir("mime/packages", 0700) == 0,
+	    "private MIME directories");
 	for (i = 0; i < G_N_ELEMENTS(files); i++)
 		write_file(files[i].name, files[i].start, files[i].end - files[i].start, files[i].mode);
 	write_file("input.svg", svg, sizeof(svg) - 1, 0600);
 	write_file("bad.svg", invalid_svg, sizeof(invalid_svg) - 1, 0600);
 	check(run(query_args, "loaders.cache") == 0, "query the packaged SVG module");
 	check(setenv("GDK_PIXBUF_MODULE_FILE", cache, 1) == 0, "private loader cache");
+	check(setenv("XDG_DATA_HOME", cwd, 1) == 0 &&
+	    setenv("XDG_DATA_DIRS", cwd, 1) == 0, "private MIME search paths");
+	check(run(mime_args, NULL) == 0, "generate the packaged MIME database");
+	if (loader_only) {
+		pixbuf = gdk_pixbuf_new_from_file("input.svg", &error);
+		if (error != NULL)
+			fprintf(stderr, "SVG loader: %s (%s:%d)\n", error->message,
+			    g_quark_to_string(error->domain), error->code);
+		check(pixbuf != NULL && error == NULL, "dynamic GdkPixbuf SVG loader");
+		g_object_unref(pixbuf);
+		puts("PASS: isolated SVG loader");
+		return 0;
+	}
 	check(run(version_args, NULL) == 0, "packaged CLI version");
 	fonts = FcConfigCreate();
 	check(fonts != NULL && FcConfigAppFontAddFile(fonts, (const FcChar8 *)"Ahem.ttf") &&
@@ -195,6 +214,9 @@ main(void)
 		check_surface(surface);
 		cairo_surface_destroy(surface);
 		pixbuf = gdk_pixbuf_new_from_file("input.svg", &error);
+		if (error != NULL)
+			fprintf(stderr, "SVG loader: %s (%s:%d)\n", error->message,
+			    g_quark_to_string(error->domain), error->code);
 		check(pixbuf != NULL && error == NULL, "dynamic GdkPixbuf SVG loader");
 		check(gdk_pixbuf_get_width(pixbuf) == 32 && gdk_pixbuf_get_height(pixbuf) == 16, "pixbuf dimensions");
 		stride = gdk_pixbuf_get_rowstride(pixbuf);
@@ -223,7 +245,7 @@ main(void)
 		g_clear_error(&error);
 		printf("cycle %u: C API, CLI PNG, dynamic pixbuf, AVIF, text and GIR invoke PASS\n", cycle + 1);
 	}
-	check(run(bad_args, NULL) != 0, "CLI rejects malformed SVG");
+	check(run(bad_args, NULL) == 1, "CLI rejects malformed SVG with exit 1");
 	FcConfigDestroy(fonts);
 	puts("PASS: packaged librsvg features across four target lifecycles; malformed SVG refused");
 	return 0;

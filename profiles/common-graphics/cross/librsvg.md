@@ -16,21 +16,31 @@ cover the unchanged Cargo.lock, all 357 crate archives and 31 patches. The
 native/cross Meson selection and header-mapping regression pass. Rsvg GIR and
 typelib generation used a successful real target GType query.
 
-The first CM5 packaged consumer passed its C API SVG RGB pixels and CLI PNG
-pixels, then failed `dynamic GdkPixbuf SVG loader` in the first cycle. Its
-temporary directory was cleaned successfully. The test currently omits the
-GError detail at that assertion, so the loader failure's cause is unresolved.
-Embedded AVIF, text, typelib invocation and four complete lifecycles were not
-reached and are not validated. The next diagnostic step is to print that
-GError and repeat the loader check alone. The conditional AVIF/dav1d consumer
-buildlink correction is saved; downstream labwc configure has not been rerun.
-The later malformed-CLI assertion also needs tightening before acceptance:
-its current nonzero check would accept an execution failure or signal.
+The packaged consumer passes four CPU-rendering lifecycles on physical
+CM5: C API RGB pixels, CLI PNG, the dynamic GdkPixbuf SVG loader, embedded
+AVIF, text with Ahem, and construction through the Rsvg typelib. Malformed
+SVG is rejected through both the C API and CLI. The recursive library
+providers are hash-checked before and after execution; temporary target
+files are removed. These results use the existing package with a freshly
+cross-built GCC16 consumer, not a new renderer package or board installation.
+
+The earlier loader failure was a test-bundle defect: GdkPixbuf uses GIO MIME
+detection, but the isolated consumer omitted the shared MIME database.
+The corrected bundle verifies all 84 shared-mime-info package files and
+generates a private database from its original XML before image detection.
+It sets both XDG data directories explicitly. GError diagnostics now name
+the failing domain and code. The CLI negative accepts only normal exit 1;
+an actual-process regression rejects missing exec, signals and setup errors.
+Omitting only MIME database generation reproduces the original format error
+with the same packaged renderer and library providers.
+The conditional AVIF/dav1d consumer buildlink correction is saved;
+downstream labwc packaging and its accelerated session remain separate work.
 
 The final exporter passed 99 refusal checks and a complete common-graphics
 export. All five added recipe directories matched the exported copies byte
 for byte. Other profile compositions were not rerun at this checkpoint.
-Full SVG runtime acceptance remains open.
+This accepts the bounded packaged SVG consumer, not the full upstream suite,
+GPU rendering or a complete desktop.
 
 Sources come from [GNOME](https://download.gnome.org/sources/librsvg/2.63/),
 [VideoLAN](https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/) and
@@ -125,7 +135,7 @@ module installation path and actual full-build outputs.
 ## Packaged target consumer
 
 [`prepare-librsvg-package.rb`](../tests/prepare-librsvg-package.rb) compares
-every installed package file and symlink against the archive and cross-builds
+every installed renderer and MIME package file and symlink against the archives and cross-builds
 [`librsvg-package.c`](../tests/librsvg-package.c). It embeds those exact files,
 their required metadata, and two hash-pinned fixtures from the upstream source:
 the Ahem font and `rectangle.avif`. The embedded font retains its public-domain
@@ -134,7 +144,8 @@ notice. Upstream font notes, authors and LGPL text accompany the fixtures.
 ```sh
 ruby profiles/common-graphics/tests/prepare-librsvg-package.rb \
   /absolute/cross-tools /absolute/sysroot \
-  /absolute/packages/librsvg-2.63.2.tgz /absolute/original-librsvg-source \
+  /absolute/packages/librsvg-2.63.2.tgz \
+  /absolute/packages/shared-mime-info-2.5.1.tgz /absolute/original-librsvg-source \
   /absolute/build-root/new-consumer
 env EMBERBSD_GI_QUERY_CONFIG=/absolute/query.json ruby \
   profiles/common-graphics/recipes/devel/gobject-introspection/files/target-query.rb \
@@ -150,8 +161,19 @@ CLI paths. Loader or transport failures are failures, not passing negatives.
 
 The launcher stages the recursive target ELF providers in a private temporary
 directory, verifies hashes, enforces a timeout, records status and cleans up.
-The consumer creates its own loader cache and font configuration there. No
+The consumer creates its own loader cache, MIME database and font configuration there. No
 board package registration, global loader cache or font cache is changed.
+
+`librsvg-package --loader-only` isolates format detection and loading when
+executed directly in a fresh target scratch directory with the same providers.
+`ruby profiles/common-graphics/tests/librsvg-cli-status.rb /absolute/new-work`
+tests the production CLI status predicate and reproduces the old false
+positives with real missing-executable and signal exits.
+With `EMBERBSD_GI_QUERY_CONFIG` set, run
+`ruby profiles/common-graphics/tests/librsvg-mime-regression.rb /absolute/prepared-consumer /absolute/new-work`
+to reproduce the MIME omission using the real target loader. Both directories
+must be inside the configured query build root. The negative control must
+fail specifically at SVG format detection and clean its target directory.
 
 This is bounded CPU renderer acceptance. GPU rendering, a Wayland surface,
 labwc integration, the complete upstream test suite and long-duration operation

@@ -134,7 +134,10 @@ runtime behavior are validated.
   Four CM5 cycles pass complete and incremental decoding with pixel checks.
   The [sysroot rules](profiles/common-build-tools/cross/sysroot.md) preserve
   fork libc provenance and reject divergent shared-library aliases.
-  labwc client surfaces and full SVG remain separate acceptance stages.
+  The [librsvg 2.63.2 consumer](profiles/common-graphics/cross/librsvg.md)
+  passes four CM5 CPU cycles with SVG/PNG pixels, dynamic loading, AVIF,
+  text and typelib invocation. Its corrected isolated bundle includes
+  verified MIME data; labwc client surfaces and GPU rendering remain separate.
 
 - [Current robotics libraries](probes/robotics-foundations/README.md): native
   OpenCV 5.0.0, Eigen 5.0.1 and gpsd 3.27.5 source probes; installed vision,
