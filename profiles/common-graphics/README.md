@@ -76,7 +76,8 @@ selected SVG, icon, translation and documentation payload. Inspection matches
 62 installed files/links and 80 target ELF files.
 The separate [VirGL session check](cross/labwc-session.md) passes two EGL/screencopy
 and USB-input sessions on Apple M4/ANGLE Metal, including 60 additional paced
-frames per session across window/maximize/restore/fullscreen transitions.
+frames per session across keyboard-driven window/maximize/restore/fullscreen
+transitions, plus two whole-window captures verifying USB mouse dragging.
 Sustained desktop use and
 physical-board GPU acceleration remain unaccepted.
 

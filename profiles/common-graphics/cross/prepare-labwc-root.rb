@@ -112,7 +112,7 @@ end
 manifest = seen.keys.sort.map { |p| "#{Digest::SHA256.file(p).hexdigest}  #{p.delete_prefix(root)}\n" }.join
 File.write(root + '/tests/labwc/runtime.sha256', manifest)
 File.write(root + '/tests/labwc/fonts.conf', '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd"><fontconfig><dir>/usr/pkg/share/fonts/X11/TTF</dir><cachedir>/tmp/fontcache</cachedir></fontconfig>')
-File.write(root + '/tests/labwc/config/rc.xml', '<?xml version="1.0"?><labwc_config><core><gap>0</gap></core><focus><followMouse>yes</followMouse></focus></labwc_config>')
+File.write(root + '/tests/labwc/config/rc.xml', '<?xml version="1.0"?><labwc_config><core><gap>0</gap></core><focus><followMouse>yes</followMouse></focus><keyboard><keybind key="F10"><action name="ToggleMaximize"/></keybind><keybind key="F11"><action name="ToggleFullscreen"/></keybind></keyboard><mouse><context name="Frame"><mousebind button="A-Left" action="Drag"><action name="Move"/></mousebind></context></mouse></labwc_config>')
 boot = File.expand_path('run-labwc-guest.sh', __dir__)
 inputs << boot
 FileUtils.cp(boot, root + '/etc/rc')

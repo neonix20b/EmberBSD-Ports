@@ -72,6 +72,8 @@ pid = nil
 code = 124
 socket = nil
 injected = 0
+window_keys = 0
+drag_inputs = 0
 commands = []
 qmp = lambda do |command, arguments|
   request = {execute: command, arguments: arguments}
@@ -117,6 +119,43 @@ begin
       qmp.call('send-key', {keys: [{type: 'qcode', data: 'k'}], 'hold-time': 150})
       injected += 1
     end
+    log = File.file?(serial) ? File.binread(serial) : ''.b
+    requests = log.scan(/^READY_WINDOW: stage=([1-5])\r?$/).flatten
+    if socket && requests.size > window_keys
+      stage = requests[window_keys].to_i
+      abort 'unexpected shortcut request' unless requests.size == window_keys + 1 && window_keys < 10 && stage == window_keys % 5 + 1
+      qmp.call('send-key', {keys: [{type: 'qcode', data: [2, 3].include?(stage) ? 'f10' : 'f11'}], 'hold-time': 150})
+      window_keys += 1
+    end
+    drag_ready = log.scan(/^READY_DRAG\r?$/).size
+    if socket && drag_ready > drag_inputs
+      abort 'unexpected drag request' unless drag_ready == drag_inputs + 1 && drag_ready <= 2
+      inside = false
+      60.times do
+        qmp.call('input-send-event', {events: [{type: 'rel', data: {axis: 'x', value: 10}}, {type: 'rel', data: {axis: 'y', value: 5}}]})
+        sleep 0.05
+        current = File.binread(serial).split(/READY_DRAG\r?\n/).last
+        position = current.scan(/^DRAG_POINTER: x=([\d.]+) y=([\d.]+)\r?$/).last
+        if position && (30..600).cover?(position[0].to_f) && (30..360).cover?(position[1].to_f)
+          inside = true
+          break
+        end
+      end
+      abort 'pointer did not enter drag window' unless inside
+      qmp.call('input-send-event', {events: [{type: 'key', data: {down: true, key: {type: 'qcode', data: 'alt'}}}]})
+      sleep 0.15
+      qmp.call('input-send-event', {events: [{type: 'btn', data: {down: true, button: 'left'}}]})
+      sleep 0.15
+      10.times do
+        qmp.call('input-send-event', {events: [{type: 'rel', data: {axis: 'x', value: 5}}, {type: 'rel', data: {axis: 'y', value: 3}}]})
+        sleep 0.05
+      end
+      qmp.call('input-send-event', {events: [{type: 'btn', data: {down: false, button: 'left'}}]})
+      qmp.call('input-send-event', {events: [{type: 'key', data: {down: false, key: {type: 'qcode', data: 'alt'}}}]})
+      sleep 0.2
+      qmp.call('send-key', {keys: [{type: 'qcode', data: 'k'}], 'hold-time': 150})
+      drag_inputs += 1
+    end
     sleep 0.05
   end
 ensure
@@ -152,6 +191,7 @@ abort 'Metal backend not selected' unless host_log.include?('ANGLE Metal Rendere
   abort "accepted image not loaded: #{path}" unless host_log.include?(File.realpath(path))
 end
 begin
+  raise 'interactive injection count' unless window_keys == 10 && drag_inputs == 2
   LabwcSessionOracle.check(guest_log, injected)
 rescue RuntimeError => error
   abort error.message

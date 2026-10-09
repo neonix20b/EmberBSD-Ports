@@ -33,6 +33,18 @@ module LabwcSessionOracle
       elapsed = body.scan(/^WINDOW_ELAPSED: stage=(\d+) seconds=(\d+)$/)
       raise 'paced window duration' unless elapsed.map(&:first) == %w[1 2 3 4] && elapsed.each_with_index.all? { |r, i| r[1].to_i >= 14*(i+1) } && elapsed.last.last.to_i < 140
       raise 'window cleanup result' unless body.lines.count { |l| l.chomp == 'PASS: windowed/maximized/restored/fullscreen, 60 captured EGL frames' } == 1
+      raise 'shortcut readiness sequence' unless body.scan(/^READY_WINDOW: stage=(\d+)$/).flatten == %w[1 2 3 4 5]
+      raise 'drag readiness' unless body.lines.count { |l| l.chomp == 'READY_DRAG' } == 1
+      raise 'drag acknowledgement' unless body.lines.count { |l| l.chomp == 'DRAG_ACK' } == 1
+      drag_input = body.split("READY_DRAG\n", 2).last.split("DRAG_ACK\n", 2).first
+      positions = drag_input.scan(/^DRAG_POINTER: x=([\d.]+) y=([\d.]+)$/)
+      raise 'pointer not inside drag window' unless positions.any? { |x, y| (30..600).cover?(x.to_f) && (30..360).cover?(y.to_f) }
+      rectangles = body.scan(/^DRAG_CAPTURE: phase=([12]) rect=(\d+),(\d+),640,400 pixels=256000$/)
+      raise 'drag captures' unless rectangles.size == 2 && rectangles.map(&:first) == %w[1 2]
+      dx = rectangles[1][1].to_i - rectangles[0][1].to_i
+      dy = rectangles[1][2].to_i - rectangles[0][2].to_i
+      raise 'drag translation' unless (1..200).cover?(dx) && (1..200).cover?(dy)
+      raise 'interactive result' unless body.lines.count { |l| l.chomp == "PASS: USB window shortcuts and drag dx=#{dx} dy=#{dy}" } == 1
       raise 'input readiness' unless body.lines.count { |l| l.chomp == 'READY_INPUT' } == 1
       input = body.split("READY_INPUT\n", 2).last
       raise 'pointer motion absent' unless input.match?(/^MOTION: x=[\d.]+ y=[\d.]+$/)

@@ -6,7 +6,16 @@ abort 'usage: labwc-session-oracle.rb ACCEPTED_GUEST_LOG' unless ARGV.size == 1
 log = File.binread(ARGV[0])
 abort 'baseline rejected' unless LabwcSessionOracle.check(log, 2)
 abort 'partial UTF-8 rejected' unless LabwcSessionOracle.check(log + "\nDEBUG: \xe2\x94\n".b, 2)
+before_drag = log.match(/DRAG_CAPTURE: phase=1 rect=(\d+,\d+),640,400/)[1]
 cases = {
+  'missing pointer entry' => log.gsub(/^DRAG_POINTER:.*\n/, ''),
+  'unmoved window' => log.sub(/DRAG_CAPTURE: phase=2 rect=\d+,\d+,640,400/) { "DRAG_CAPTURE: phase=2 rect=#{before_drag},640,400" },
+  'repeated shortcut stage' => log.sub('READY_WINDOW: stage=3', 'READY_WINDOW: stage=2'),
+  'missing shortcut' => log.sub(/^READY_WINDOW: stage=2.*\n/, ''),
+  'missing drag acknowledgement' => log.sub(/^DRAG_ACK.*\n/, ''),
+  'missing drag capture' => log.sub(/^DRAG_CAPTURE: phase=2.*\n/, ''),
+  'incomplete drag rectangle' => log.sub('pixels=256000', 'pixels=255999'),
+  'wrong drag result' => log.sub(/PASS: USB window shortcuts and drag dx=\d+/, 'PASS: USB window shortcuts and drag dx=0'),
   'wrong window state' => log.sub('stage=2 max=1', 'stage=2 max=0'),
   'wrong restore size' => log.sub('size=640x400', 'size=800x600'),
   'missing window frame' => log.sub(/^WINDOW_CAPTURE: stage=2 frame=7 .*\n/, ''),

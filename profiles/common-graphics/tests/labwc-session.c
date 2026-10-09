@@ -31,7 +31,7 @@ static struct wl_egl_window *window;
 static EGLDisplay egl_display;
 static EGLSurface egl_surface;
 static EGLContext context;
-static struct xdg_toplevel *toplevel;
+static int drag_phase, drag_done, drag_ack, flipped, bounds[2][4];
 static int window_stage, window_frame, maximized, fullscreen;
 static struct timespec window_started;
 static int width = 640, height = 400, configured, cycle;
@@ -40,6 +40,7 @@ static uint32_t format, stride, shot_width, shot_height;
 static struct wl_buffer *buffer;
 static unsigned char *pixels;
 static size_t pixel_size;
+static const unsigned char magenta[3] = {255, 0, 255};
 static const unsigned char colors[4][3] = {
 	{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}
 };
@@ -73,6 +74,9 @@ static void key_leave(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surf
 static void
 key(void *d, struct wl_keyboard *k, uint32_t serial, uint32_t time, uint32_t code, uint32_t state)
 {
+	if (drag_phase && code == 37 && state == WL_KEYBOARD_KEY_STATE_RELEASED) {
+		drag_ack = 1; puts("DRAG_ACK"); return;
+	}
 	if (!input_phase || code != 37) return;
 	if (state == WL_KEYBOARD_KEY_STATE_PRESSED) key_down++;
 	else if (key_down) key_up++;
@@ -82,11 +86,11 @@ static void mods(void *d, struct wl_keyboard *k, uint32_t s, uint32_t a, uint32_
 static const struct wl_keyboard_listener key_listener = {
 	.keymap = keymap, .enter = key_enter, .leave = key_leave, .key = key, .modifiers = mods
 };
-static void pointer_enter(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *w, wl_fixed_t x, wl_fixed_t y) { }
+static void pointer_enter(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *w, wl_fixed_t x, wl_fixed_t y) { if (drag_phase == 1) printf("DRAG_POINTER: x=%f y=%f\n", wl_fixed_to_double(x), wl_fixed_to_double(y)); }
 static void pointer_leave(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *w) { }
 static void
 pointer_motion(void *d, struct wl_pointer *p, uint32_t t, wl_fixed_t x, wl_fixed_t y)
-{ if (input_phase) { motion++; printf("MOTION: x=%f y=%f\n", wl_fixed_to_double(x), wl_fixed_to_double(y)); } }
+{ if (drag_phase == 1) printf("DRAG_POINTER: x=%f y=%f\n", wl_fixed_to_double(x), wl_fixed_to_double(y)); if (input_phase) { motion++; printf("MOTION: x=%f y=%f\n", wl_fixed_to_double(x), wl_fixed_to_double(y)); } }
 static void
 button(void *d, struct wl_pointer *p, uint32_t s, uint32_t t, uint32_t b, uint32_t state)
 {
@@ -144,13 +148,35 @@ shot_buffer(void *d, struct zwlr_screencopy_frame_v1 *frame, uint32_t f, uint32_
 	wl_shm_pool_destroy(pool); close(fd);
 	zwlr_screencopy_frame_v1_copy(frame, buffer);
 }
-static void shot_flags(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t flags) { }
+static void shot_flags(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t flags) { flipped = (flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT) != 0; }
 static void shot_failed(void *d, struct zwlr_screencopy_frame_v1 *f) { errx(1, "screencopy failed"); }
 static void
 shot_ready(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t hi, uint32_t lo, uint32_t ns)
 {
 	int x, y;
 	const unsigned char *rgb = colors[window_stage ? (window_frame - 1) % 4 : cycle - 1];
+	if (drag_phase) {
+		int left = shot_width, right = -1, top = shot_height, bottom = -1, count = 0;
+		int reversed = format == WL_SHM_FORMAT_XBGR8888 || format == WL_SHM_FORMAT_ABGR8888;
+		for (y = 0; y < (int)shot_height; y++)
+			for (x = 0; x < (int)shot_width; x++) {
+				unsigned char *p = pixels + y * stride + x * 4;
+				int row = flipped ? (int)shot_height - y - 1 : y;
+				if (p[reversed ? 0 : 2] != 255 || p[1] != 0 || p[reversed ? 2 : 0] != 255) continue;
+				if (x < left) left = x;
+				if (x > right) right = x;
+				if (row < top) top = row;
+				if (row > bottom) bottom = row;
+				count++;
+			}
+		if (count != 640 * 400 || right - left + 1 != 640 || bottom - top + 1 != 400)
+			errx(1, "drag rectangle mismatch: %d pixels, %d,%d..%d,%d", count, left, top, right, bottom);
+		bounds[drag_phase - 1][0] = left; bounds[drag_phase - 1][1] = top;
+		bounds[drag_phase - 1][2] = right; bounds[drag_phase - 1][3] = bottom;
+		printf("DRAG_CAPTURE: phase=%d rect=%d,%d,640,400 pixels=%d\n", drag_phase, left, top, count);
+		zwlr_screencopy_frame_v1_destroy(f); wl_buffer_destroy(buffer); munmap(pixels, pixel_size);
+		drag_done = 1; return;
+	}
 	for (y = shot_height / 2 - 16; y < (int)shot_height / 2 + 16; y++)
 		for (x = shot_width / 2 - 16; x < (int)shot_width / 2 + 16; x++) {
 			unsigned char *p = pixels + y * stride + x * 4;
@@ -185,7 +211,7 @@ draw(void)
 {
 	unsigned char p[4];
 	struct wl_callback *callback;
-	const unsigned char *rgb = colors[window_stage ? window_frame++ % 4 : cycle++];
+	const unsigned char *rgb = drag_phase ? magenta : colors[window_stage ? window_frame++ % 4 : cycle++];
 	glViewport(0, 0, width, height);
 	glClearColor(rgb[0] / 255.0f, rgb[1] / 255.0f, rgb[2] / 255.0f, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -214,7 +240,7 @@ main(void)
 	xdg_wm_base_add_listener(wm, &wm_listener, NULL); wl_seat_add_listener(seat, &seat_listener, NULL);
 	if (wl_display_roundtrip(display) < 0 || !keyboard || !pointer) errx(1, "missing input capabilities");
 	surface = wl_compositor_create_surface(compositor); xdg = xdg_wm_base_get_xdg_surface(wm, surface);
-	xdg_surface_add_listener(xdg, &surface_listener, NULL); top = xdg_surface_get_toplevel(xdg); toplevel = top;
+	xdg_surface_add_listener(xdg, &surface_listener, NULL); top = xdg_surface_get_toplevel(xdg);
 	xdg_toplevel_add_listener(top, &top_listener, NULL); xdg_toplevel_set_title(top, "EmberBSD EGL acceptance");
 	xdg_toplevel_set_app_id(top, "emberbsd-labwc-acceptance");
 	wl_surface_commit(surface);
@@ -244,10 +270,7 @@ main(void)
 	for (window_stage = 1; window_stage <= 4; window_stage++) {
 		struct timespec now;
 		configured = window_frame = 0;
-		if (window_stage == 1) xdg_toplevel_unset_fullscreen(toplevel);
-		if (window_stage == 2) xdg_toplevel_set_maximized(toplevel);
-		if (window_stage == 3) xdg_toplevel_unset_maximized(toplevel);
-		if (window_stage == 4) xdg_toplevel_set_fullscreen(toplevel, output);
+		printf("READY_WINDOW: stage=%d\n", window_stage);
 		while (!configured)
 			if (wl_display_dispatch(display) < 0) errx(1, "window configure failed");
 		if (maximized != (window_stage == 2) || fullscreen != (window_stage == 4))
@@ -267,6 +290,27 @@ main(void)
 		printf("WINDOW_ELAPSED: stage=%d seconds=%ld\n", window_stage, (long)(now.tv_sec - window_started.tv_sec));
 	}
 	puts("PASS: windowed/maximized/restored/fullscreen, 60 captured EGL frames");
+	input_phase = 0; configured = 0;
+	puts("READY_WINDOW: stage=5");
+	while (!configured)
+		if (wl_display_dispatch(display) < 0) errx(1, "drag window configure failed");
+	if (fullscreen || maximized || width != 640 || height != 400)
+		errx(1, "drag window did not restore");
+	for (drag_phase = 1; drag_phase <= 2; drag_phase++) {
+		drag_done = 0; draw();
+		while (!drag_done)
+			if (wl_display_dispatch(display) < 0) errx(1, "drag capture dispatch failed");
+		if (drag_phase == 1) {
+			puts("READY_DRAG");
+			while (!drag_ack)
+				if (wl_display_dispatch(display) < 0) errx(1, "drag input dispatch failed");
+		}
+	}
+	if (bounds[1][0] <= bounds[0][0] || bounds[1][0] - bounds[0][0] > 200 ||
+	    bounds[1][1] <= bounds[0][1] || bounds[1][1] - bounds[0][1] > 200)
+		errx(1, "drag did not translate window within expected bounds");
+	printf("PASS: USB window shortcuts and drag dx=%d dy=%d\n",
+	    bounds[1][0] - bounds[0][0], bounds[1][1] - bounds[0][1]);
 	eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 	eglDestroySurface(egl_display, egl_surface); eglDestroyContext(egl_display, context); eglTerminate(egl_display);
 	wl_egl_window_destroy(window); xdg_toplevel_destroy(top); xdg_surface_destroy(xdg); wl_surface_destroy(surface);

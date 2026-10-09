@@ -72,19 +72,37 @@ devices. The client must receive the corresponding Wayland motion, button and
 key events. Device enumeration alone does not pass. QMP uses a private Unix
 socket; no network or user disk is connected. `SEATD_VTBOUND=0` is explicit.
 
-After USB input, the client requests normal, maximized, restored and fullscreen
-states in sequence through xdg-shell. Each configure must carry the expected
+After the baseline USB input, the host sends F11, F10, F10 and F11 through
+the virtual USB keyboard. The isolated labwc configuration binds these to
+ToggleFullscreen and ToggleMaximize. The client makes no state requests
+during this cycle; it waits for normal, maximized, restored and fullscreen
+configures in sequence. Each configure must carry the expected
 maximized/fullscreen flags. Normal and restored content must be 640x400;
 fullscreen must be 1280x800. The accepted maximized content is also 1280x800:
 this client does not negotiate server decorations. Protocol state distinguishes
-maximized from fullscreen. No decoration, shortcut, drag or resize-handle
-acceptance is implied by these client requests.
+maximized from fullscreen. Server decorations and resize handles remain
+outside this check.
 
 Each state renders 15 changing-color frames with a one-second delay between
 captures. Each capture checks 1024 output-center pixels and the client checks
 its own EGL center pixel. The host checks all 60 added captures and cumulative
 monotonic durations of at least 14/28/42/56 seconds. This is paced rendering,
 not a throughput benchmark or a sustained-stability qualification.
+
+After the four-state cycle, F11 restores the normal window. The client draws
+magenta and scans the whole screencopy image for its exact 640x400 rectangle:
+all 256000 pixels must match. The host moves the USB mouse until the client
+reports a pointer position safely inside the restored window, then holds Alt and the left mouse button,
+sends ten relative mouse movements of +5,+3, then releases both. A final USB K
+release acknowledges the end of injection. The client captures the magenta
+rectangle again. Its size and area must be unchanged and its screen position
+must move right and down by 1..200 pixels. The bound allows input acceleration;
+it does not substitute the requested pointer delta for measured window motion.
+Screencopy Y-inversion is handled for the rectangle coordinates. The capture
+excludes the cursor. An unchanged rectangle fails even if input was delivered.
+The host also requires all ten shortcut and both drag injections across the
+two sessions. This tests the explicitly supplied F10/F11 and Alt-drag bindings,
+not every shortcut or the compositor's default configuration.
 
 The client destroys its EGL and Wayland objects and exits. labwc's session
 mode then terminates the compositor. The guest starts the same scenario again
@@ -95,7 +113,7 @@ exit, host loaded-library paths and unchanged input FFS. A zero compositor
 exit without the client's success marker is rejected.
 
 The host limit is 340+5 seconds; each compositor has a 155+5 second limit and
-the client has a 140-second alarm. The log oracle regression rejects twenty-one
+the client has a 140-second alarm. The log oracle regression rejects twenty-nine
 mutations, including software renderers, wrong pixels, missing release events,
 failed cleanup, missing runtime-integrity evidence, wrong window states,
 geometry, capture sequences and duration.
@@ -105,7 +123,26 @@ Acceptance markers remain exact ASCII matches.
 
 ## Result and boundaries
 
-The extended 2026-10-09 window cycle passed twice on the same matched host.
+The interactive 2026-10-09 cycle passed twice on the same matched host.
+Each session produced 66 captures and completed all five keyboard shortcuts.
+Both drag captures measured a move from (320,200) to (411,254), or +91,+54,
+with unchanged 640x400 dimensions and 256000 matching magenta pixels.
+Runtime ELF hashes and input FFS integrity passed; the guest halted at 144.4
+seconds. The log regression rejected 29 false-success mutations, including
+missing pointer entry, an unmoved rectangle, wrong area and missing shortcuts.
+An earlier exploratory run injected the drag outside the restored window;
+the unchanged rectangle correctly failed. The accepted runner requires
+Wayland pointer-position feedback before pressing the drag button.
+
+| Interactive evidence | SHA256 |
+| --- | --- |
+| Client | `de35ece2f50312ec39d5ddcb3960b26fcdbe33c72e4aa4b56248d27acc563888` |
+| Test FFS | `2bf97250b0f8fbc61c4769bd81cfc11194bb85e8de08e36ccd36996ee625aad1` |
+| Guest log | `968886cb9312decfb66288c7d77d839051a1a479af622c1ebcf6dd7dff83dbbd` |
+| Host log | `1b90b1a0dbb74226593c8e36fdfcc5eaf3e1dcf2fa55660b11b25e1d29eb37cc` |
+| Output manifest | `3e04198e8e0cdaebbb3a889c8771740de672a853e598f4f620b4a7b62f4f2614` |
+
+The preceding client-requested window cycle passed twice on 2026-10-09.
 Each session produced the original four fullscreen captures plus 60 paced
 captures across normal 640x400, maximized 1280x800, restored 640x400 and
 fullscreen 1280x800 states. Each window cycle took 61 monotonic seconds.
@@ -140,7 +177,7 @@ also passed with this rebuilt host before the labwc run.
 | GLESv2 framework | `e146b9185ed7b8a1bf45d7ec9977f38d60d6c6d286f4b3373c33d40297e8afb0` |
 
 This does not cover VT switching, Xwayland, clipboard, a desktop application
-suite, interactive shortcuts/dragging, sustained use, GPU reset/fault recovery,
+suite, resize handles, sustained use, GPU reset/fault recovery,
 or A733/CM5 physical GPU acceleration. It does not exercise SVG window
 ornaments merely because SVG is included in the package. Fonts, SVG rendering
 and package contents retain their separate acceptance records.
