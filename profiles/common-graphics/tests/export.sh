@@ -45,6 +45,16 @@ for name in cross.mk files/target-query.rb files/elf-needed.sh; do
     negative "missing-gi-${name##*/}"
     mv "$work/gi-helper" "$helper"
 done
+for name in cross.mk cargo-depends.mk; do
+    helper=$profile/recipes/graphics/librsvg/$name
+    mv "$helper" "$work/librsvg-helper"
+    negative "missing-librsvg-$name"
+    mv "$work/librsvg-helper" "$helper"
+done
+helper=$profile/recipes/graphics/gdk-pixbuf2/files/target-tools.rb
+mv "$helper" "$work/gdk-target-helper"
+negative missing-gdk-target-helper
+mv "$work/gdk-target-helper" "$helper"
 pkg=$profile/recipes/graphics/MesaLib
 mv "$pkg/Makefile" "$pkg/Makefile.saved"
 negative missing-recipe
@@ -80,7 +90,7 @@ cp "$profile/sources.tsv" "$work/saved-manifest"
 sed 's/bce5f7fb/00000000/' "$work/saved-manifest" > "$profile/sources.tsv"
 negative altered-manifest
 cp "$work/saved-manifest" "$profile/sources.tsv"
-for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection; do
+for dependency in x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection graphics/librsvg multimedia/dav1d devel/xxhash graphics/gdk-pixbuf2 databases/shared-mime-info; do
     # Every added consumer/dependency needs its exact source pin.
     awk -F '\t' -v dep="$dependency" 'BEGIN { OFS="\t" }
         $1 == dep { $3="0000000000000000000000000000000000000000000000000000000000000000" }
@@ -96,7 +106,7 @@ for dependency in devel/glib2-tools devel/glib2-introspection devel/gdbus-codege
     negative "missing-${dependency##*/}-family-recipe"
     mv "$work/family-Makefile" "$profile/recipes/$dependency/Makefile"
 done
-for entry in 'devel/glib2:patch-meson.build' 'devel/glib2:patch-meson_gir-cross.build' 'devel/glib2:patch-girepository_compiler_meson.build' 'converters/fribidi:patch-bin_Makefile.in' 'archivers/lzo:patch-src_lzo1f__d.ch' 'x11/libXt:patch-util_Makefile.in'; do
+for entry in 'graphics/gdk-pixbuf2:patch-emberbsd_meson.build' 'graphics/gdk-pixbuf2:patch-emberbsd_gdk-pixbuf_meson.build' 'graphics/gdk-pixbuf2:patch-emberbsd_thumbnailer_meson.build' 'graphics/gdk-pixbuf2:patch-emberbsd_build-aux_gen-thumbnailer.py' 'databases/shared-mime-info:patch-src_update-mime-database.cpp' 'graphics/librsvg:patch-meson_gir-cross.build' 'graphics/librsvg:patch-rsvg_meson.build' 'graphics/librsvg:patch-gdk-pixbuf-loader_meson.build' 'graphics/librsvg:patch-.._vendor_wide-1.7.1_src_f32x4__.rs' 'devel/glib2:patch-meson.build' 'devel/glib2:patch-meson_gir-cross.build' 'devel/glib2:patch-girepository_compiler_meson.build' 'converters/fribidi:patch-bin_Makefile.in' 'archivers/lzo:patch-src_lzo1f__d.ch' 'x11/libXt:patch-util_Makefile.in'; do
     dependency=${entry%:*}
     name=${entry#*:}
     cp "$profile/recipes/$dependency/distinfo" "$work/new-dependency-distinfo"
@@ -165,11 +175,11 @@ for mode in default development-toolchain common-build-tools common-graphics com
     else sh "$script" "$tree" "$mode" > "$work/$mode.log" 2>&1; fi
     case "$mode" in
         common-graphics|common-media|plasma-mobile)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen graphics/librsvg multimedia/dav1d devel/xxhash graphics/gdk-pixbuf2 databases/shared-mime-info; do diff -qr "$profile/recipes/$recipe" "$tree/$recipe"; done
             cmp "$profile/mk.conf" "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF"
             cmp "$profile/sources.tsv" "$tree/EMBERBSD-COMMON-GRAPHICS-SOURCES" ;;
         *)
-            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
+            for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen graphics/librsvg multimedia/dav1d devel/xxhash graphics/gdk-pixbuf2 databases/shared-mime-info; do diff -qr "$root/upstream/pkgsrc/$recipe" "$tree/$recipe"; done
             [ ! -e "$tree/EMBERBSD-COMMON-GRAPHICS-MK.CONF" ] ;;
     esac
     case "$mode" in common-build-tools|common-graphics|common-media|plasma-mobile)

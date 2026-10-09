@@ -1,0 +1,72 @@
+# $NetBSD: Makefile,v 1.5 2026/09/02 19:04:50 wiz Exp $
+
+DISTNAME=	labwc-0.20.2
+PKGREVISION=	2
+CATEGORIES=	wayland
+MASTER_SITES=	${MASTER_SITE_GITHUB:=labwc/}
+
+MAINTAINER=	kikadf@NetBSD.org
+HOMEPAGE=	https://labwc.github.io/
+COMMENT=	Wlroots-based compositor for Wayland, inspired by Openbox
+LICENSE=	gnu-gpl-v2
+
+USE_TOOLS+=	pkg-config msgfmt
+
+# Origin: pkgsrc, adapted by EmberBSD (AI-assisted) for the common stack.
+# Require the selected payload instead of silently omitting unavailable parts.
+MESON_ARGS+=	--wrap-mode=nofallback
+MESON_ARGS+=	-Dman-pages=enabled -Dsvg=enabled -Dicon=enabled
+MESON_ARGS+=	-Dlabnag=enabled -Dnls=enabled
+
+.include "../../mk/bsd.prefs.mk"
+.if ${USE_CROSS_COMPILE:Uno:tl} == "yes"
+.if defined(EMBERBSD_WAYLAND_SCANNER)
+.include "../../devel/wayland-protocols/cross-scanner.mk"
+.else
+PKG_FAIL_REASON+= "Cross labwc requires the validated native Wayland scanner"
+.endif
+# Both programs consume text and produce target-independent output.
+MESON_BINARIES+=	scdoc msgfmt
+MESON_BINARY.scdoc=	${TOOLBASE}/bin/scdoc
+MESON_BINARY.msgfmt=	${TOOLS_PATH.msgfmt}
+.endif
+
+SUBST_CLASSES+=		path
+SUBST_STAGE.path=	pre-configure
+SUBST_MESSAGE.path=	Fixing pathes
+SUBST_FILES.path+=	startlabwc.sh
+SUBST_VARS.path+=	PREFIX PKG_SYSCONFBASE
+
+EGDIR=			${PREFIX}/share/examples/labwc
+PKG_SYSCONFSUBDIR=	xdg/labwc
+INSTALL_MAKE_FLAGS+=	rcdir=${EGDIR}
+
+# Fix: [../src/main.c:94] no fonts are available
+DEPENDS+=	nerd-fonts-Hack-[0-9]*:../../fonts/nerd-fonts-Hack
+
+CFLAGS+=	-I${BUILDLINK_PREFIX.libepoll-shim}/include/libepoll-shim
+
+post-extract:
+	${CP} ${FILESDIR}/startlabwc.sh.in ${WRKSRC}/startlabwc.sh
+
+post-install:
+	${INSTALL_SCRIPT} ${WRKSRC}/startlabwc.sh \
+                ${DESTDIR}${PREFIX}/bin/startlabwc
+
+.include "options.mk"
+
+.include "../../devel/meson/build.mk"
+.include "../../textproc/scdoc/tool.mk"
+.include "../../devel/glib2/buildlink3.mk"
+.include "../../devel/libepoll-shim/buildlink3.mk"
+.include "../../devel/libsfdo/buildlink3.mk"
+.include "../../devel/pango/buildlink3.mk"
+.include "../../graphics/cairo/buildlink3.mk"
+.include "../../graphics/hicolor-icon-theme/buildlink3.mk"
+.include "../../graphics/librsvg/buildlink3.mk"
+.include "../../sysutils/dbus/buildlink3.mk"
+.include "../../sysutils/seatd/buildlink3.mk"
+.include "../../textproc/libxml2/buildlink3.mk"
+BUILDLINK_API_DEPENDS.wlroots+=	wlroots>=0.20.2nb4
+.include "../../wayland/wlroots/buildlink3.mk"
+.include "../../mk/bsd.pkg.mk"

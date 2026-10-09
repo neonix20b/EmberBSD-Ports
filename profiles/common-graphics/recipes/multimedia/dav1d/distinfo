@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.19 2026/07/22 17:33:07 ryoon Exp $
+
+BLAKE2s (dav1d-1.5.4.tar.xz) = 4932d08d4717dd5be43d0789385f4580b480d224168958d9d05a01504d30ae4b
+SHA512 (dav1d-1.5.4.tar.xz) = 75ab7c922bc9647d73534c9f6c95a514748557adbf7a4debf95eee52ef1db681012cbaad165a46141d904cdd01c1e6319cdea33d254afb5c6b3d968679e55b98
+Size (dav1d-1.5.4.tar.xz) = 1038852 bytes

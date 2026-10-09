@@ -1,0 +1,13 @@
+@comment $NetBSD: PLIST,v 1.4 2024/03/16 10:12:43 nia Exp $
+bin/xxh128sum
+bin/xxh32sum
+bin/xxh64sum
+bin/xxhsum
+include/xxh3.h
+include/xxhash.h
+lib/libxxhash.la
+lib/pkgconfig/libxxhash.pc
+man/man1/xxh128sum.1
+man/man1/xxh32sum.1
+man/man1/xxh64sum.1
+man/man1/xxhsum.1

@@ -1,0 +1,54 @@
+$NetBSD$
+
+Use native GI generators and real EmberBSD queries; preserve the full thumbnailer.
+Native and unselected cross builds retain their existing execution paths.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- gdk-pixbuf/meson.build.orig
++++ gdk-pixbuf/meson.build
+@@ -283,7 +283,16 @@
+                     ],
+                     install: true)
+ 
+-gir = find_program('g-ir-scanner', required : get_option('introspection'))
++emberbsd_gi_cross = meson.is_cross_build() and meson.get_external_property('emberbsd_gi_cross', false)
++if emberbsd_gi_cross
++  gir = find_program('g-ir-scanner', native: true, required: get_option('introspection'))
++  meson.override_find_program('g-ir-scanner', gir)
++  gir_compiler = find_program('g-ir-compiler', native: true, required: get_option('introspection'))
++  meson.override_find_program('g-ir-compiler', gir_compiler)
++  pixbuf_target_runner = meson.get_external_property('emberbsd_pixbuf_runner')
++else
++  gir = find_program('g-ir-scanner', required : get_option('introspection'))
++endif
+ build_gir = gir.found() and (not meson.is_cross_build() or get_option('introspection').enabled())
+ 
+ if build_gir
+@@ -293,6 +302,10 @@
+     '-DGDK_PIXBUF_ENABLE_BACKEND',
+   ]
+ 
++  if emberbsd_gi_cross
++    gir_args += ['--use-ldd-wrapper=' + meson.get_external_property('emberbsd_gi_ldd_wrapper')]
++  endif
++
+   gdkpixbuf_gir = gnome.generate_gir(
+     gdkpixbuf,
+     sources: [
+@@ -415,7 +428,15 @@
+   set_variable(bin_name.underscorify(), bin)
+ endforeach
+ 
+-if not meson.is_cross_build()
++if emberbsd_gi_cross
++  loaders_cache = custom_target('loaders.cache',
++                                output: 'loaders.cache',
++                                capture: true,
++                                command: pixbuf_target_runner + ['--loaders', gdk_pixbuf_query_loaders] + dynamic_loaders,
++                                depends: dynamic_loaders_dep,
++                                build_by_default: true)
++  loaders_dep = declare_dependency(sources: [ loaders_cache ])
++elif not meson.is_cross_build()
+   # The 'loaders.cache' used for testing, so we don't accidentally
+   # load the installed cache; we always build it by default
+   loaders_cache = custom_target('loaders.cache',

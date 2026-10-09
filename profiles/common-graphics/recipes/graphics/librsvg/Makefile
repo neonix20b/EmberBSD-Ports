@@ -1,0 +1,78 @@
+# $NetBSD: Makefile,v 1.189 2026/09/02 19:02:46 wiz Exp $
+
+DISTNAME=	librsvg-2.63.2
+CATEGORIES=	graphics gnome
+MASTER_SITES=	${MASTER_SITE_GNOME:=sources/librsvg/${PKGVERSION_NOREV:R}/}
+EXTRACT_SUFX=	.tar.xz
+
+MAINTAINER=	pkgsrc-users@NetBSD.org
+HOMEPAGE=	https://wiki.gnome.org/LibRsvg
+COMMENT=	SVG library for GNOME
+LICENSE=	gnu-lgpl-v2.1
+
+TOOL_DEPENDS+=	cargo-c>=0.10.25:../../devel/cargo-c
+
+USE_LANGUAGES=	c c++
+USE_TOOLS+=	pkg-config
+TEST_TARGET=	check
+MESON_ARGS+=	-Dpixbuf-loader=enabled
+MESON_REQD+=	1.3.0
+RUST_REQ=	1.92.0
+
+PYTHON_FOR_BUILD_ONLY=		tool
+
+BUILDLINK_TRANSFORM.SunOS+=	rm:-Wl,--gc-sections
+BUILDLINK_TRANSFORM.SunOS+=	rm:-Wl,--version-script
+BUILDLINK_TRANSFORM.SunOS+=	rm:-Wl,${WRKSRC}/output/rsvg/librsvg-2.0.def
+LDFLAGS.SunOS+=			-lsocket
+
+PKGCONFIG_OVERRIDE=		output/meson-private/librsvg-2.0.pc
+PKGCONFIG_OVERRIDE_STAGE=	post-configure
+
+SUBST_CLASSES+=		rst2man
+SUBST_MESSAGE.rst2man=	Fixing rst2man name used by pkgsrc due to versioning.
+SUBST_STAGE.rst2man=	pre-configure
+SUBST_FILES.rst2man=	meson.build
+SUBST_SED.rst2man=	-e 's,rst2man.py,rst2man-${PYVERSSUFFIX},g'
+
+.include "../../mk/bsd.prefs.mk"
+
+.if ${USE_CROSS_COMPILE:Uno:tl} == "yes"
+.include "cross.mk"
+.else
+TOOL_DEPENDS+= glib2-introspection-[0-9]*:../../devel/glib2-introspection
+RUSTFLAGS+= -C link-arg=${COMPILER_RPATH_FLAG}${BUILDLINK_PREFIX.cairo}/lib
+.endif
+
+.if ${OPSYS} == "Darwin"
+post-install:
+	install_name_tool			\
+	  -change @rpath/librsvg-2.2.dylib	\
+	  ${PREFIX}/lib/librsvg-2.2.dylib	\
+	  -id       ${PREFIX}/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.dylib	\
+	  ${DESTDIR}${PREFIX}/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.dylib
+.endif
+
+.include "options.mk"
+
+.include "cargo-depends.mk"
+
+.include "../../devel/meson/build.mk"
+BUILDLINK_DEPMETHOD.gobject-introspection+=	build
+.include "../../devel/gobject-introspection/buildlink3.mk"
+BUILDLINK_API_DEPENDS.glib2+=	glib2>=2.50.0
+.include "../../devel/glib2/buildlink3.mk"
+BUILDLINK_API_DEPENDS.pango+=	pango>=1.50.0
+.include "../../devel/pango/buildlink3.mk"
+.include "../../fonts/fontconfig/buildlink3.mk"
+BUILDLINK_API_DEPENDS.cairo+=	cairo>=1.18
+.include "../../graphics/cairo/buildlink3.mk"
+.include "../../graphics/freetype2/buildlink3.mk"
+.include "../../graphics/gdk-pixbuf2/buildlink3.mk"
+.include "../../graphics/gdk-pixbuf2/loaders.mk"
+.include "../../lang/python/tool.mk"
+BUILDLINK_API_DEPENDS.libxml2+=	libxml2>=2.9
+.include "../../textproc/libxml2/buildlink3.mk"
+.include "../../lang/rust/cargo.mk"
+.include "../../lang/python/pyversion.mk"
+.include "../../mk/bsd.pkg.mk"

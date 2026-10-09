@@ -1,0 +1,28 @@
+$NetBSD$
+
+Use validated native generators and real target GType queries for cross GIRs.
+Default and native builds retain the upstream execution guard.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -155,10 +155,17 @@
+   extra_env.set('SYSTEM_DEPS_LIBXML2_LIB', fs.stem(libxml_lib))
+ endif
+ 
++# The Ports recipe validates the native tools and the real target query runner.
++emberbsd_gi_cross = meson.is_cross_build() and meson.get_external_property('emberbsd_gi_cross', false)
++if emberbsd_gi_cross
++  meson.override_find_program('g-ir-scanner', find_program('g-ir-scanner', native: true))
++  meson.override_find_program('g-ir-compiler', find_program('g-ir-compiler', native: true))
++endif
++
+ if host_system == 'windows'
+-  build_gir = get_option('introspection').require(get_option('default_library') != 'static' and meson.can_run_host_binaries() and gi_dep.found())
++  build_gir = get_option('introspection').require(get_option('default_library') != 'static' and (meson.can_run_host_binaries() or emberbsd_gi_cross) and gi_dep.found())
+ else
+-  build_gir = get_option('introspection').require(meson.can_run_host_binaries() and gi_dep.found())
++  build_gir = get_option('introspection').require((meson.can_run_host_binaries() or emberbsd_gi_cross) and gi_dep.found())
+ endif
+ build_vala = get_option('vala').require(meson.can_run_host_binaries() and vapigen_dep.found())
+ 

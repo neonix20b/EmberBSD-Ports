@@ -1,0 +1,22 @@
+$NetBSD: patch-tests_meson.build,v 1.4 2024/06/27 15:19:59 adam Exp $
+
+Add LD_LIBRARY_PATH so uninstalled programs find newly built shared libraries.
+
+--- tests/meson.build.orig	2024-05-15 02:15:41.000000000 +0000
++++ tests/meson.build
+@@ -12,6 +12,7 @@ if enabled_loaders.contains('png') and h
+     input: 'resources.gresource.xml',
+     output: 'resources.c',
+     command: [
++      'env', '@LD_LIBRARY_PATH@=' + meson.current_build_dir() + '/../gdk-pixbuf',
+       gen_resources,
+       '--glib-compile-resources', glib_compile_resources,
+       '--pixdata', gdk_pixbuf_pixdata,
+@@ -27,6 +28,7 @@ if enabled_loaders.contains('png') and h
+     input: 'resources.gresource.xml',
+     output: 'resources.h',
+     command: [
++      'env', '@LD_LIBRARY_PATH@=' + meson.current_build_dir() + '/../gdk-pixbuf',
+       gen_resources,
+       '--glib-compile-resources', glib_compile_resources,
+       '--pixdata', gdk_pixbuf_pixdata,

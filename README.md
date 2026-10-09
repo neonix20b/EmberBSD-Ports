@@ -129,6 +129,9 @@ runtime behavior are validated.
   with real GType discovery and upstream hash/search checks on EmberBSD/CM5.
   Matching GLib 2.90.1 metadata now cross-builds all seven GIR/typelib pairs
   and passes target loading and introspection/libffi invocation on CM5.
+  Current [GdkPixbuf and shared MIME packages](profiles/common-graphics/cross/gdk-pixbuf.md)
+  preserve all thirteen raster formats, metadata and thumbnailer payload.
+  Four CM5 cycles pass complete and incremental decoding with pixel checks.
   The [sysroot rules](profiles/common-build-tools/cross/sysroot.md) preserve
   fork libc provenance and reject divergent shared-library aliases.
   labwc client surfaces and full SVG remain separate acceptance stages.

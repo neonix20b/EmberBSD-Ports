@@ -1,0 +1,28 @@
+$NetBSD$
+
+Use native GI generators and real EmberBSD queries; preserve the full thumbnailer.
+Native and unselected cross builds retain their existing execution paths.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- thumbnailer/meson.build.orig
++++ thumbnailer/meson.build
+@@ -13,6 +13,11 @@
+                                          c_args: common_cflags,
+                                          dependencies: gdk_pixbuf_deps + [ gdkpixbuf_dep ])
+ 
++thumbnailer_runner_args = []
++if emberbsd_gi_cross
++  thumbnailer_runner_args = ['--runner'] + pixbuf_target_runner
++endif
++
+ custom_target('thumbnailer',
+               input: 'gdk-pixbuf-thumbnailer.thumbnailer.in',
+               output: 'gdk-pixbuf-thumbnailer.thumbnailer',
+@@ -24,6 +29,6 @@
+                 '--bindir', gdk_pixbuf_bindir,
+                 '@INPUT@',
+                 '@OUTPUT@',
+-              ],
++              ] + thumbnailer_runner_args,
+               install: true,
+               install_dir: join_paths(gdk_pixbuf_datadir, 'thumbnailers'))

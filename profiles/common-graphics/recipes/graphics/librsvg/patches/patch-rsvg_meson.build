@@ -1,0 +1,19 @@
+$NetBSD$
+
+Use validated native generators and real target GType queries for cross GIRs.
+Default and native builds retain the upstream execution guard.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- rsvg/meson.build.orig
++++ rsvg/meson.build
+@@ -359,6 +359,10 @@
+     endif
+   endif
+ 
++  if emberbsd_gi_cross
++    gir_args += ['--use-ldd-wrapper=' + meson.get_external_property('emberbsd_gi_ldd_wrapper')]
++  endif
++
+   rsvg_gir = gnome.generate_gir(
+     librsvg_gir,
+     namespace: 'Rsvg',

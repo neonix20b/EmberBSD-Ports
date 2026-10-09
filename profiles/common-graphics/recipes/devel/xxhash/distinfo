@@ -1,0 +1,5 @@
+$NetBSD: distinfo,v 1.11 2024/12/30 06:03:24 adam Exp $
+
+BLAKE2s (xxhash-0.8.4.tar.gz) = 9ab554b4d81612b921272f5b2e5dbe7b24b5a566a7a27522e1ad5451d96b2b0f
+SHA512 (xxhash-0.8.4.tar.gz) = 1585ae3f3feded2492e43f4dd5dd43183329c57ffe92afa907f71eb26deaf34beab4434458a2d87e8795a4226339c5b0b493bd8a9186bb6f0c752fa1fdef10e3
+Size (xxhash-0.8.4.tar.gz) = 1167538 bytes

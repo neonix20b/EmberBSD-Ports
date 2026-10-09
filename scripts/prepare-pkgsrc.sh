@@ -101,8 +101,8 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             $1 != "converters/fribidi" &&
             $1 != "graphics/png" &&
             $1 != "graphics/freetype2" &&
-            $1 != "archivers/lzo" && $1 != "x11/libXt" && $1 != "devel/pango" && $1 != "devel/libsfdo" && $1 != "sysutils/dbus" && $1 != "devel/gobject-introspection") ||
-            $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz)$/ ||
+            $1 != "archivers/lzo" && $1 != "x11/libXt" && $1 != "devel/pango" && $1 != "devel/libsfdo" && $1 != "sysutils/dbus" && $1 != "devel/gobject-introspection" && $1 != "graphics/librsvg" && $1 != "multimedia/dav1d" && $1 != "devel/xxhash" && $1 != "graphics/gdk-pixbuf2" && $1 != "databases/shared-mime-info") ||
+            $2 !~ /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.tar\.(xz|gz|bz2)$/ ||
             length($3) != 64 || $3 !~ /^[0-9a-f]+$/ ||
             $4 !~ /^https:\/\// || seen[$1]++ { bad=1 }
         END { if (bad || !seen["graphics/MesaLib"] || !seen["x11/libdrm"] ||
@@ -116,7 +116,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             !seen["converters/fribidi"] ||
             !seen["graphics/png"] ||
             !seen["graphics/freetype2"] ||
-            !seen["archivers/lzo"] || !seen["x11/libXt"] || !seen["devel/pango"] || !seen["devel/libsfdo"] || !seen["sysutils/dbus"] || !seen["devel/gobject-introspection"]) exit 1 }
+            !seen["archivers/lzo"] || !seen["x11/libXt"] || !seen["devel/pango"] || !seen["devel/libsfdo"] || !seen["sysutils/dbus"] || !seen["devel/gobject-introspection"] || !seen["graphics/librsvg"] || !seen["multimedia/dav1d"] || !seen["devel/xxhash"] || !seen["graphics/gdk-pixbuf2"] || !seen["databases/shared-mime-info"]) exit 1 }
     ' "$graphics/sources.tsv" || { echo 'Invalid common graphics manifest.' >&2; exit 2; }
     while IFS="$(printf '\t')" read -r recipe archive sha url; do
         case "$recipe" in
@@ -144,6 +144,11 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
             graphics/png) pin='libpng-1.6.59.tar.xz:d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389:https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz' ;;
             graphics/freetype2) pin='freetype-2.14.3.tar.xz:36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f:https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz' ;;
             sysutils/dbus) pin='dbus-1.16.2.tar.xz:0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2:https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz' ;;
+            graphics/gdk-pixbuf2) pin='gdk-pixbuf-2.44.8.tar.xz:919f529512961a12e81cd4b4b466a48c3933469e7f9a310c6513cd4fb252ba3c:https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.8.tar.xz' ;;
+            databases/shared-mime-info) pin='shared-mime-info-2.5.1.tar.bz2:b75b420da9b0be9a3d99b1bee6ed87957b56ab54583ac1a97fbd0dc98ddddb25:https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive/2.5.1/shared-mime-info-2.5.1.tar.bz2' ;;
+            graphics/librsvg) pin='librsvg-2.63.2.tar.xz:852b18e1a00b8605528825a27dc7748bff2a5dd254028f59dc22a34ea57e81b6:https://download.gnome.org/sources/librsvg/2.63/librsvg-2.63.2.tar.xz' ;;
+            multimedia/dav1d) pin='dav1d-1.5.4.tar.xz:686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5:https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz' ;;
+            devel/xxhash) pin='xxhash-0.8.4.tar.gz:5738270935e7c3d38a79b3adf7c9692566ce7895a25f67de43ad52ab504acd32:https://github.com/Cyan4973/xxHash/archive/v0.8.4.tar.gz' ;;
             devel/gobject-introspection) pin='gobject-introspection-1.86.0.tar.xz:920d1a3fcedeadc32acff95c2e203b319039dd4b4a08dd1a2dfd283d19c0b9ae:https://download.gnome.org/sources/gobject-introspection/1.86/gobject-introspection-1.86.0.tar.xz' ;;
             devel/libsfdo) pin='libsfdo-0.1.4.tar.gz:9d74a9bff1f872e38ab662d8e2b5f6ecd404d7f82f84e9c324013f856688fa2d:https://gitlab.freedesktop.org/vyivel/libsfdo/-/archive/v0.1.4/libsfdo-v0.1.4.tar.gz' ;;
             devel/pango) pin='pango-1.58.2.tar.xz:342385b6ca3b7c73455d7c80a13b7dbe4489e00bc3bd4c5bd6ed4dce421e374a:https://download.gnome.org/sources/pango/1.58/pango-1.58.2.tar.xz' ;;
@@ -152,11 +157,15 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         esac
         [ "$archive:$sha:$url" = "$pin" ] || { echo "Incorrect common graphics source pin: $recipe" >&2; exit 2; }
     done < "$graphics/sources.tsv"
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen graphics/librsvg multimedia/dav1d devel/xxhash graphics/gdk-pixbuf2 databases/shared-mime-info; do
         source=$graphics/recipes/$recipe
         recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk'
         case "$recipe" in
             devel/glib2-tools|devel/glib2-introspection) recipe_files='Makefile DESCR PLIST' ;;
+            graphics/gdk-pixbuf2) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk options.mk loaders.mk files/loaders.tmpl files/target-tools.rb' ;;
+            databases/shared-mime-info) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk INSTALL DEINSTALL mimedb.mk files/install.tmpl' ;;
+            graphics/librsvg) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk available.mk options.mk tool.mk cargo-depends.mk cross.mk' ;;
+            devel/xxhash) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk files/Makefile' ;;
             devel/gobject-introspection) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk cross.mk files/target-query.rb files/elf-needed.sh' ;;
             devel/gdbus-codegen) recipe_files='Makefile DESCR PLIST distinfo' ;;
             sysutils/dbus) recipe_files='Makefile DESCR PLIST distinfo buildlink3.mk INSTALL options.mk hacks.mk files/dbus.sh files/smf/manifest.xml files/smf/dbus.sh' ;;
@@ -167,7 +176,10 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         case "$recipe" in
             devel/glib2) approved='patch-girepository_compiler_meson.build patch-meson_gir-cross.build patch-gio_gcredentialsprivate.h patch-gio_gdbus-2.0_codegen_meson.build patch-gio_glib-compile-schemas.c patch-gio_gresource-tool.c patch-gio_gunixcredentialsmessage.c patch-gio_gunixmounts.c patch-gio_inotify_inotify-kernel.c patch-gio_meson.build patch-gio_tests_iptosmessage.c patch-gio_tests_meson.build patch-girepository_gitypelib.c patch-glib_gatomic.c patch-glib_gatomic.h patch-glib_genviron.c patch-glib_glib-unix.c patch-glib_gspawn-posix.c patch-glib_gthread.c patch-glib_tests_hash.c patch-glib_tests_include.c patch-glib_tests_meson.build patch-glib_tests_testing.c patch-glib_tests_thread.c patch-gmodule_gmodule-dl.c patch-gmodule_gmodule.c patch-gobject_glib-mkenums.in patch-gobject_meson.build patch-meson.build patch-meson.options' ;;
             devel/gobject-introspection) approved='patch-gir_meson.build patch-girepository_gitypelib.c patch-giscanner_ast.py patch-giscanner_ccompiler.py patch-meson.build patch-tests_meson.build patch-tools_compiler.c patch-tools_generate.c patch-tools_meson.build' ;;
-            devel/pcre2|devel/libsfdo) approved='' ;;
+            graphics/gdk-pixbuf2) approved='patch-emberbsd_build-aux_gen-thumbnailer.py patch-emberbsd_gdk-pixbuf_meson.build patch-emberbsd_meson.build patch-emberbsd_thumbnailer_meson.build patch-gdk-pixbuf_gdk-pixbuf-scaled-anim.c patch-gdk-pixbuf_meson.build patch-tests_meson.build patch-thumbnailer_meson.build' ;;
+            databases/shared-mime-info) approved='patch-src_update-mime-database.cpp' ;;
+            graphics/librsvg) approved='patch-.._vendor_matrixmultiply-0.3.11_src_dgemm__kernel.rs patch-.._vendor_matrixmultiply-0.3.11_src_sgemm__kernel.rs patch-.._vendor_memchr-2.8.3_src_arch_aarch64_memchr.rs patch-.._vendor_memchr-2.8.3_src_arch_aarch64_mod.rs patch-.._vendor_memchr-2.8.3_src_memchr.rs patch-.._vendor_memchr-2.8.3_src_memmem_searcher.rs patch-.._vendor_memchr-2.8.3_src_vector.rs patch-.._vendor_wide-1.7.1_src_f32x4__.rs patch-.._vendor_wide-1.7.1_src_f64x2__.rs patch-.._vendor_wide-1.7.1_src_i16x16__.rs patch-.._vendor_wide-1.7.1_src_i16x32__.rs patch-.._vendor_wide-1.7.1_src_i16x8__.rs patch-.._vendor_wide-1.7.1_src_i32x16__.rs patch-.._vendor_wide-1.7.1_src_i32x4__.rs patch-.._vendor_wide-1.7.1_src_i32x8__.rs patch-.._vendor_wide-1.7.1_src_i64x2__.rs patch-.._vendor_wide-1.7.1_src_i64x4__.rs patch-.._vendor_wide-1.7.1_src_i64x8__.rs patch-.._vendor_wide-1.7.1_src_i8x16__.rs patch-.._vendor_wide-1.7.1_src_i8x32__.rs patch-.._vendor_wide-1.7.1_src_u16x8__.rs patch-.._vendor_wide-1.7.1_src_u32x4__.rs patch-.._vendor_wide-1.7.1_src_u64x2__.rs patch-.._vendor_wide-1.7.1_src_u8x16__.rs patch-.._vendor_zune-jpeg-0.5.15_src_idct.rs patch-.._vendor_zune-jpeg-0.5.15_src_unsafe__utils.rs patch-.._vendor_zune-jpeg-0.5.15_src_unsafe__utils__neon.rs patch-meson.build patch-meson_gir-cross.build patch-rsvg_meson.build patch-gdk-pixbuf-loader_meson.build' ;;
+            devel/pcre2|devel/libsfdo|devel/xxhash|multimedia/dav1d) approved='' ;;
             sysutils/dbus) approved='patch-bus_meson.build patch-meson.build patch-tools_meson.build' ;;
             graphics/cairo) approved='patch-meson.build patch-src_cairo-bentley-ottmann-rectangular.c patch-src_cairo-colr-glyph-render.c patch-src_cairo-image-surface.c patch-test_pdf-structure.c patch-util_cairo-missing_getline.c' ;;
             fonts/harfbuzz) approved='patch-src_meson.build patch-util_meson.build' ;;
@@ -228,7 +240,7 @@ if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$prof
         done
         required=$(awk '/^SHA1 \(patch-/ { gsub(/[()]/, "", $2); print $2 }' "$source/distinfo")
         case "$recipe" in
-            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff|devel/pcre2|devel/libsfdo) ;;
+            x11/xorgproto|devel/libudev-bsd|devel/input-headers|graphics/libliftoff|devel/pcre2|devel/libsfdo|devel/xxhash|multimedia/dav1d) ;;
             *) [ -n "$required" ] || { echo "No graphics patch checksums: $recipe" >&2; exit 2; } ;;
         esac
         actual=0
@@ -296,7 +308,7 @@ if [ "$profile" = common-build-tools ] || [ "$profile" = common-graphics ] || [ 
         "$destination/EMBERBSD-CROSS-MK.CONF"
 fi
 if [ "$profile" = common-graphics ] || [ "$profile" = common-media ] || [ "$profile" = plasma-mobile ]; then
-    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen; do
+    for recipe in graphics/MesaLib x11/libdrm devel/wayland devel/wayland-protocols x11/xorgproto devel/libudev-bsd wayland/wlroots x11/xkeyboard-config devel/input-headers x11/libxkbcommon sysutils/hwdata sysutils/seatd x11/libdisplay-info graphics/libliftoff devel/libopeninput devel/glib2 devel/pcre2 graphics/cairo fonts/harfbuzz converters/fribidi graphics/png graphics/freetype2 archivers/lzo x11/libXt devel/pango devel/libsfdo sysutils/dbus devel/gobject-introspection devel/glib2-tools devel/glib2-introspection devel/gdbus-codegen graphics/librsvg multimedia/dav1d devel/xxhash graphics/gdk-pixbuf2 databases/shared-mime-info; do
         rm -rf "$destination/$recipe"
         cp -R "$graphics/recipes/$recipe" "$destination/$recipe"
     done

@@ -1,0 +1,16 @@
+$NetBSD$
+
+Honor an explicitly enabled SVG feature: a missing provider must fail.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- meson.build.orig
++++ meson.build
+@@ -75,7 +75,7 @@
+ pixman = dependency('pixman-1')
+ math = cc.find_library('m')
+ png = dependency('libpng')
+-svg = dependency('librsvg-2.0', version: '>=2.46', required: false)
++svg = dependency('librsvg-2.0', version: '>=2.46', required: get_option('svg'))
+ sfdo_basedir = dependency(
+   'libsfdo-basedir',
+   default_options: ['default_library=static', 'examples=false', 'tests=false'],

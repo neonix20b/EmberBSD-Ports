@@ -1,0 +1,30 @@
+$NetBSD$
+
+Use a target installation path for the validated cross build. pkg-config's
+sysroot-prefixed lookup directory must not leak into the staged package.
+Native and default builds retain the upstream directory lookup.
+Origin: EmberBSD (AI-assisted); not submitted upstream.
+
+--- gdk-pixbuf-loader/meson.build.orig
++++ gdk-pixbuf-loader/meson.build
+@@ -4,6 +4,11 @@
+ )
+ 
+ prefix = get_option('prefix')
++pixbuf_module_dir = pixbuf_dep.get_variable(pkgconfig: 'gdk_pixbuf_moduledir', pkgconfig_define: ['prefix', prefix])
++if emberbsd_gi_cross
++  # Install paths describe the target filesystem, not the build sysroot.
++  pixbuf_module_dir = meson.get_external_property('emberbsd_pixbuf_module_dir')
++endif
+ 
+ pixbufloader = custom_target(
+   'pixbufloader-svg',
+@@ -11,7 +16,7 @@
+   output: ['@0@pixbufloader_svg.@1@'.format(cargo_dylib_prefix, ext_dynamic)],
+   console: true,
+   install: true,
+-  install_dir: pixbuf_dep.get_variable(pkgconfig: 'gdk_pixbuf_moduledir', pkgconfig_define: ['prefix', prefix]),
++  install_dir: pixbuf_module_dir,
+   depends: librsvg_rust_dep,
+   depend_files: pixbufloader_sources,
+   env: extra_env,
