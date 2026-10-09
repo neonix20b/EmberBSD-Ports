@@ -1,0 +1,49 @@
+$NetBSD: patch-meson.build,v 1.4 2026/03/26 08:53:11 wiz Exp $
+
+Support for NetBSD.
+
+--- meson.build.orig	2026-03-19 16:03:08.000000000 +0000
++++ meson.build
+@@ -42,9 +42,23 @@ endforeach
+ 	config_h.set('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
+ endforeach
+ 
++# NetBSD defines posix_fallocate(), but it always returns failure.
++# Cleanly fall back to ftruncate.
++# After memfd_create() and ftruncate(), mmap() fails
++# when the file size is smaller than a page.
++# See: https://gnats.netbsd.org/57622
++if host_machine.system() == 'netbsd'
+ have_funcs = [
+ 	'accept4',
+ 	'mkostemp',
++	'prctl',
++	'mremap',
++	'strndup',
++]
++else
++have_funcs = [
++	'accept4',
++	'mkostemp',
+ 	'posix_fallocate',
+ 	'prctl',
+ 	'memfd_create',
+@@ -52,6 +66,7 @@ have_funcs = [
+ 	'strndup',
+ 	'gettid',
+ ]
++endif
+ foreach f: have_funcs
+ 	config_h.set('HAVE_' + f.underscorify().to_upper(), cc.has_function(f))
+ endforeach
+@@ -74,8 +89,8 @@ if get_option('libraries')
+ config_h.set10('HAVE_BROKEN_MSG_CMSG_CLOEXEC', have_broken_msg_cmsg_cloexec)
+ 
+ if get_option('libraries')
+-	if host_machine.system() in ['freebsd', 'openbsd']
+-		# When building for FreeBSD, epoll(7) is provided by a userspace
++	if host_machine.system() in ['freebsd', 'netbsd', 'openbsd']
++		# When building for *BSD, epoll(7) is provided by a userspace
+ 		# wrapper around kqueue(2).
+ 		epoll_dep = dependency('epoll-shim')
+ 	else
